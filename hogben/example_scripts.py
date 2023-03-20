@@ -1,36 +1,41 @@
+"""
+Several exemplar scripts which perform actions users may wish to replicate
+"""
 import os
-import sys
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 from hogben.optimise import Optimiser
 from hogben.visualise import contrast_choice_single, contrast_choice_double
+from models.bilayers import BilayerDMPC, BilayerDPPC
 from hogben.utils import save_plot
 
 
 def _contrast_results_visualise(save_path):
-    """Visualises the choice of contrasts for a bilayer sample.
+    """Visualises the choice of contrasts for a DMPC bilayer sample.
 
     Args:
         save_path (str): path to directory to save results to.
 
     """
-    from models.bilayers import BilayerDMPC, BilayerDPPC
-
     # Choose sample here.
     bilayer = BilayerDMPC()
 
     # Number of points and counting times for each angle to simulate.
     angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
 
-    # Visualise single contrast choices assuming different initial measurements.
     contrast_range = np.linspace(-0.56, 6.36, 500)
-    contrast_choice_single(bilayer, contrast_range, [], angle_times, save_path, 'initial')
-    contrast_choice_single(bilayer, contrast_range, [6.36], angle_times, save_path, 'D2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56], angle_times, save_path, 'H2O')
-    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36], angle_times, save_path, 'D2O_H2O')
+
+    contrast_choice_single(bilayer, contrast_range, [],
+                           angle_times, save_path, 'initial')
+    contrast_choice_single(bilayer, contrast_range, [6.36],
+                           angle_times, save_path, 'D2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56],
+                           angle_times, save_path, 'H2O')
+    contrast_choice_single(bilayer, contrast_range, [-0.56, 6.36],
+                           angle_times, save_path, 'D2O_H2O')
 
     # Investigate contrast pair choices assuming no prior measurement.
     contrast_range = np.linspace(-0.56, 6.36, 75)
@@ -40,20 +45,21 @@ def _contrast_results_visualise(save_path):
     bilayer.nested_sampling([6.36, 6.36], angle_times, save_path, 'D2O_D2O')
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path, 'H2O_D2O')
 
-def _contrast_results_optimise(save_path):
-    """Optimises the choice of contrasts for a bilayer sample.
+
+def _optimise_contrast_time_fraction(save_path):
+    """Optimises the choice of contrasts and the fraction of time which should
+    be spent in each for a bilayer sample and writes out the answer
+    to a file in `save_path`.
 
     Args:
         save_path (str): path to directory to save results to.
 
     """
-    from bilayers import BilayerDMPC, BilayerDPPC
-
     # Choose sample here.
     bilayer = BilayerDMPC()
 
     # Time budget for experiment.
-    total_time = 1000 # A large time improves DE convergence.
+    total_time = 1000  # A large time improves DE convergence.
 
     # Points and proportion of total counting time for each angle.
     angle_splits = [(0.7, 100, 0.2), (2.3, 100, 0.8)]
@@ -64,7 +70,7 @@ def _contrast_results_optimise(save_path):
     # Create a new .txt file for the results.
     save_path = os.path.join(save_path, bilayer.name)
     with open(os.path.join(save_path, 'optimised_contrasts.txt'), 'w') as file:
-        optimiser = Optimiser(bilayer) # Optimiser for the experiment.
+        optimiser = Optimiser(bilayer)  # Optimiser for the experiment.
 
         # Optimise the experiment using 1-4 contrasts.
         for i, num_contrasts in enumerate([1, 2, 3, 4]):
@@ -79,29 +85,27 @@ def _contrast_results_optimise(save_path):
             end = time.time()
 
             contrasts, splits, val = results
-            splits = np.array(splits)*100 # Convert to percentages.
+            splits = np.array(splits)*100  # Convert to percentages.
 
             # Round the optimisation function value to 4 significant figures.
             val = np.format_float_positional(val, precision=4, unique=False,
                                              fractional=False, trim='k')
 
             # Write the conditions, objective value and computation time.
-            file.write('----------- {} Contrasts -----------\n'.format(num_contrasts))
+            file.write('------- {} Contrasts -------\n'.format(num_contrasts))
             file.write('Contrasts: {}\n'.format(list(np.round(contrasts, 2))))
             file.write('Splits (%): {}\n'.format(list(np.round(splits, 1))))
             file.write('Objective value: {}\n'.format(val))
             file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
 
-def _figure_2(save_path):
+
+def _eigenvalue_vs_contrast_plot(save_path):
     """Creates figure 2 for the paper. The figure shows the minimum eigenvalue
        versus contrast SLD for the DMPC and DPPC/Ra LPS bilayer models, for a
        third contrast choice, assuming D2O and H2O were previously measured.
-
     Args:
         save_path (str): path to directory to save figure to.
-
     """
-    from bilayers import BilayerDMPC, BilayerDPPC
 
     # Load the two bilayer models.
     sample_1, sample_2 = BilayerDMPC(), BilayerDPPC()
@@ -135,10 +139,10 @@ def _figure_2(save_path):
                          for angle, points, split in angle_splits]
 
     # Counting times for each angle when measuring the third contrast.
-    nxt_angle_times_1 = [(angle, points, total_time*split*(nxt_split_1))
+    nxt_angle_times_1 = [(angle, points, total_time*split*nxt_split_1)
                          for angle, points, split in angle_splits]
 
-    nxt_angle_times_2 = [(angle, points, total_time*split*(nxt_split_2))
+    nxt_angle_times_2 = [(angle, points, total_time*split*nxt_split_2)
                          for angle, points, split in angle_splits]
 
     # Information from the D2O and H2O contrasts for each model.
@@ -168,7 +172,7 @@ def _figure_2(save_path):
     line_1 = ax1.plot(contrast_range, min_eigs_1, color='b')
     line_2 = ax2.plot(contrast_range, min_eigs_2, color='g')
 
-    x_label = '$\mathregular{Contrast\ SLD\ (10^{-6} \AA^{-2})}$'
+    x_label = r'$\mathregular{Contrast\ SLD\ (10^{-6} \AA^{-2})}$'
     y_label = 'Minimum Eigenvalue'
 
     ax1.set_xlabel(x_label, fontsize=11, weight='bold')
@@ -179,9 +183,10 @@ def _figure_2(save_path):
     # Save the plot.
     save_plot(fig, save_path, 'figure_2')
 
-if __name__ == '__main__':
-    save_path = './results'
-    _contrast_results_visualise(save_path)
-    _contrast_results_optimise(save_path)
 
-    _figure_2('../figures')
+if __name__ == '__main__':
+    save_folder = './results'
+
+    _contrast_results_visualise(save_folder)
+    _optimise_contrast_time_fraction(save_folder)
+    _eigenvalue_vs_contrast_plot(save_folder)

@@ -87,7 +87,7 @@ def simulate_magnetic(sample: Union['refnx.reflect.Stucture',
     """
     models, datasets = [], []
 
-    direct_beam = direct_beam_path(inst_or_path, polarised=False)
+    direct_beam = direct_beam_path(inst_or_path, polarised=True)
 
     if not direct_beam:  # Local filepath provided so direct_beam_path==None
         direct_beam = inst_or_path
