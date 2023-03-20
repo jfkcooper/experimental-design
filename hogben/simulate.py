@@ -46,12 +46,12 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
             msg = "Please provide an instrument name or a valid local filepath"
             raise FileNotFoundError(str(msg))
 
-    path = importlib_resources.files('hogben.data.directbeams').joinpath(
-        non_pol_instr[inst_or_path])
-
     if polarised:
         path = importlib_resources.files('hogben.data.directbeams'
                                          ).joinpath(pol_instr[inst_or_path])
+    else:
+        path = importlib_resources.files('hogben.data.directbeams').joinpath(
+            non_pol_instr[inst_or_path])
 
     return path
 
