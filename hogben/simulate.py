@@ -232,7 +232,8 @@ class Simulation:
 
     def _run_experiment(self, angle: float, points: int, time: float,
                         spin_state: int) -> tuple:
-        """Simulates a single angle measurement of a given `sample`.
+        """Simulates a single angle measurement of a given `sample` on the
+        instrument set in self.direct_beam_file
 
         Args:
             angle: angle to simulate.
@@ -248,8 +249,8 @@ class Simulation:
 
         wavelengths = direct_beam[:, 0]  # direct_beam = [wavelength, flux]
 
-        # Scale flux by measurement angle squared (assuming both slits scale
-        # linearly with angle, this should be correct)
+        # Scale flux by relative measurement angle squared (assuming both slits
+        # scale linearly with angle, this should be correct)
         direct_flux = direct_beam[:, 1] * pow(angle / self.angle_scale, 2)
 
         # Calculate Q values from the incident angle and wavelength
