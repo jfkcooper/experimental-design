@@ -81,10 +81,10 @@ class Simulation:
 
         Args:
             spin_state: optional, int. spin state to simulate,
-                        if the sample is magnetic.
+                        if the sample is magnetic, else None
 
         Returns:
-            tuple: model and simulated data for the given `sample`.
+            tuple: model and simulated data for the given `sample`
         """
 
         # Iterate over each angle to simulate.
@@ -93,7 +93,7 @@ class Simulation:
         for angle, points, time in self.angle_times:
             # Simulate the experiment.
             total_points += points
-            simulated = self._run_experiment(angle, points, time, self.angle_scale, spin_state)
+            simulated = self._run_experiment(angle, points, time, spin_state)
 
             # Combine the data for the angle with the data from previous angles.
             q.append(simulated[0])
@@ -101,14 +101,14 @@ class Simulation:
             dr.append(simulated[2])
             counts.append(simulated[3])
 
-        # Create a matrix with all of the simulated data.
+        # Create a matrix with all the simulated data.
         data = np.zeros((total_points, 4))
         for i, element in enumerate([q, r, dr, counts]):
             data[:, i] = np.concatenate(element)
 
         data = data[data[:, 0].argsort()]  # Sort by Q.
 
-        # If there is no data after removing zeros, return no model.
+        # If there is no data, return None for the model.
         if len(data) == 0:
             return None, np.zeros((0, 4))
 
@@ -132,7 +132,7 @@ class Simulation:
                 model.probe.R = r
                 model.probe.dR = dr
         else:
-            raise RuntimeError('Sample given isnt valid refnx or refl1D model')
+            raise RuntimeError('Sample given isnt a valid refnx or refl1D model')
 
         return model, data
 
@@ -141,13 +141,13 @@ class Simulation:
         """Simulates an experiment of a given magnetic `sample` measured
            over a number of angles.
         Args:
-            pp: whether to simulate "plus plus" spin state.
-            pm: whether to simulate "plus minus" spin state.
-            mp: whether to simulate "minus plus" spin state.
-            mm: whether to simulate "minus minus" spin state.
+            pp: whether to simulate "plus plus" spin state
+            pm: whether to simulate "plus minus" spin state
+            mp: whether to simulate "minus plus" spin state
+            mm: whether to simulate "minus minus" spin state
 
         Returns:
-            tuple: model and simulated data for the given `sample`.
+            tuple: model and simulated data for the given `sample`
         """
         models, datasets = [], []
         # Simulate the spin states if requested.
@@ -223,8 +223,7 @@ class Simulation:
 
                 experiment = self.refl1d_experiment(q, self.sample.probe.spin_state)
 
-                return experiment.reflectivity()[self.sample.probe.spin_state][
-                    1]
+                return experiment.reflectivity()[self.sample.probe.spin_state][1]
 
             # Otherwise, the sample is not magnetic.
             else:
@@ -232,14 +231,13 @@ class Simulation:
                 return experiment.reflectivity()[1]
 
     def _run_experiment(self, angle: float, points: int, time: float,
-                        angle_scale: float, spin_state: int) -> tuple:
+                        spin_state: int) -> tuple:
         """Simulates a single angle measurement of a given `sample`.
 
         Args:
             angle: angle to simulate.
             points: number of points to use for simulated data.
             time: counting time for simulation.
-            angle_scale: angle to use when scaling directbeam flux.
             spin_state: spin state to simulate if given a magnetic sample.
 
         Returns:
@@ -252,7 +250,7 @@ class Simulation:
 
         # Scale flux by measurement angle squared (assuming both slits scale
         # linearly with angle, this should be correct)
-        direct_flux = direct_beam[:, 1] * pow(angle / angle_scale, 2)
+        direct_flux = direct_beam[:, 1] * pow(angle / self.angle_scale, 2)
 
         # Calculate Q values from the incident angle and wavelength
         q = 4 * np.pi * np.sin(np.radians(angle)) / wavelengths
