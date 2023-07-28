@@ -8,7 +8,7 @@ numpy
 periodictable
 Pillow
 pytest
-refl1d
+refl1d==0.8.14
 refnx
 scipy
 tqdm

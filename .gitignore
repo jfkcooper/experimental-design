@@ -1,9 +1,9 @@
 **__pycache__
 /.spyproject
-/src/notebooks/results
-/src/notebooks/.ipynb_checkpoints
-/src/hogben/__pycache__
-/src/hogben/models/__pycache__
-/src/hogben/results/
-/dist
-/src/hogben/HOGBEN.egg-info
+/examples/results
+/hogben/__pycache__
+/hogben/models/__pycache__
+/hogben/results/
+/hogben/HOGBEN.egg-info
+/notebooks/results
+/notebooks/.ipynb_checkpoints
