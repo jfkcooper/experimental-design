@@ -12,7 +12,25 @@ import refl1d.experiment
 
 class Simulation:
     """
-    A class for simulating experimental data from a refnx or refl1D model
+    A class for simulating experimental data from a refnx or refl1D sample
+    structure. It takes a single model, but can simulate a list of
+    experimental conditions: different angles for different times.
+
+    Attributes:
+        sample: A refnx Structure or a refl1d Stack
+        angle_times: a list of tuples of experimental conditions to simulate,
+                    in the order (angle, # of points, time)
+        scale: a scale-factor for the dataset (e.g. reflectivity of the
+                critical edge), defaults to 1.0
+        bkg: background of the measurement, defaults to 1e-6
+        dq: resolution of the measurement (assuming constant dq/q as a percentage)
+            defaults to 2.0
+        inst_or_path: either the name of an instrument already in HOGBEN, or
+                    the path to a direct beam file, defaults to 'OFFSPEC'
+        angle_scale: the angle at which the direct beam was taken (so that it can
+                    be scaled appropriately), defaults to 0.3
+        polarised: a bool describing if the measurement is polarised, so that the
+                    correct direct beam file is taken, defaults to False
     """
 
     non_pol_instr_dict = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
@@ -25,10 +43,10 @@ class Simulation:
 
     def __init__(self,
                  sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
-                 angle_times: list,
-                 scale: float,
-                 bkg: float,
-                 dq: float,
+                 angle_times: list[tuple],
+                 scale: float = 1.0,
+                 bkg: float = 1e-6,
+                 dq: float = 2.0,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3,
                  polarised: bool = False):
@@ -42,6 +60,7 @@ class Simulation:
         self.polarised = polarised
         self.direct_beam_file = self.direct_beam_path()
         self.angle_scale = angle_scale
+        self.model = None
 
 
     def direct_beam_path(self) -> str:
@@ -49,7 +68,7 @@ class Simulation:
         instrument being used
 
         Returns:
-            str or None: A string of the hogben internal path of the correct
+            A string of the hogben internal path of the correct
             direct beam file or the local path
         """
 
@@ -75,7 +94,7 @@ class Simulation:
 
         return path
 
-    def simulate(self, spin_state: Optional[str] = None) -> tuple:
+    def simulate(self, spin_state: Optional[int] = None) -> tuple:
         """Simulates an experiment of self.sample measured at the angles and
         for the durations specified in self.angle_times
 
@@ -88,7 +107,7 @@ class Simulation:
         """
 
         # Iterate over each angle to simulate.
-        q, r, dr, counts = [], [], [], []
+        q, r, dr, counts, model = [], [], [], [], None
         total_points = 0
         for angle, points, time in self.angle_times:
             # Simulate the experiment.
@@ -100,6 +119,8 @@ class Simulation:
             r.append(simulated[1])
             dr.append(simulated[2])
             counts.append(simulated[3])
+            model = simulated[4]
+
 
         # Create a matrix with all the simulated data.
         data = np.zeros((total_points, 4))
@@ -114,14 +135,10 @@ class Simulation:
 
         # If a refnx sample was given, create a refnx ReflectModel.
         if isinstance(self.sample, refnx.reflect.Structure):
-            model = refnx.reflect.ReflectModel(self.sample, scale=self.scale,
-                                               bkg=self.bkg, dq=self.dq)
+            return model, data
 
         # If a Refl1D sample was given, create a Refl1D Experiment.
         elif isinstance(self.sample, refl1d.model.Stack):
-            # Create the experiment object.
-            model = self.refl1d_experiment(q, spin_state)
-
             # Record the data.
             model.probe.dq = self.dq
             if self.sample.ismagnetic:
@@ -131,10 +148,12 @@ class Simulation:
             else:
                 model.probe.R = r
                 model.probe.dR = dr
-        else:
-            raise RuntimeError('Sample given isnt a valid refnx or refl1D model')
 
-        return model, data
+            return model, data
+
+        else:
+            raise RuntimeError('Sample given is not a valid refnx or refl1D model')
+
 
     def simulate_magnetic(self, mm: bool = True, mp: bool = True,
                           pm: bool = True, pp: bool = True) -> tuple:
@@ -212,22 +231,20 @@ class Simulation:
             return []
 
         # Calculate the reflectance in either refnx or Refl1D.
-        if isinstance(self.sample, refnx.reflect.ReflectModel):
-            model = refnx.reflect.ReflectModel(self.sample, scale=self.scale,
+        if isinstance(self.sample, refnx.reflect.Stucture):
+            self.model = refnx.reflect.ReflectModel(self.sample, scale=self.scale,
                                                bkg=self.bkg, dq=self.dq)
-            return model(q)
+            return self.model(q)
 
-        if isinstance(self.sample, refl1d.experiment.Experiment):
+        if isinstance(self.sample, refl1d.model.Stack):
             # If magnetic, use the correct spin state.
+            experiment = self.refl1d_experiment(q, self.sample.probe.spin_state)
+
             if self.sample.sample.ismagnetic:
-
-                experiment = self.refl1d_experiment(q, self.sample.probe.spin_state)
-
                 return experiment.reflectivity()[self.sample.probe.spin_state][1]
+            # experiment.reflectivity() returns q, r, or an array if magnetic
 
-            # Otherwise, the sample is not magnetic.
             else:
-                experiment = self.refl1d_experiment(q, self.sample.probe.spin_state)
                 return experiment.reflectivity()[1]
 
     def _run_experiment(self, angle: float, points: int, time: float,
@@ -299,4 +316,4 @@ class Simulation:
                             out=np.zeros_like(counts_reflected),
                             where=counts_incident != 0)
 
-        return q_binned, r_noisy, r_error, counts_incident
+        return q_binned, r_noisy, r_error, counts_incident, r_model
