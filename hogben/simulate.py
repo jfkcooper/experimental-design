@@ -10,11 +10,11 @@ import refl1d.probe
 import refl1d.experiment
 
 
-class Simulation:
+class SimulateReflectivity:
     """
-    A class for simulating experimental data from a refnx or refl1D sample
-    structure. It takes a single model, but can simulate a list of
-    experimental conditions: different angles for different times.
+    A class for simulating experimental reflectivity data from a refnx or
+    refl1D sample structure. It takes a single model, but can simulate a list
+    of experimental conditions, e.g. different angles for different times.
 
     Attributes:
         sample: A refnx Structure or a refl1d Stack
@@ -23,14 +23,15 @@ class Simulation:
         scale: a scale-factor for the dataset (e.g. reflectivity of the
                 critical edge), defaults to 1.0
         bkg: background of the measurement, defaults to 1e-6
-        dq: resolution of the measurement (assuming constant dq/q as a percentage)
-            defaults to 2.0
+        dq: resolution of the measurement (assuming constant dq/q as a
+            percentage), defaults to 2.0
         inst_or_path: either the name of an instrument already in HOGBEN, or
-                    the path to a direct beam file, defaults to 'OFFSPEC'
-        angle_scale: the angle at which the direct beam was taken (so that it can
-                    be scaled appropriately), defaults to 0.3
-        polarised: a bool describing if the measurement is polarised, so that the
-                    correct direct beam file is taken, defaults to False
+                      the path to a direct beam file, defaults to 'OFFSPEC'
+        angle_scale: the angle at which the direct beam was taken (so that it
+                     can be scaled appropriately), defaults to 0.3
+        polarised: a list of the spin states to be simulated if the measurement
+                   is polarised, so that the correct direct beam file is taken,
+                   defaults to None [mm, mp, pm, pp]
     """
 
     non_pol_instr_dict = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
@@ -49,7 +50,7 @@ class Simulation:
                  dq: float = 2.0,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3,
-                 polarised: bool = False):
+                 polarised: list = None):
 
         self.sample = sample
         self.angle_times = angle_times
@@ -69,7 +70,7 @@ class Simulation:
 
         Returns:
             A string of the hogben internal path of the correct
-            direct beam file or the local path
+            direct beam file or the local file path
         """
 
         # Check if the key isn't in the dictionary and check if it is a
@@ -84,23 +85,25 @@ class Simulation:
 
         if self.polarised is True:
             path = importlib_resources.files(
-                'hogben.data.directbeams').joinpath(
-                self.pol_instr_dict[self.inst_or_path])
+                   'hogben.data.directbeams').joinpath(
+                   self.pol_instr_dict[self.inst_or_path])
 
             return path
 
         path = importlib_resources.files('hogben.data.directbeams').joinpath(
-            self.non_pol_instr_dict[self.inst_or_path])
+               self.non_pol_instr_dict[self.inst_or_path])
 
         return path
 
     def simulate(self, spin_state: Optional[int] = None) -> tuple:
-        """Simulates an experiment of self.sample measured at the angles and
-        for the durations specified in self.angle_times
+        """Simulates a measurement of self.sample taken at the angles and
+        for the durations specified in self.angle_times on the instrument
+        specified in self.direct_beam_path
 
         Args:
-            spin_state: optional, int. spin state to simulate,
-                        if the sample is magnetic, else None
+            spin_state: optional, integer spin state to simulate if the
+            sample is magnetic, refers to [mm, mp, pm, pp]. None if non-
+            magnetic
 
         Returns:
             tuple: model and simulated data for the given `sample`
@@ -114,15 +117,14 @@ class Simulation:
             total_points += points
             simulated = self._run_experiment(angle, points, time, spin_state)
 
-            # Combine the data for the angle with the data from previous angles.
+            # Combine the data for the angle with the data from previous angles
             q.append(simulated[0])
             r.append(simulated[1])
             dr.append(simulated[2])
             counts.append(simulated[3])
             model = simulated[4]
 
-
-        # Create a matrix with all the simulated data.
+        # Create a matrix with all the simulated data
         data = np.zeros((total_points, 4))
         for i, element in enumerate([q, r, dr, counts]):
             data[:, i] = np.concatenate(element)
@@ -152,7 +154,8 @@ class Simulation:
             return model, data
 
         else:
-            raise RuntimeError('Sample given is not a valid refnx or refl1D model')
+            msg = 'Sample given is not a valid refnx or refl1D model'
+            raise RuntimeError(msg)
 
 
     def simulate_magnetic(self, mm: bool = True, mp: bool = True,
@@ -226,21 +229,24 @@ class Simulation:
             numpy.ndarray: reflectivity for each Q point.
 
         """
-        # If there are no data points, return an empty list.
+        # If there are no data points, return an empty array.
         if len(q) == 0:
-            return []
+            return np.array([])
 
         # Calculate the reflectance in either refnx or Refl1D.
         if isinstance(self.sample, refnx.reflect.Stucture):
-            self.model = refnx.reflect.ReflectModel(self.sample, scale=self.scale,
-                                               bkg=self.bkg, dq=self.dq)
+            self.model = refnx.reflect.ReflectModel(self.sample,
+                                                    scale=self.scale,
+                                                    bkg=self.bkg,
+                                                    dq=self.dq)
             return self.model(q)
 
         if isinstance(self.sample, refl1d.model.Stack):
             # If magnetic, use the correct spin state.
-            experiment = self.refl1d_experiment(q, self.sample.probe.spin_state)
+            experiment = self.refl1d_experiment(q,
+                                                self.sample.probe.spin_state)
 
-            if self.sample.sample.ismagnetic:
+            if self.sample.ismagnetic:
                 return experiment.reflectivity()[self.sample.probe.spin_state][1]
             # experiment.reflectivity() returns q, r, or an array if magnetic
 
@@ -304,7 +310,7 @@ class Simulation:
         # Get the measured reflected count for each bin.
         # r_model accounts for background.
         counts_reflected = np.random.poisson(r_model * counts_incident).astype(
-            float)
+                                             float)
 
         # Convert from count space to reflectivity space.
         # Point has zero reflectivity if there is no flux.
