@@ -29,7 +29,7 @@ class SimulateReflectivity:
                       the path to a direct beam file, defaults to 'OFFSPEC'
         angle_scale: the angle at which the direct beam was taken (so that it
                      can be scaled appropriately), defaults to 0.3
-        polarised: a list of the spin states to be simulated if the measurement
+        spin_states: a list of the spin states to be simulated if the measurement
                    is polarised, so that the correct direct beam file is taken,
                    defaults to None [mm, mp, pm, pp]
     """
@@ -50,7 +50,7 @@ class SimulateReflectivity:
                  dq: float = 2.0,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3,
-                 polarised: list = None):
+                 spin_states: list = None):
 
         self.sample = sample
         self.angle_times = angle_times
@@ -58,7 +58,7 @@ class SimulateReflectivity:
         self.bkg = bkg
         self.dq = dq
         self.inst_or_path = inst_or_path
-        self.polarised = polarised
+        self.spin_states = spin_states
         self.direct_beam_file = self.direct_beam_path()
         self.angle_scale = angle_scale
         self.model = None
@@ -83,7 +83,7 @@ class SimulateReflectivity:
                 msg = "Please provide an instrument name or a local filepath"
                 raise FileNotFoundError(str(msg))
 
-        if self.polarised is True:
+        if self.spin_states is True:
             path = importlib_resources.files(
                    'hogben.data.directbeams').joinpath(
                    self.pol_instr_dict[self.inst_or_path])
