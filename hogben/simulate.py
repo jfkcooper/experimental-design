@@ -13,25 +13,20 @@ import refl1d.experiment
 class SimulateReflectivity:
     """
     A class for simulating experimental reflectivity data from a refnx or
-    refl1D sample structure. It takes a single model, but can simulate a list
+    refl1D model. It takes a single model, but can simulate a list
     of experimental conditions, e.g. different angles for different times.
 
     Attributes:
-        sample: A refnx Structure or a refl1d Stack
+        sample_model: A refnx or a refl1d model
         angle_times: a list of tuples of experimental conditions to simulate,
                     in the order (angle, # of points, time)
-        scale: a scale-factor for the dataset (e.g. reflectivity of the
-                critical edge), defaults to 1.0
-        bkg: background of the measurement, defaults to 1e-6
-        dq: resolution of the measurement (assuming constant dq/q as a
-            percentage), defaults to 2.0
         inst_or_path: either the name of an instrument already in HOGBEN, or
                       the path to a direct beam file, defaults to 'OFFSPEC'
         angle_scale: the angle at which the direct beam was taken (so that it
                      can be scaled appropriately), defaults to 0.3
-        spin_states: a list of the spin states to be simulated if the measurement
-                   is polarised, so that the correct direct beam file is taken,
-                   defaults to None [mm, mp, pm, pp]
+        spin_states: a list of the spin states to be simulated if the
+                     measurement is polarised, so that the correct direct beam
+                     file is taken, defaults to None [mm, mp, pm, pp]
     """
 
     non_pol_instr_dict = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
@@ -43,25 +38,19 @@ class SimulateReflectivity:
                       'POLREF': 'POLREF_polarised.dat'}
 
     def __init__(self,
-                 sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
+                 sample_model: Union['refnx.reflect.ReflectModel',
+                                     'refl1d.model'],
                  angle_times: list[tuple],
-                 scale: float = 1.0,
-                 bkg: float = 1e-6,
-                 dq: float = 2.0,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3,
                  spin_states: list = None):
 
-        self.sample = sample
+        self.sample_model = sample_model
         self.angle_times = angle_times
-        self.scale = scale
-        self.bkg = bkg
-        self.dq = dq
         self.inst_or_path = inst_or_path
         self.spin_states = spin_states
         self.direct_beam_file = self.direct_beam_path()
         self.angle_scale = angle_scale
-        self.model = None
 
 
     def direct_beam_path(self) -> str:
@@ -77,8 +66,10 @@ class SimulateReflectivity:
         # a local filepath instead
         if self.inst_or_path not in (
                 self.non_pol_instr_dict or self.pol_instr_dict):
+
             if os.path.isfile(self.inst_or_path):
                 return self.inst_or_path
+
             else:
                 msg = "Please provide an instrument name or a local filepath"
                 raise FileNotFoundError(str(msg))
@@ -136,14 +127,14 @@ class SimulateReflectivity:
             return None, np.zeros((0, 4))
 
         # If a refnx sample was given, create a refnx ReflectModel.
-        if isinstance(self.sample, refnx.reflect.Structure):
+        if isinstance(self.sample_model, refnx.reflect.Structure):
             return model, data
 
         # If a Refl1D sample was given, create a Refl1D Experiment.
-        elif isinstance(self.sample, refl1d.model.Stack):
+        elif isinstance(self.sample_model, refl1d.model.Stack):
             # Record the data.
             model.probe.dq = self.dq
-            if self.sample.ismagnetic:
+            if self.sample_model.ismagnetic:
                 model.probe.xs[spin_state].R = r
                 model.probe.xs[spin_state].dR = dr
                 model.probe.spin_state = spin_state
@@ -211,16 +202,16 @@ class SimulateReflectivity:
                                     21 * len(q_array))
 
         # If the sample is magnetic, create a polarised QProbe.
-        if self.sample.ismagnetic:
+        if self.sample_model.ismagnetic:
             probes = [None] * 4
             probes[spin_state] = probe
             probe = refl1d.probe.PolarizedQProbe(xs=probes, name='')
             probe.spin_state = spin_state
 
-        return refl1d.experiment.Experiment(probe=probe, sample=self.sample)
+        return refl1d.experiment.Experiment(probe=probe, sample=self.sample_model)
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
-        """Calculates the reflectance of a `model` at given `q` points.
+        """Calculates the model reflectivity at given `q` points.
 
         Args:
             q: Q points to calculate reflectance at.
@@ -234,20 +225,20 @@ class SimulateReflectivity:
             return np.array([])
 
         # Calculate the reflectance in either refnx or Refl1D.
-        if isinstance(self.sample, refnx.reflect.Stucture):
-            self.model = refnx.reflect.ReflectModel(self.sample,
+        if isinstance(self.sample_model, refnx.reflect.Stucture):
+            self.model = refnx.reflect.ReflectModel(self.sample_model,
                                                     scale=self.scale,
                                                     bkg=self.bkg,
                                                     dq=self.dq)
             return self.model(q)
 
-        if isinstance(self.sample, refl1d.model.Stack):
+        if isinstance(self.sample_model, refl1d.model.Stack):
             # If magnetic, use the correct spin state.
             experiment = self.refl1d_experiment(q,
-                                                self.sample.probe.spin_state)
+                                                self.sample_model.probe.spin_state)
 
-            if self.sample.ismagnetic:
-                return experiment.reflectivity()[self.sample.probe.spin_state][1]
+            if self.sample_model.ismagnetic:
+                return experiment.reflectivity()[self.sample_model.probe.spin_state][1]
             # experiment.reflectivity() returns q, r, or an array if magnetic
 
             else:
@@ -288,15 +279,15 @@ class SimulateReflectivity:
             [(q_bin_edges[i] + q_bin_edges[i + 1]) / 2 for i in range(points)])
 
         # Calculate the model reflectivity at each Q point.
-        if isinstance(self.sample, refnx.reflect.Structure):
+        if isinstance(self.sample_model, refnx.reflect.Structure):
             # Create a refnx ReflectModel if the sample was defined in refnx.
-            model = refnx.reflect.ReflectModel(self.sample, scale=self.scale,
+            model = refnx.reflect.ReflectModel(self.sample_model, scale=self.scale,
                                                bkg=self.bkg, dq=self.dq)
             r_model = model(q_binned)
 
-        elif isinstance(self.sample, refl1d.model.Stack):
+        elif isinstance(self.sample_model, refl1d.model.Stack):
             # Create a Refl1D experiment if the sample was defined in Refl1D.
-            experiment = self.refl1d_experiment(self.sample, q_binned,
+            experiment = self.refl1d_experiment(self.sample_model, q_binned,
                                                 spin_state)
             r_model = self.reflectivity(q_binned, experiment)
 
