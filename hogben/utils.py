@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -143,7 +143,7 @@ class Sampler:
         return fig
 
 
-def fisher(qs: list[list],
+def fisher(qs: list[np.ndarray],
            xi: list[Union['refnx.analysis.Parameter',
                           'bumps.parameter.Parameter']],
            counts: list[int],
@@ -183,8 +183,7 @@ def fisher(qs: list[list],
 
     # Calculate the gradient of model reflectivity with every model parameter
     # for every model data point.
-    for i in range(m):
-        parameter = xi[i]
+    for i, parameter in enumerate(xi):
         old = parameter.value
 
         # Calculate reflectance for each model for first part of gradient.
@@ -230,8 +229,8 @@ def fisher(qs: list[list],
                 importance_array.append(1)
         importance = np.diag(importance_array)
         H = np.diag(1 / (ub - lb))  # Get unit scaling Jacobian.
-        g = np.dot(np.dot(H.T, g), H) # Perform unit scaling.
-        g = np.dot(g, importance) # Perform importance scaling.
+        g = np.dot(np.dot(H.T, g), H)  # Perform unit scaling.
+        g = np.dot(g, importance)  # Perform importance scaling.
 
         # Return the Fisher information matrix.
     return g

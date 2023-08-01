@@ -1,8 +1,7 @@
 **__pycache__
+.*
 /.spyproject
 /examples/results
-/hogben/__pycache__
-/hogben/models/__pycache__
 /hogben/results/
 /hogben/HOGBEN.egg-info
 /notebooks/results
