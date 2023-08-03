@@ -143,13 +143,7 @@ class Sampler:
         return fig
 
 
-def fisher(qs: list[np.ndarray],
-           xi: list[Union['refnx.analysis.Parameter',
-                          'bumps.parameter.Parameter']],
-           counts: list[int],
-           models: list[Union['refnx.reflect.ReflectModel',
-                              'refl1d.experiment.Experiment']],
-           step: float = 0.005) -> np.ndarray:
+class Fisher():
     """Calculates the Fisher information matrix for multiple `models`
     containing parameters `xi`. The model describes the experiment,
     including the sample, and is defined using `refnx` or `refl1d`. The
@@ -163,77 +157,182 @@ def fisher(qs: list[np.ndarray],
     "layer1" can be set to 2 using `layer1.thickness.importance = 2` or
     `layer1.thick.importance = 2` in `refnx` and `refl1d` respectively.
 
-    Args:
+    Attributes:
         qs: The Q points for each model.
         xi: The varying model parameters.
         counts: incident neutron counts corresponding to each Q value.
         models: models to calculate gradients with.
         step: step size to take when calculating gradient.
-    Returns:
-        numpy.ndarray: Fisher information matrix for given models and data.
+        g: The Fisher information matrix
+        min_eigenval: The minimum eigenvalue associated with the Fisher
+         information matrix
 
     """
-    n = sum(len(q) for q in qs)  # Number of data points.
-    m = len(xi)  # Number of parameters.
-    J = np.zeros((n, m))
 
-    # There is no information if there is no data.
-    if n == 0:
-        return np.zeros((m, m))
+    def __init__(self,
+                 qs: list[np.ndarray],
+                 xi: list[Union['refnx.analysis.Parameter',
+                                'bumps.parameter.Parameter']],
+                 counts: list[int],
+                 models: list[Union['refnx.reflect.ReflectModel',
+                                    'refl1d.experiment.Experiment']],
+                 step: float = 0.005):
+        """Constructor for the Fisher matrix class.
 
-    # Calculate the gradient of model reflectivity with every model parameter
-    # for every model data point.
-    for i, parameter in enumerate(xi):
-        old = parameter.value
+        Args:
+            qs: The Q points for each model.
+            xi: The varying model parameters.
+            counts: incident neutron counts corresponding to each Q value.
+            models: models to calculate gradients with.
+            step: step size to take when calculating gradient.
+            g: The Fisher information matrix
+            min_eigenval: The minimum eigenvalue associated with the Fisher
+             information matrix
+        """
+        self.qs = qs
+        self.xi = xi
+        self.counts = counts
+        self.models = models
+        self.step = step
 
-        # Calculate reflectance for each model for first part of gradient.
-        x1 = parameter.value = old * (1 - step)
-        y1 = np.concatenate([reflectivity(q, model)
-                             for q, model in list(zip(qs, models))])
+    @property
+    def n(self) -> int:
+        """The total amount of datapoints.
 
-        # Calculate reflectance for each model for second part of gradient.
-        x2 = parameter.value = old * (1 + step)
-        y2 = np.concatenate([reflectivity(q, model)
-                             for q, model in list(zip(qs, models))])
+        Returns:
+            int: total amount of datapoints.
+        """
+        return sum(len(q) for q in self.qs)
 
-        parameter.value = old  # Reset the parameter.
+    @property
+    def m(self) -> int:
+        """The total amount of parameters.
 
-        J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
+        Returns:
+            int: total amount of parameters.
+        """
+        return len(self.xi)
 
-    # Calculate the reflectance for each model for the given Q values.
-    r = np.concatenate([reflectivity(q, model)
-                        for q, model in list(zip(qs, models))])
+    @property
+    def g(self) -> np.ndarray:
+        """The Fisher information matrix.
 
-    # Calculate the Fisher information matrix using equations from the paper.
-    M = np.diag(np.concatenate(counts) / r, k=0)
-    g = np.dot(np.dot(J.T, M), J)
+        Returns:
+            numpy.ndarray: The Fisher information matrix.
+        """
+        return self._calculate_g()
 
-    # If there are multiple parameters,
-    # scale each parameter's information by its "importance".
-    if len(xi) > 1:
-        if isinstance(xi[0], refnx.analysis.Parameter):
-            lb = np.array([param.bounds.lb for param in xi])
-            ub = np.array([param.bounds.ub for param in xi])
+    @g.setter
+    def g(self, value: np.ndarray):
+        """Sets the fisher information matrix."""
+        self.g = value
 
-        elif isinstance(xi[0], bumps.parameter.Parameter):
-            lb = np.array([param.bounds.limits[0] for param in xi])
-            ub = np.array([param.bounds.limits[1] for param in xi])
+    @property
+    def min_eigenval(self) -> float:
+        """The minimum eigenvalue associated with the Fisher information
+         matrix.
 
-        # Scale each parameter with their specified importance,
-        # scale with one if no importance was specified.
-        importance_array = []
-        for param in xi:
-            if hasattr(param, "importance"):
-                importance_array.append(param.importance)
-            else:
-                importance_array.append(1)
-        importance = np.diag(importance_array)
+        Returns:
+            float: The minimum eigenvalue.
+        """
+        return np.linalg.eigvalsh(self.g)[0]
+
+    def _calculate_g(self) -> np.ndarray:
+        """Calculates the Fisher information matrix using the class attributes.
+
+        Returns:
+            numpy.ndarray: The Fisher information matrix.
+        """
+        if self.n == 0:
+            return np.zeros((self.m, self.m))
+        J = self._get_gradient_matrix()
+
+        # Calculate the reflectance for each model for the given Q values.
+        r = np.concatenate([reflectivity(q, model)
+                            for q, model in list(zip(self.qs, self.models))])
+
+        # Calculate the Fisher information matrix using equations from
+        # the paper.
+        M = np.diag(np.concatenate(self.counts) / r, k=0)
+        g = np.dot(np.dot(J.T, M), J)
+
+        # Perform unit scaling if there's more than one parameter
+        if len(self.xi) > 1:
+            g = self._scale_units(g)  # Scale by unit bounds
+            g = self._scale_importance(g)  # Scale by importance
+        return g
+
+    def _scale_units(self, g: np.ndarray) -> np.ndarray:
+        """Scale the Fisher information matrix using unit scaling.
+
+        Args:
+            g: The Fisher information matrix.
+
+        Returns:
+            numpy.ndarray: The scaled Fisher information matrix.
+        """
+        lb, ub = self._get_bounds()
         H = np.diag(1 / (ub - lb))  # Get unit scaling Jacobian.
-        g = np.dot(np.dot(H.T, g), H)  # Perform unit scaling.
-        g = np.dot(g, importance)  # Perform importance scaling.
+        return np.dot(np.dot(H.T, g), H)  # Perform unit scaling.
 
-        # Return the Fisher information matrix.
-    return g
+    def _scale_importance(self, g: np.ndarray) -> np.ndarray:
+        """Scale the Fisher information matrix using importance scaling.
+
+        Args:
+            g: The Fisher information matrix.
+
+        Returns:
+            numpy.ndarray: The scaled Fisher information matrix.
+        """
+        importance_array = [param.importance if hasattr(param, "importance")
+                            else 1 for param in self.xi]
+        importance = np.diag(importance_array)
+        return np.dot(g, importance)
+
+    def _get_gradient_matrix(self) -> np.ndarray:
+        """Calculate the gradient matrix.
+
+        Returns:
+            numpy.ndarray: The gradient matrix.
+        """
+        J = np.zeros((self.n, self.m))
+        for i, parameter in enumerate(self.xi):
+            old = parameter.value
+
+            # Calculate reflectance for each model for first part of gradient.
+            x1 = parameter.value = old * (1 - self.step)
+            y1 = np.concatenate([reflectivity(q, model)
+                                 for q, model in list(zip(self.qs,
+                                                          self.models))])
+
+            # Calculate reflectance for each model for second part of gradient.
+            x2 = parameter.value = old * (1 + self.step)
+            y2 = np.concatenate([reflectivity(q, model)
+                                 for q, model in list(zip(self.qs,
+                                                          self.models))])
+
+            parameter.value = old  # Reset the parameter.
+
+            J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
+        return J
+
+    def _get_bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """Get the bounds from the refnx or refl1d model.
+
+        Returns:
+            tuple: The lower and upper bounds of the parameters.
+        """
+        if isinstance(self.xi[0], refnx.analysis.Parameter):
+            lb = np.array([param.bounds.lb for param in self.xi])
+            ub = np.array([param.bounds.ub for param in self.xi])
+
+        elif isinstance(self.xi[0], bumps.parameter.Parameter):
+            lb = np.array([param.bounds.limits[0] for param in self.xi])
+            ub = np.array([param.bounds.limits[1] for param in self.xi])
+        # Otherwise, the sample must be invalid.
+        else:
+            raise RuntimeError('Invalid sample given')
+        return lb, ub
 
 
 def save_plot(fig, save_path, filename):

@@ -153,10 +153,10 @@ class Optimiser:
                        for i in range(num_angles)]
 
         # Calculate the Fisher information matrix.
-        g = self.sample.angle_info(angle_times, contrasts)
+        fisher = self.sample.angle_info(angle_times, contrasts)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     def _contrasts_func(self, x, num_contrasts, angle_splits, total_time):
         """Defines the function for optimising an experiment's contrasts.

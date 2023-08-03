@@ -10,7 +10,7 @@ import refnx.reflect
 import refnx.analysis
 
 from hogben.simulate import simulate
-from hogben.utils import fisher, Sampler, save_plot
+from hogben.utils import Fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -141,9 +141,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Exclude certain parameters if underlayers are being used.
         if underlayers is None:
-            return fisher(qs, self.params, counts, models)
+            return Fisher(qs, self.params, counts,
+                          models).g
         else:
-            return fisher(qs, self.underlayer_params, counts, models)
+            return Fisher(qs, self.underlayer_params, counts,
+                          models).g
 
     @abstractmethod
     def _using_conditions(self):

@@ -108,14 +108,14 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
 
         # Get the information from the initial angle at the current time.
         angle_times_init = [(initial_angle, points, time_range[i])]
-        g_init = sample.angle_info(angle_times_init, contrasts)
+        g_init = sample.angle_info(angle_times_init, contrasts).g
 
         # Iterate over each angle to consider.
         min_eigs = []
         for new_angle in angle_range:
             # Combine the information from the first and second angles.
             angle_times_new = [(new_angle, points, new_time)]
-            g_new = sample.angle_info(angle_times_new, contrasts)
+            g_new = sample.angle_info(angle_times_new, contrasts).g
             min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
 
         # Update the data of the line.
