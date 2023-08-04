@@ -163,9 +163,8 @@ class Fisher():
         counts: incident neutron counts corresponding to each Q value.
         models: models to calculate gradients with.
         step: step size to take when calculating gradient.
-        g: The Fisher information matrix
-        min_eigenval: The minimum eigenvalue associated with the Fisher
-         information matrix
+        fisher_information: The Fisher information matrix
+        min_eigenval: The minimum eigenvalue of the Fisher information matrix
 
     """
 
@@ -185,9 +184,6 @@ class Fisher():
             counts: incident neutron counts corresponding to each Q value.
             models: models to calculate gradients with.
             step: step size to take when calculating gradient.
-            g: The Fisher information matrix
-            min_eigenval: The minimum eigenvalue associated with the Fisher
-             information matrix
         """
         self.qs = qs
         self.xi = xi
@@ -197,7 +193,7 @@ class Fisher():
 
     @property
     def n(self) -> int:
-        """The total amount of datapoints.
+        """The total number of datapoints.
 
         Returns:
             int: total amount of datapoints.
@@ -206,7 +202,7 @@ class Fisher():
 
     @property
     def m(self) -> int:
-        """The total amount of parameters.
+        """The total number of parameters.
 
         Returns:
             int: total amount of parameters.
@@ -214,30 +210,24 @@ class Fisher():
         return len(self.xi)
 
     @property
-    def g(self) -> np.ndarray:
+    def fisher_information(self) -> np.ndarray:
         """The Fisher information matrix.
 
         Returns:
             numpy.ndarray: The Fisher information matrix.
         """
-        return self._calculate_g()
-
-    @g.setter
-    def g(self, value: np.ndarray):
-        """Sets the fisher information matrix."""
-        self.g = value
+        return self._calculate_fisher_information()
 
     @property
     def min_eigenval(self) -> float:
-        """The minimum eigenvalue associated with the Fisher information
-         matrix.
+        """The minimum eigenvalue of the Fisher information matrix
 
         Returns:
             float: The minimum eigenvalue.
         """
-        return np.linalg.eigvalsh(self.g)[0]
+        return np.linalg.eigvalsh(self.fisher_information)[0]
 
-    def _calculate_g(self) -> np.ndarray:
+    def _calculate_fisher_information(self) -> np.ndarray:
         """Calculates the Fisher information matrix using the class attributes.
 
         Returns:
@@ -256,14 +246,17 @@ class Fisher():
         M = np.diag(np.concatenate(self.counts) / r, k=0)
         g = np.dot(np.dot(J.T, M), J)
 
-        # Perform unit scaling if there's more than one parameter
-        if len(self.xi) > 1:
+        # Perform unit scaling if there's at least one parameter
+        if len(self.xi) >= 1:
             g = self._scale_units(g)  # Scale by unit bounds
             g = self._scale_importance(g)  # Scale by importance
+
         return g
 
     def _scale_units(self, g: np.ndarray) -> np.ndarray:
-        """Scale the Fisher information matrix using unit scaling.
+
+        """Scale the values of the fisher information matrix for each parameter
+        from interval [lb, ub] to the interval [0, 1]
 
         Args:
             g: The Fisher information matrix.

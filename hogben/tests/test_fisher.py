@@ -119,7 +119,7 @@ def test_fisher_workflow_refnx(refnx_model):
     corresponding results are consistent with the expected values
     """
     g = Fisher(QS, refnx_model.xi, COUNTS,
-               [refnx_model]).g
+               [refnx_model]).fisher_information
     expected_fisher = [
         [5.17704306e-06, 2.24179068e-06, -5.02221954e-07, -7.91886209e-07],
         [2.24179068e-06, 1.00559528e-06, -2.09433754e-07, -3.18583142e-07],
@@ -135,7 +135,7 @@ def test_fisher_workflow_refl1d(refl1d_model):
     corresponding results are consistent with the expected values
     """
     g = Fisher(QS, refl1d_model.xi, COUNTS,
-               [refl1d_model]).g
+               [refl1d_model]).fisher_information
     expected_fisher = [
         [4.58294661e-06, 2.07712766e-06, -4.23068571e-07, -6.80596824e-07],
         [2.07712766e-06, 9.76175381e-07, -1.84017555e-07, -2.83513452e-07],
@@ -201,7 +201,7 @@ def test_fisher_analytical_values(mock_reflectivity, model_class, request):
         [0.5125, 0.205, 10.25],
         [25.625, 10.25, 512.5]
     ]
-    g_reference = Fisher(QS, xi, COUNTS, [model]).g
+    g_reference = Fisher(QS, xi, COUNTS, [model]).fisher_information
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
@@ -237,7 +237,7 @@ def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
         [0.5125, 0.41, 30.75],
         [25.625, 20.5, 1537.5]
     ]
-    g_reference = Fisher(QS, xi, COUNTS, [model]).g
+    g_reference = Fisher(QS, xi, COUNTS, [model]).fisher_information
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
@@ -252,9 +252,9 @@ def test_fisher_consistent_steps(step, model_class, request):
     model = request.getfixturevalue(model_class)
     model.xi = model.xi[:1]
     g_reference = Fisher(QS, model.xi, COUNTS, [model],
-                         step=0.005).g
+                         step=0.005).fisher_information
     g_compare = Fisher(QS, model.xi, COUNTS, [model],
-                       step=step).g
+                       step=step).fisher_information
     np.testing.assert_allclose(g_reference, g_compare, rtol=1e-02)
 
 
@@ -273,7 +273,7 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
     mock_reflectivity.side_effect = generate_reflectivity_data()
 
     expected_shape = (model_params, model_params)
-    g = Fisher(QS, xi, COUNTS, [model]).g
+    g = Fisher(QS, xi, COUNTS, [model]).fisher_information
     np.testing.assert_array_equal(g.shape, expected_shape)
 
 
@@ -293,7 +293,7 @@ def test_fisher_diagonal_non_negative(mock_reflectivity, qs, model_class,
     mock_reflectivity.side_effect = (np.random.rand(len(qs)) for _ in range(
         19))
     counts = [np.ones(len(qs)) * 100]
-    g = Fisher([qs], model.xi, counts, [model]).g
+    g = Fisher([qs], model.xi, counts, [model]).fisher_information
     assert np.all(np.diag(g)) >= 0
 
 @pytest.mark.parametrize('model_class', ("mock_refl1d_model",
@@ -304,7 +304,7 @@ def test_fisher_no_data(model_params, model_class, request):
     matrix of the correct shape"""
     model = request.getfixturevalue(model_class)
     xi = model.xi[:model_params]
-    g = Fisher([], xi, COUNTS, [model]).g
+    g = Fisher([], xi, COUNTS, [model]).fisher_information
     np.testing.assert_equal(g, np.zeros((len(xi), len(xi))))
 
 
@@ -316,7 +316,7 @@ def test_fisher_no_parameters(mock_reflectivity, model_class, request):
     zero array"""
     model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = generate_reflectivity_data()
-    g = Fisher(QS, [], COUNTS, [model]).g
+    g = Fisher(QS, [], COUNTS, [model]).fisher_information
     np.testing.assert_equal(g.shape, (0, 0))
 
 
@@ -330,12 +330,12 @@ def test_fisher_doubling_with_two_identical_models(model_class, request):
     """
     model = request.getfixturevalue(model_class)
     g_single = Fisher(QS, model.xi, COUNTS, [model],
-                      0.005).g
+                      0.005).fisher_information
 
     counts = [COUNTS[0], COUNTS[0]]
     qs = [QS[0], QS[0]]
     g_double = Fisher(qs, model.xi, counts, [model, model],
-                      0.005).g
+                      0.005).fisher_information
     np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
 
 
@@ -354,5 +354,5 @@ def test_multiple_models_shape(model_class, request):
     counts = [COUNTS[0], COUNTS[0]]
     qs = [QS[0], QS[0]]
     g_double = Fisher(qs, xi, counts, [model, model_2],
-                      0.005).g
+                      0.005).fisher_information
     np.testing.assert_equal(g_double.shape, (xi_length, xi_length))

@@ -142,19 +142,19 @@ def _figure_2(save_path):
                          for angle, points, split in angle_splits]
 
     # Information from the D2O and H2O contrasts for each model.
-    g_init_1 = (sample_1.angle_info(d2o_angle_times_1, [6.36]).g +
-                sample_1.angle_info(h2o_angle_times_1, [-0.56]).g)
+    g_init_1 = (sample_1.angle_info(d2o_angle_times_1, [6.36]).fisher_information +
+                sample_1.angle_info(h2o_angle_times_1, [-0.56]).fisher_information)
 
-    g_init_2 = (sample_2.angle_info(d2o_angle_times_2, [6.36]).g +
-                sample_2.angle_info(h2o_angle_times_2, [-0.56]).g)
+    g_init_2 = (sample_2.angle_info(d2o_angle_times_2, [6.36]).fisher_information +
+                sample_2.angle_info(h2o_angle_times_2, [-0.56]).fisher_information)
 
     # Calculate the minimum eigenvalue for each choice of third contrast.
     min_eigs_1, min_eigs_2 = [], []
     contrast_range = np.linspace(-0.56, 6.36, 500)
     for i, new_contrast in enumerate(contrast_range):
         # Combine Fisher information matrices from initial and third contrasts.
-        g_new_1 = sample_1.contrast_info(nxt_angle_times_1, [new_contrast]).g
-        g_new_2 = sample_2.contrast_info(nxt_angle_times_2, [new_contrast]).g
+        g_new_1 = sample_1.contrast_info(nxt_angle_times_1, [new_contrast]).fisher_information
+        g_new_2 = sample_2.contrast_info(nxt_angle_times_2, [new_contrast]).fisher_information
 
         min_eigs_1.append(np.linalg.eigvalsh(g_init_1+g_new_1)[0])
         min_eigs_2.append(np.linalg.eigvalsh(g_init_2+g_new_2)[0])

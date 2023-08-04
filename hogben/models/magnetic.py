@@ -209,7 +209,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         # Calculate the Fisher information matrix.
         qs = [data[:,0] for data in datasets]
         counts = [data[:,3] for data in datasets]
-        return Fisher(qs, self.params, counts, models).g
+        return Fisher(qs, self.params, counts, models).fisher_information
 
     def underlayer_info(self, angle_times, yig_thick, pt_thick):
         """Calculates the Fisher information matrix for the YIG sample
@@ -236,7 +236,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         # Calculate the Fisher information matrix.
         qs = [data[:,0] for data in datasets]
         counts = [data[:,3] for data in datasets]
-        return Fisher(qs, self.params, counts, models).g
+        return Fisher(qs, self.params, counts, models).fisher_information
 
     def __set_dq(self, probe):
         """Sets the resolution of a given `probe` to be constant dQ/Q.
