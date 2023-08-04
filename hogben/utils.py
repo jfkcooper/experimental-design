@@ -165,7 +165,6 @@ class Fisher():
         step: step size to take when calculating gradient.
         fisher_information: The Fisher information matrix
         min_eigenval: The minimum eigenvalue of the Fisher information matrix
-
     """
 
     def __init__(self,
@@ -176,7 +175,7 @@ class Fisher():
                  models: list[Union['refnx.reflect.ReflectModel',
                                     'refl1d.experiment.Experiment']],
                  step: float = 0.005):
-        """Constructor for the Fisher matrix class.
+        """Initialize the Fisher matrix class.
 
         Args:
             qs: The Q points for each model.
@@ -196,7 +195,7 @@ class Fisher():
         """The total number of datapoints.
 
         Returns:
-            int: total amount of datapoints.
+            int: total number of datapoints.
         """
         return sum(len(q) for q in self.qs)
 
@@ -205,13 +204,13 @@ class Fisher():
         """The total number of parameters.
 
         Returns:
-            int: total amount of parameters.
+            int: total number of parameters.
         """
         return len(self.xi)
 
     @property
     def fisher_information(self) -> np.ndarray:
-        """The Fisher information matrix.
+        """Calculate and return the Fisher information matrix.
 
         Returns:
             numpy.ndarray: The Fisher information matrix.
@@ -220,7 +219,8 @@ class Fisher():
 
     @property
     def min_eigenval(self) -> float:
-        """The minimum eigenvalue of the Fisher information matrix
+        """Calculate and return the minimum eigenvalue of the Fisher
+        information matrix.
 
         Returns:
             float: The minimum eigenvalue.
