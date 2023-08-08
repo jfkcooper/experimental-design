@@ -191,24 +191,6 @@ class Fisher():
         self.step = step
 
     @property
-    def n(self) -> int:
-        """The total number of datapoints.
-
-        Returns:
-            int: total number of datapoints.
-        """
-        return sum(len(q) for q in self.qs)
-
-    @property
-    def m(self) -> int:
-        """The total number of parameters.
-
-        Returns:
-            int: total number of parameters.
-        """
-        return len(self.xi)
-
-    @property
     def fisher_information(self) -> np.ndarray:
         """Calculate and return the Fisher information matrix.
 
@@ -226,6 +208,24 @@ class Fisher():
             float: The minimum eigenvalue.
         """
         return np.linalg.eigvalsh(self.fisher_information)[0]
+
+    @property
+    def n(self) -> int:
+        """The total number of datapoints.
+
+        Returns:
+            int: total number of datapoints.
+        """
+        return sum(len(q) for q in self.qs)
+
+    @property
+    def m(self) -> int:
+        """The total number of parameters.
+
+        Returns:
+            int: total number of parameters.
+        """
+        return len(self.xi)
 
     def _calculate_fisher_information(self) -> np.ndarray:
         """Calculates the Fisher information matrix using the class attributes.
