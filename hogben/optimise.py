@@ -173,6 +173,7 @@ class Optimiser:
         """
         # Define the initial Fisher information matrix.
         angle_times = []
+
         # Iterate over each contrast.
         for i in range(num_contrasts):
             # Calculate proportion of the total counting time for each angle.
@@ -181,7 +182,7 @@ class Optimiser:
                            for angle, points, split in angle_splits]
             angle_times.append(angle_times_new)
 
-        # Add to the initial Fisher information matrix.
+        # Calculate the Fisher Information Matrix for the total information.
         fisher = self.sample.contrast_info(angle_times, [x])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
@@ -204,7 +205,7 @@ class Optimiser:
         underlayers = [(x[i], x[num_underlayers+i])
                        for i in range(num_underlayers)]
 
-        # Calculate the Fisher information matrix using the conditions.
+        # Calculate the Fisher information using the conditions.
         fisher = self.sample.underlayer_info(angle_times, contrasts,
                                             underlayers)
 

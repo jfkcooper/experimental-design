@@ -115,7 +115,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, underlayers)
 
     def __conditions_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for the lipid sample
+        """Calculates the Fisher information object for the lipid sample
            with given conditions.
 
         Args:
@@ -124,7 +124,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             underlayers (list): thickness and SLD of each underlayer to add.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information matrix object
 
         """
         # Iterate over each contrast to simulate.

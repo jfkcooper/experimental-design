@@ -95,7 +95,7 @@ class Sample(BaseSample):
             angle_times (list): points and times for each angle to simulate.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information object
 
         """
         # Return the Fisher information matrix calculated from simulated data.

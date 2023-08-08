@@ -44,7 +44,8 @@ def angle_choice(sample, initial_angle_times, angle_range, points_new,
         # Get the information for the new angle.
         new_angle_times = initial_angle_times + [(angle_new, points_new,
                                                  time_new)]
-        # Calculate the Fisher information for the new angle
+        # Calculate the total Fisher information at the new angle together
+        # with the initial angle
         fisher_new = sample.angle_info(new_angle_times,
                                   contrasts)
         min_eigs.append(fisher_new.min_eigenval)
@@ -112,6 +113,8 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
             # Combine the information from the first and second angles.
             angle_times_new = angle_times_init + [(new_angle, points,
                                                    new_time)]
+            # Calculate the total Fisher information using the first and
+            # second angle together
             fisher_new = sample.angle_info(angle_times_new,
                                   contrasts)
             min_eigs.append(fisher_new.min_eigenval)
@@ -166,7 +169,8 @@ def contrast_choice_single(sample, contrast_range, initial_contrasts,
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(contrast_range)))
 
-        # Get the information from the new contrast and combine with initial.
+        # Get the information from the new contrast, and calculate the total
+        # Fisher information for the initial and new contrast together.
         new_contrast = initial_contrasts + [new_contrast]
         fisher_new = sample.contrast_info(angle_times, new_contrast)
         min_eigs.append(fisher_new.min_eigenval)

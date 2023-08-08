@@ -197,7 +197,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             contrasts (list): not applicable.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information object
 
         """
         # Simulate the polarised experiment.
@@ -209,7 +209,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         # Calculate the Fisher information matrix.
         qs = [data[:,0] for data in datasets]
         counts = [data[:,3] for data in datasets]
-        return Fisher(qs, self.params, counts, models).fisher_information
+        return Fisher(qs, self.params, counts, models)
 
     def underlayer_info(self, angle_times, yig_thick, pt_thick):
         """Calculates the Fisher information matrix for the YIG sample
@@ -221,7 +221,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             pt_thick (float): platinum layer thickness to use.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information object
 
         """
         # Create a structure with the given YIG and Pt thicknesses.
@@ -236,7 +236,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         # Calculate the Fisher information matrix.
         qs = [data[:,0] for data in datasets]
         counts = [data[:,3] for data in datasets]
-        return Fisher(qs, self.params, counts, models).fisher_information
+        return Fisher(qs, self.params, counts, models)
 
     def __set_dq(self, probe):
         """Sets the resolution of a given `probe` to be constant dQ/Q.
