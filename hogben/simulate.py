@@ -1,5 +1,6 @@
 import os.path
 from typing import Optional, Union
+from enum import Enum
 
 import importlib_resources
 import numpy as np
@@ -8,6 +9,12 @@ import refnx.reflect
 import refl1d.model
 import refl1d.probe
 import refl1d.experiment
+
+class SpinStates(str, Enum):
+    PP = 'pp'
+    PM = 'pm'
+    MP = 'mp'
+    MM = 'mm'
 
 
 class SimulateReflectivity:
@@ -75,19 +82,19 @@ class SimulateReflectivity:
                 msg = "Please provide an instrument name or a local filepath"
                 raise FileNotFoundError(str(msg))
 
-        if self.spin_states is True:
+        if self.polarised is True:
             path = importlib_resources.files(
                    'hogben.data.directbeams').joinpath(
                    self.pol_instr_dict[self.inst_or_path])
 
-            return path
+            return str(path)
 
         path = importlib_resources.files('hogben.data.directbeams').joinpath(
                self.non_pol_instr_dict[self.inst_or_path])
 
-        return path
+        return str(path)
 
-    def simulate(self, spin_states: Optional[list[str]] = None) -> \
+    def simulate(self, spin_states: 'Optional[list[SpinStates]]' = None) -> \
             list[tuple[np.ndarray]]:
         """Simulates a measurement of self.sample taken at the angles and
         for the durations specified in self.angle_times on the instrument
