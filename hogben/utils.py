@@ -13,7 +13,7 @@ import refnx.analysis
 import bumps.parameter
 import bumps.fitproblem
 
-from hogben.simulate import Simulation
+from hogben.simulate import SimulateReflectivity
 
 
 class Sampler:

@@ -31,9 +31,6 @@ class SimulateReflectivity:
                       the path to a direct beam file, defaults to 'OFFSPEC'
         angle_scale: the angle at which the direct beam was taken (so that it
                      can be scaled appropriately), defaults to 0.3
-        polarised: a boolian to say if the measurement is polarised or not,
-                   used to access the dictionary of polarised instrument flux
-                   files. Defaults to False
     """
 
     non_pol_instr_dict = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
@@ -49,50 +46,45 @@ class SimulateReflectivity:
                                      'refl1d.model'],
                  angle_times: list[tuple],
                  inst_or_path: str = 'OFFSPEC',
-                 angle_scale: float = 0.3,
-                 polarised: bool = False):
+                 angle_scale: float = 0.3):
 
         self.sample_model = sample_model
         self.angle_times = angle_times
         self.inst_or_path = inst_or_path
-        self.polarised = polarised
-        self.incident_flux_data = np.loadtxt(self.direct_beam_path(),
-                                             delimiter=',')
         self.angle_scale = angle_scale
 
 
-    def direct_beam_path(self) -> str:
-        """Returns the filepath of the correct direct beam file for the
-        instrument being used
+    def _incident_flux_data(self, polarised: bool=False) -> np.ndarray:
+        """
+        Returns data loaded from the filepath given by self.inst_or_path,
+        or the data from the requested instrument
 
         Returns:
-            A string of the hogben internal path of the correct
-            direct beam file or the local file path
+            An np.ndarray of the wavelength, intensity data
         """
-
         # Check if the key isn't in the dictionary and check if it is a
         # a local filepath instead
         if self.inst_or_path not in (
                 self.non_pol_instr_dict or self.pol_instr_dict):
 
             if os.path.isfile(self.inst_or_path):
-                return self.inst_or_path
+                return np.loadtxt(self.inst_or_path, delimiter=',')
 
             else:
                 msg = "Please provide an instrument name or a local filepath"
                 raise FileNotFoundError(str(msg))
 
-        if self.polarised is True:
+        if polarised is True:
             path = importlib_resources.files(
                    'hogben.data.directbeams').joinpath(
                    self.pol_instr_dict[self.inst_or_path])
 
-            return str(path)
+            return np.loadtxt(path, delimiter=',')
 
         path = importlib_resources.files('hogben.data.directbeams').joinpath(
                self.non_pol_instr_dict[self.inst_or_path])
 
-        return str(path)
+        return np.loadtxt(path, delimiter=',')
 
     def simulate(self, spin_states: 'Optional[list[SpinStates]]' = None) -> \
             list[tuple[np.ndarray]]:
@@ -206,12 +198,8 @@ class SimulateReflectivity:
             return np.array([])
 
         # Calculate the reflectance in either refnx or Refl1D.
-        if isinstance(self.sample_model, refnx.reflect.Stucture):
-            self.model = refnx.reflect.ReflectModel(self.sample_model,
-                                                    scale=self.scale,
-                                                    bkg=self.bkg,
-                                                    dq=self.dq)
-            return self.model(q)
+        if isinstance(self.sample_model, refnx.reflect.ReflectModel):
+            return self.sample_model(q)
 
         if isinstance(self.sample_model, refl1d.model.Stack):
             # If magnetic, use the correct spin state.
@@ -239,10 +227,10 @@ class SimulateReflectivity:
 
         Returns:
             tuple: simulated Q, R, dR data and incident neutron counts.
-
         """
         # direct_beam = [wavelength, flux]
-        wavelengths, flux = self.incident_flux_data
+        polarised = True if spin_state else False
+        wavelengths, flux, _ = self._incident_flux_data(polarised).T
 
         # Scale flux by relative measurement angle squared (assuming both slits
         # scale linearly with angle, this should be correct)
@@ -260,13 +248,7 @@ class SimulateReflectivity:
         q_binned = np.asarray(
             [(q_bin_edges[i] + q_bin_edges[i + 1]) / 2 for i in range(points)])
 
-        # Calculate the model reflectivity at each Q point.
-        if isinstance(self.sample_model, refnx.reflect.Structure):
-            r_model = self.model(q_binned)
-
-        elif isinstance(self.sample_model, refl1d.model.Stack):
-            # TODO: remove instance checks if possible
-            r_model = self.reflectivity(q_binned, self.model)
+        r_model = self.reflectivity(q_binned)
 
         # Get the measured reflected count for each bin.
         # r_model accounts for background.

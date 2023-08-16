@@ -1,15 +1,17 @@
 import pytest
 
 import numpy as np
-from refnx.reflect import SLD
+from refnx.reflect import SLD, ReflectModel
+
+from refl1d.material import SLD as refl1dSLD
 
 from unittest import mock
-from hogben.simulate import Simulation
+from hogben.simulate import SimulateReflectivity
 
 
 
-#@pytest.fixture(scope="module")
-def sample_structure():
+@pytest.fixture(scope="module")
+def refnx_structure():
     """Defines a structure describing a simple sample."""
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
@@ -18,6 +20,24 @@ def sample_structure():
 
     sample_1 = air | layer1 | layer2 | substrate
     return sample_1
+
+@pytest.fixture(scope="module")
+def refnx_model(refnx_structure):
+    return ReflectModel(refnx_structure)
+
+def refl1d_model(refnx_structure):
+    # Make a refl1d model out of the refnx structure
+    structure = refl1dSLD(rho=0, name='Air')
+    for component in refnx_structure[1:]:
+        name, sld = component.name, component.sld.real.value,
+        thick, rough = component.thick.value, component.rough.value
+
+        # Add the component in the opposite direction to the refnx definition.
+        layer = refl1dSLD(rho=sld, name=name)(thick, rough)
+        structure = layer | structure
+
+    return structure
+
 
 
 class TestSimulate:
@@ -28,17 +48,16 @@ class TestSimulate:
     instrument = 'OFFSPEC'
 
 
-    def test_data_streaming(self):
+    def test_data_streaming(self, refnx_model):
         """Tests that without an input for the datafile, the correct one is picked up"""
-        sim = Simulation(sample_structure(), self.angle_times, self.scale, self.bkg, self.dq,
-                         self.instrument)
-        _, simulated_datapoints = sim.simulate()
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
+        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
+        simulated_datapoints = sim.simulate()
+        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints)  # counts
 
         # Check that the default instrument also works
-        sim = Simulation(sample_structure(), self.angle_times, self.scale, self.bkg, self.dq)
-        _, simulated_datapoints = sim.simulate()
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
+        sim = SimulateReflectivity(refnx_model, self.angle_times)
+        simulated_datapoints = sim.simulate()
+        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints)  # counts
 
 
     def test_direct_beam_path(self):
