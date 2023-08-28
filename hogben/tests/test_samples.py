@@ -117,8 +117,10 @@ def test_sld_profile(_mock_save_plot, sample_class, request):
     the sld_profile as compared to a reference figure
     """
     sample = request.getfixturevalue(sample_class)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
 
+    # Make sure paths are read relative to the directory of the test
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
     # Use temporary directory, so it doesn't leave any files after testing
     with tempfile.TemporaryDirectory() as temp_dir:
         sample.sld_profile(temp_dir)
@@ -134,6 +136,8 @@ def test_reflectivity_profile(_mock_save_plot, sample_class, request):
     figure of the reflectivity_profile as compared to a reference figure
     """
     sample = request.getfixturevalue(sample_class)
+
+    # Make sure paths are read relative to the directory of the test
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Use temporary directory, so it doesn't leave any files after testing
