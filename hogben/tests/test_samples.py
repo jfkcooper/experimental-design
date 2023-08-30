@@ -14,7 +14,7 @@ from hogben.simulate import simulate
 from hogben.utils import fisher
 from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 @pytest.fixture
@@ -168,6 +168,34 @@ def test_reflectivity_profile_positive(sample_class,
     sample = request.getfixturevalue(sample_class)
     q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert min(r) > 0
+
+def test_reflectivity_invalid_structure():
+    """
+    Test whether a RunTimeError is correctly given when an invalid sample
+    structure is used in get_reflectivity_profile
+    """
+    sample = Mock(spec=None)
+    with pytest.raises(RuntimeError):
+        Sample._get_reflectivity_profile(sample, 0.005, 0.4, 500, 1,
+                                            1e-7, 2)
+
+def test_sld_invalid_structure():
+    """
+    Test whether a RunTimeError is correctly given when an invalid sample
+    structure is used in get_sld_profile
+    """
+    sample = Mock(spec=None)
+    with pytest.raises(RuntimeError):
+        Sample._get_sld_profile(sample)
+
+def test_vary_structure_invalid_structure():
+    """
+    Test whether a RunTimeError is correctly given when an invalid sample
+    structure is used in _vary_structure
+    """
+    structure = Mock(spec=None)
+    with pytest.raises(RuntimeError):
+        Sample._Sample__vary_structure(structure)
 
 @pytest.mark.parametrize('sample_class', ("refnx_sample",
                                          "refl1d_sample"))
