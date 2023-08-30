@@ -40,7 +40,7 @@ def refl1d_sample():
 
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
-                   filename: str):
+                   filename: str) -> None:
     """
     A mocked version of the hogben.utils.save_plot method, where a lower
     dpi is used when saving a figure
@@ -56,7 +56,7 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
     fig.savefig(file_path, dpi=40)
 
 def compare_sample_structure(refl1d: refl1d.model.Stack,
-                             refnx: refnx.reflect.Structure):
+                             refnx: refnx.reflect.Structure) -> None:
     """
     Compare the structural parameters of a refnx and refl1d model, and check
     if the values are equal. This function is as a helper function to

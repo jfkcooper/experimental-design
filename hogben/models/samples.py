@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 import matplotlib.pyplot as plt
 
@@ -386,8 +387,16 @@ def similar_sld_sample_2():
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
 
-def run_main(save_path = '../results'):
+def run_main(save_path: Optional[str] = '../results') -> None:
+    """
+    Runs the main function of the module, retrieves an SLD and
+    reflectivity profile for each defined structure, and saves it in the
+    results directory by default.
 
+    Args:
+        save_path: The directory where the SLD and reflectivity profiles
+        are saved
+    """
     # Plot the SLD and reflectivity profiles of all structures in this file.
     for structure in [simple_sample, many_param_sample,
                       thin_layer_sample_1, thin_layer_sample_2,
