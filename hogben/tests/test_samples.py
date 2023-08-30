@@ -264,3 +264,25 @@ def test_similar_sld_sample_2():
     """
     similar_sld_sample_2 = samples.similar_sld_sample_2()
     similar_sld_sample_2.to_refl1d()
+
+@patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
+def test_main_function(_mock_save_plot):
+    """
+    Tests whether the main function runs properly and creates a figure for
+    all defined model types.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Results are saved in parent folder, so need to create a temporary
+        # child, as we don't have access to the parent of the temp folder
+        child_dir = os.path.join(temp_dir, 'child')
+        os.mkdir(child_dir)
+        os.chdir(child_dir) # Run script from inside child folder
+        samples.run_main()
+        os.chdir(temp_dir) # Check the results from temp folder
+
+        for subfolder in os.listdir('results'):
+            reflectivity_profile = os.path.join('results', subfolder,
+                                                'reflectivity_profile.png')
+            sld_profile = os.path.join('results', subfolder, 'sld_profile.png')
+            assert os.path.isfile(reflectivity_profile)
+            assert os.path.isfile(sld_profile)

@@ -197,7 +197,7 @@ class Sample(BaseSample):
         """
         # Geometriaclly-space Q points over the specified range.
         q = np.geomspace(q_min, q_max, points)
-        
+
         # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
             model = refnx.reflect.ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
@@ -386,7 +386,7 @@ def similar_sld_sample_2():
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
 
-if __name__ == '__main__':
+def run_main():
     save_path = '../results'
 
     # Plot the SLD and reflectivity profiles of all structures in this file.
@@ -400,3 +400,8 @@ if __name__ == '__main__':
 
         # Close the plots.
         plt.close('all')
+
+
+
+if __name__ == '__main__':
+    run_main()
