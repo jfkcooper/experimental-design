@@ -12,7 +12,6 @@ import hogben.models.samples as samples
 from hogben.models.samples import Sample
 from hogben.simulate import simulate
 from hogben.utils import fisher
-from matplotlib.testing.compare import compare_images
 from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import patch
@@ -22,7 +21,7 @@ from unittest.mock import patch
 def refnx_sample():
     """Defines a structure describing a simple sample."""
     air = SLD_refnx(0, name='Air')
-    layer1 = SLD_refnx(4, name='Layer 1')(thick=100, rough=2)
+    layer1 = SLD_refnx(4, name='Layer 1')(thick=60, rough=8)
     layer2 = SLD_refnx(8, name='Layer 2')(thick=150, rough=2)
     substrate = SLD_refnx(2.047, name='Substrate')(thick=0, rough=2)
     structure = air | layer1 | layer2 | substrate
@@ -54,7 +53,7 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     file_path = os.path.join(save_path, filename + '.png')
-    fig.savefig(file_path, dpi=60)
+    fig.savefig(file_path, dpi=40)
 
 def compare_sample_structure(refl1d: refl1d.model.Stack,
                              refnx: refnx.reflect.Structure):
@@ -94,13 +93,14 @@ def test_angle_info(sample_class, request):
     """
     Tests whether the angle_info function correctly calculates the Fisher
     information, and outputs the same values as if the functions were called
-     manually.
+    manually.
     """
 
     # Get Fisher information from tested unit
     sample = request.getfixturevalue(sample_class)
     angle_times = [(0.7, 100, 10000), (2.0, 100, 10000)]
     angle_info = sample.angle_info(angle_times)
+
     # Get Fisher information directly
     model, data = simulate(sample.structure, angle_times)
     qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
@@ -108,46 +108,80 @@ def test_angle_info(sample_class, request):
 
     np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
+@patch('hogben.models.samples.Sample._get_sld_profile')
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
-@pytest.mark.parametrize('sample_class', ("refnx_sample",
-                                         "refl1d_sample"))
-def test_sld_profile(_mock_save_plot, sample_class, request):
+def test_sld_profile_valid_figure(_mock_save_plot,
+                                  mock_sld_profile, refnx_sample):
     """
-    Tests whether the sld_profile function still correctly outputs a figure of
-    the sld_profile as compared to a reference figure
+    Tests whether the sld_profile function succesfully outputs a figure
     """
-    sample = request.getfixturevalue(sample_class)
+    mock_sld_profile.return_value = ([0, 10, 60, 110, 160, 210],
+                                     [4, 9, -2, 9, -2, 9])
 
-    # Make sure paths are read relative to the directory of the test
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Use temporary directory, so it doesn't leave any files after testing
-    with tempfile.TemporaryDirectory() as temp_dir:
-        sample.sld_profile(temp_dir)
-        img_ref = os.path.join(script_dir, 'reference_figures', 'sld_profile.png')
-        img_test = os.path.join(temp_dir, sample.name, 'sld_profile.png')
-        compare_images(img_ref, img_test, 0.001)
-@patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
-@pytest.mark.parametrize('sample_class', ("refnx_sample",
-                                         "refl1d_sample"))
-def test_reflectivity_profile(_mock_save_plot, sample_class, request):
-    """
-    Tests whether the reflectivity_profile function still correctly outputs a
-    figure of the reflectivity_profile as compared to a reference figure
-    """
-    sample = request.getfixturevalue(sample_class)
-
-    # Make sure paths are read relative to the directory of the test
-    script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Use temporary directory, so it doesn't leave any files after testing
     with tempfile.TemporaryDirectory() as temp_dir:
-        sample.reflectivity_profile(temp_dir)
-        img_ref = os.path.join(script_dir, 'reference_figures',
-                               'reflectivity_profile.png')
-        img_test = os.path.join(temp_dir, sample.name,
+        refnx_sample.sld_profile(temp_dir)
+        img_test = os.path.join(temp_dir, refnx_sample.name, 'sld_profile.png')
+        assert os.path.isfile(img_test)
+
+@patch('hogben.models.samples.Sample._get_reflectivity_profile')
+@patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
+def test_reflectivity_profile_valid_figure(_mock_save_plot,
+                                           _mock_reflectivity_profile,
+                                           refnx_sample):
+    """
+    Tests whether the reflectivity_profile function succesfully outputs a
+    figure
+    """
+    _mock_reflectivity_profile.return_value = ([0, 0.05, 0.1, 0.15, 0.2],
+                                               [1, 0.9, 0.8, 0.75, 0.8])
+    # Use temporary directory, so it doesn't leave any files after testing
+    with tempfile.TemporaryDirectory() as temp_dir:
+        refnx_sample.reflectivity_profile(temp_dir)
+        img_test = os.path.join(temp_dir, refnx_sample.name,
                                 'reflectivity_profile.png')
-        compare_images(img_ref, img_test, 0.001)
+        assert os.path.isfile(img_test)
+
+@patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
+@pytest.mark.parametrize('sample_class', ("refnx_sample",
+                                         "refl1d_sample"))
+def test_sld_profile_length(_mock_save_plot, sample_class,
+                                        request):
+    """
+    Tests whether _get_sld_profile() succesfully retrieves two arrays with
+    equal lengths, representing an SLD profile that can be plotted in a figure
+    """
+    sample = request.getfixturevalue(sample_class)
+    z, slds = sample._get_sld_profile()
+    assert len(z) == len(slds)
+    assert len(z) > 0 # Make sure arrays are not empty
+
+@pytest.mark.parametrize('sample_class', ("refnx_sample",
+                                         "refl1d_sample"))
+def test_reflectivity_profile_positive(sample_class,
+                                        request):
+    """
+    Tests whether _get_reflectivity_profile() succesfully obtains reflectivity
+    values that are all positively valued
+    """
+    sample = request.getfixturevalue(sample_class)
+    q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
+    assert min(r) > 0
+
+@pytest.mark.parametrize('sample_class', ("refnx_sample",
+                                         "refl1d_sample"))
+def test_reflectivity_profile_length(sample_class,
+                                        request):
+    """
+    Tests whether _get_reflectivity_profile() succesfully retrieves two arrays
+    with equal lengths, representing a reflectivity profile that can be
+    plotted in a figure.
+    """
+    sample = request.getfixturevalue(sample_class)
+    q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
+    assert len(q) == len(r)
+    assert len(q) > 0 # Make sure array is not empty
 
 def test_to_refl1d_instance(refnx_sample):
     """

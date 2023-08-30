@@ -111,19 +111,8 @@ class Sample(BaseSample):
 
         """
         # Determine if the structure was defined in refnx.
-        if isinstance(self.structure, refnx.reflect.Structure):
-            z, slds = self.structure.sld_profile()
 
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            q = np.geomspace(0.005, 0.3, 500) # This is not used.
-            scale, bkg, dq = 1, 1e-6, 2 # These are not used.
-            experiment = refl1d_experiment(self.structure, q, scale, bkg, dq)
-            z, slds, _ = experiment.smooth_profile()
-
-        # Otherwise, the structure is invalid.
-        else:
-            raise RuntimeError('invalid structure given')
+        z, slds = self._get_sld_profile()
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -141,6 +130,28 @@ class Sample(BaseSample):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'sld_profile')
 
+    def _get_sld_profile(self):
+        """
+        Obtains the SLD profile of the sample, in terms of z (depth) vs SLD
+
+        Returns:
+            numpy.ndarray: depth
+            numpy.ndarray: SLD values
+        """
+        if isinstance(self.structure, refnx.reflect.Structure):
+            z, slds = self.structure.sld_profile()
+
+        # Determine if the structure was defined in Refl1D.
+        elif isinstance(self.structure, refl1d.model.Stack):
+            q = np.geomspace(0.005, 0.3, 500) # This is not used.
+            scale, bkg, dq = 1, 1e-6, 2 # These are not used.
+            experiment = refl1d_experiment(self.structure, q, scale, bkg, dq)
+            z, slds, _ = experiment.smooth_profile()
+        # Otherwise, the structure is invalid.
+        else:
+            raise RuntimeError('invalid structure given')
+        return z, slds
+
     def reflectivity_profile(self, save_path, q_min=0.005, q_max=0.4,
                              points=500, scale=1, bkg=1e-7, dq=2):
         """Plots the reflectivity profile of the sample.
@@ -155,23 +166,9 @@ class Sample(BaseSample):
             dq (float): instrument resolution.
 
         """
-        # Geometriaclly-space Q points over the specified range.
-        q = np.geomspace(q_min, q_max, points)
-
-        # Determine if the structure was defined in refnx.
-        if isinstance(self.structure, refnx.reflect.Structure):
-            model = refnx.reflect.ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
-
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            model = refl1d_experiment(self.structure, q, scale, bkg, dq)
-
-        # Otherwise, the structure is invalid.
-        else:
-            raise RuntimeError('invalid structure given')
-
         # Calculate the model reflectivity.
-        r = reflectivity(q, model)
+        q, r = self._get_reflectivity_profile(q_min, q_max, points, scale,
+                                                  bkg, dq)
 
         # Plot Q versus model reflectivity.
         fig = plt.figure()
@@ -188,6 +185,34 @@ class Sample(BaseSample):
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'reflectivity_profile')
+
+    def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
+        """
+        Obtains the reflectivity profile of the sample, in terms of q
+        vs r
+
+        Returns:
+            numpy.ndarray: q values at each reflectivity point
+            numpy.ndarray: model reflectivity values
+        """
+        # Geometriaclly-space Q points over the specified range.
+        q = np.geomspace(q_min, q_max, points)
+        
+        # Determine if the structure was defined in refnx.
+        if isinstance(self.structure, refnx.reflect.Structure):
+            model = refnx.reflect.ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
+
+        # Determine if the structure was defined in Refl1D.
+        elif isinstance(self.structure, refl1d.model.Stack):
+            model = refl1d_experiment(self.structure, q, scale, bkg, dq)
+
+        # Otherwise, the structure is invalid.
+        else:
+            raise RuntimeError('invalid structure given')
+
+        r = reflectivity(q, model)
+        return q, r
+
 
     def nested_sampling(self, angle_times, save_path, filename, dynamic=False):
         """Runs nested sampling on simulated data of the sample.
