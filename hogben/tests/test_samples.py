@@ -299,6 +299,7 @@ def test_main_function(_mock_save_plot):
     Tests whether the main function runs properly and creates a figure for
     all defined model types.
     """
+    work_dir = os.getcwd()
     with tempfile.TemporaryDirectory() as temp_dir:
         # Results are saved in parent folder, so need to create a temporary
         # child, as we don't have access to the parent of the temp folder
@@ -314,3 +315,4 @@ def test_main_function(_mock_save_plot):
             sld_profile = os.path.join('results', subfolder, 'sld_profile.png')
             assert os.path.isfile(reflectivity_profile)
             assert os.path.isfile(sld_profile)
+    os.chdir(work_dir)
