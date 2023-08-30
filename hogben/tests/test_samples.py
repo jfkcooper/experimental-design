@@ -299,20 +299,15 @@ def test_main_function(_mock_save_plot):
     Tests whether the main function runs properly and creates a figure for
     all defined model types.
     """
-    work_dir = os.getcwd()
     with tempfile.TemporaryDirectory() as temp_dir:
         # Results are saved in parent folder, so need to create a temporary
         # child, as we don't have access to the parent of the temp folder
-        child_dir = os.path.join(temp_dir, 'child')
-        os.mkdir(child_dir)
-        os.chdir(child_dir) # Run script from inside child folder
-        samples.run_main()
-        os.chdir(temp_dir) # Check the results from temp folder
+        save_path = os.path.join(temp_dir, 'results')
+        samples.run_main(save_path)
 
-        for subfolder in os.listdir('results'):
-            reflectivity_profile = os.path.join('results', subfolder,
+        for subfolder in os.listdir(save_path):
+            reflectivity_profile = os.path.join(save_path, subfolder,
                                                 'reflectivity_profile.png')
-            sld_profile = os.path.join('results', subfolder, 'sld_profile.png')
+            sld_profile = os.path.join(save_path, subfolder, 'sld_profile.png')
             assert os.path.isfile(reflectivity_profile)
             assert os.path.isfile(sld_profile)
-    os.chdir(work_dir)

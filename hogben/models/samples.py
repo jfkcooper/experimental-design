@@ -386,8 +386,7 @@ def similar_sld_sample_2():
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
 
-def run_main():
-    save_path = '../results'
+def run_main(save_path = '../results'):
 
     # Plot the SLD and reflectivity profiles of all structures in this file.
     for structure in [simple_sample, many_param_sample,
