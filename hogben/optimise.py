@@ -149,9 +149,11 @@ class Optimiser:
 
         """
         # Extract the angles and counting times from given list, `x`.
-        angle_times = [(x[i], points, total_time*x[num_angles+i])
-                       for i in range(num_angles)]
-
+        angle_times = []
+        for i in range(num_angles):
+            angle = x[i]
+            counting_time = total_time * x[num_angles + i]
+            angle_times.append((angle, points, counting_time))
         # Calculate the Fisher information matrix.
         g = self.sample.angle_info(angle_times, contrasts)
 
