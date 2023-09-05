@@ -280,8 +280,6 @@ def test_main_function(_mock_save_plot):
     all defined model types.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Results are saved in parent folder, so need to create a temporary
-        # child, as we don't have access to the parent of the temp folder
         save_path = os.path.join(temp_dir, 'results')
         samples.run_main(save_path)
 
