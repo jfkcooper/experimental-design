@@ -27,15 +27,17 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
         beam file or the local path
     """
 
-    non_pol_instr = {'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
-                     'SURF': 'SURF_non_polarised.dat',
-                     'POLREF': 'POLREF_non_polarised.dat',
-                     'INTER': 'INTER_non_polarised.dat'
-                     }
+    non_pol_instr = {
+        'OFFSPEC': 'OFFSPEC_non_polarised_old.dat',
+        'SURF': 'SURF_non_polarised.dat',
+        'POLREF': 'POLREF_non_polarised.dat',
+        'INTER': 'INTER_non_polarised.dat',
+    }
 
-    pol_instr = {'OFFSPEC': 'OFFSPEC_polarised_old.dat',
-                 'POLREF': 'POLREF_polarised.dat'
-                 }
+    pol_instr = {
+        'OFFSPEC': 'OFFSPEC_polarised_old.dat',
+        'POLREF': 'POLREF_polarised.dat',
+    }
 
     # Check if the key isn't in the dictionary and assume
     # a local filepath
@@ -43,26 +45,34 @@ def direct_beam_path(inst_or_path: str = 'OFFSPEC',
         if os.path.isfile(inst_or_path):
             return inst_or_path
         else:
-            msg = "Please provide an instrument name or a valid local filepath"
+            msg = 'Please provide an instrument name or a valid local filepath'
             raise FileNotFoundError(str(msg))
 
     path = importlib_resources.files('hogben.data.directbeams').joinpath(
-        non_pol_instr[inst_or_path])
+        non_pol_instr[inst_or_path]
+    )
 
     if polarised:
-        path = importlib_resources.files('hogben.data.directbeams'
-                                         ).joinpath(pol_instr[inst_or_path])
+        path = importlib_resources.files('hogben.data.directbeams').joinpath(
+            pol_instr[inst_or_path]
+        )
 
     return path
 
 
-def simulate_magnetic(sample: Union['refnx.reflect.Stucture',
-                                    'refl1d.model.Stack'],
-                      angle_times: np.ndarray, scale: float = 1.0,
-                      bkg: float = 5e-7, dq: float = 2, mm: bool = True,
-                      mp: bool = True, pm: bool = True, pp: bool = True,
-                      angle_scale: float = 0.3,
-                      inst_or_path: str = 'OFFSPEC') -> tuple:
+def simulate_magnetic(
+    sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
+    angle_times: np.ndarray,
+    scale: float = 1.0,
+    bkg: float = 5e-7,
+    dq: float = 2,
+    mm: bool = True,
+    mp: bool = True,
+    pm: bool = True,
+    pp: bool = True,
+    angle_scale: float = 0.3,
+    inst_or_path: str = 'OFFSPEC',
+) -> tuple:
     """Simulates an experiment of a given magnetic `sample` measured
        over a number of angles.
 
@@ -178,8 +188,8 @@ def simulate(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
     data[:, 2] = np.concatenate(dr)
     data[:, 3] = np.concatenate(counts)
 
-    data = data[(data != 0).all(1)] # Remove points of zero reflectivity.
-    data = data[data[:,0].argsort()] # Sort by Q.
+    data = data[(data != 0).all(1)]  # Remove points of zero reflectivity.
+    data = data[data[:, 0].argsort()]  # Sort by Q.
 
     # If there is no data after removing zeros, return no model.
     if len(data) == 0:
@@ -212,11 +222,18 @@ def simulate(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
     return model, data
 
 
-def _run_experiment(sample: Union['refnx.reflect.Stucture',
-                                  'refl1d.model.Stack'],
-                    angle: float, points: int, time: float,
-                    scale: float, bkg: float, dq: float, directbeam_path: str,
-                    angle_scale: float, spin_state: int) -> tuple:
+def _run_experiment(
+    sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
+    angle: float,
+    points: int,
+    time: float,
+    scale: float,
+    bkg: float,
+    dq: float,
+    directbeam_path: str,
+    angle_scale: float,
+    spin_state: int,
+) -> tuple:
     """Simulates a single angle measurement of a given `sample`.
 
     Args:
@@ -241,18 +258,19 @@ def _run_experiment(sample: Union['refnx.reflect.Stucture',
     wavelengths = direct_beam[:, 0]  # 1st column is wavelength, 2nd is flux.
 
     # Adjust flux by measurement angle.
-    direct_flux = direct_beam[:, 1] * pow(angle/angle_scale, 2)
+    direct_flux = direct_beam[:, 1] * pow(angle / angle_scale, 2)
 
     # Calculate Q values.
-    q = 4*np.pi*np.sin(np.radians(angle)) / wavelengths
+    q = 4 * np.pi * np.sin(np.radians(angle)) / wavelengths
 
     # Bin Q's' in equally geometrically-spaced bins using flux as weighting.
-    q_bin_edges = np.geomspace(min(q), max(q), points+1)
+    q_bin_edges = np.geomspace(min(q), max(q), points + 1)
     flux_binned, _ = np.histogram(q, q_bin_edges, weights=direct_flux)
 
     # Get the bin centres.
-    q_binned = np.asarray([(q_bin_edges[i] + q_bin_edges[i+1]) / 2
-                           for i in range(points)])
+    q_binned = np.asarray(
+        [(q_bin_edges[i] + q_bin_edges[i + 1]) / 2 for i in range(points)]
+    )
 
     # Calculate the model reflectivity at each Q point.
     if isinstance(sample, refnx.reflect.Structure):
@@ -275,7 +293,8 @@ def _run_experiment(sample: Union['refnx.reflect.Stucture',
 
     # Get the measured reflected count for each bin.
     # r_model accounts for background.
-    counts_reflected = np.random.poisson(r_model*counts_incident).astype(float)
+    counts_reflected = np.random.poisson(r_model * counts_incident).astype(
+        float)
 
     # Convert from count space to reflectivity space.
     # Point has zero reflectivity if there is no flux.
@@ -334,10 +353,13 @@ def reflectivity(q: np.ndarray, model: Union['refnx.reflect.ReflectModel',
             return experiment.reflectivity()[1]
 
 
-def refl1d_experiment(sample: 'refl1d.model.stack', q_array: np.ndarray,
-                      scale: float, bkg: float, dq: float,
-                      spin_state: Optional[int] = None)\
-                     -> refl1d.experiment.Experiment:
+def refl1d_experiment(sample: 'refl1d.model.stack',
+                      q_array: np.ndarray,
+                      scale: float,
+                      bkg: float,
+                      dq: float,
+                      spin_state: Optional[int] = None,
+                      ) -> refl1d.experiment.Experiment:
     """Creates a Refl1D experiment for a given `sample` and `q_array`.
 
     Args:
@@ -353,7 +375,7 @@ def refl1d_experiment(sample: 'refl1d.model.stack', q_array: np.ndarray,
 
     """
     # Transform the resolution from refnx to Refl1D format.
-    refl1d_dq = dq / (100*np.sqrt(8*np.log(2)))
+    refl1d_dq = dq / (100 * np.sqrt(8 * np.log(2)))
 
     # Calculate the dq array and use it to define a QProbe.
     dq_array = q_array * refl1d_dq
@@ -363,13 +385,15 @@ def refl1d_experiment(sample: 'refl1d.model.stack', q_array: np.ndarray,
 
     # Adjust probe calculation for constant dQ/Q resolution.
     argmin, argmax = np.argmin(q_array), np.argmax(q_array)
-    probe.calc_Qo = np.linspace(q_array[argmin] - 3.5*dq_array[argmin],
-                                q_array[argmax] + 3.5*dq_array[argmax],
-                                21*len(q_array))
+    probe.calc_Qo = np.linspace(
+        q_array[argmin] - 3.5 * dq_array[argmin],
+        q_array[argmax] + 3.5 * dq_array[argmax],
+        21 * len(q_array),
+    )
 
     # If the sample is magnetic, create a polarised QProbe.
     if sample.ismagnetic:
-        probes = [None]*4
+        probes = [None] * 4
         probes[spin_state] = probe
         probe = refl1d.probe.PolarizedQProbe(xs=probes, name='')
         probe.spin_state = spin_state

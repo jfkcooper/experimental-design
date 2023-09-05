@@ -1,7 +1,6 @@
 import os
-import sys
-
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import matplotlib.pyplot as plt
 
@@ -19,33 +18,41 @@ plt.rcParams['figure.dpi'] = 600
 class VariableAngle(ABC):
     """Abstract class representing whether the measurement angle of a sample
        can be varied."""
+
     @abstractmethod
     def angle_info(self):
+
         """Calculates the Fisher information matrix for a sample measured
-           over a number of angles."""
+        over a number of angles."""
         pass
+
 
 class VariableContrast(ABC):
     """Abstract class representing whether the contrast of a sample
-       can be varied."""
+       dan be varied."""
+
     @abstractmethod
     def contrast_info(self):
         """Calculates the Fisher information matrix for a sample with contrasts
            measured over a number of angles."""
         pass
 
+
 class VariableUnderlayer(ABC):
     """Abstract class representing whether the underlayer(s) of a sample
        can be varied."""
+
     @abstractmethod
     def underlayer_info(self):
         """Calculates the Fisher information matrix for a sample with
-           underlayers, and contrasts measured over a number of angles."""
+        underlayers, and contrasts measured over a number of angles."""
         pass
+
 
 class BaseSample(VariableAngle):
     """Abstract class representing a "standard" neutron reflectometry sample
-       defined by a series of contiguous layers."""
+    defined by a series of contiguous layers."""
+
     @abstractmethod
     def sld_profile(self):
         """Plots the SLD profile of the sample."""
@@ -61,10 +68,12 @@ class BaseSample(VariableAngle):
         """Runs nested sampling on measured or simulated data of the sample."""
         pass
 
+
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
+
     def __init__(self):
-        self._create_objectives() # Load experimentally-measured data.
+        self._create_objectives()  # Load experimentally-measured data.
 
     @abstractmethod
     def _create_objectives(self):
@@ -133,10 +142,14 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             # Simulate data for the contrast.
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
-            background_level = 2e-6*contrast_point + 4e-6*(1-contrast_point)
-            model, data = simulate(sample, angle_times, scale=1, bkg=background_level, dq=2)
-            qs.append(data[:,0])
-            counts.append(data[:,3])
+            background_level = (2e-6 * contrast_point
+                                + 4e-6 * (1 - contrast_point)
+                                )
+            model, data = simulate(
+                sample, angle_times, scale=1, bkg=background_level, dq=2
+            )
+            qs.append(data[:, 0])
+            counts.append(data[:, 3])
             models.append(model)
 
         # Exclude certain parameters if underlayers are being used.
@@ -150,8 +163,11 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         """Creates a structure describing the given measurement conditions."""
         pass
 
-    def sld_profile(self, save_path, filename='sld_profile',
-                    ylim=None, legend=True):
+    def sld_profile(self,
+                    save_path: str,
+                    filename: str = 'sld_profile',
+                    ylim: Optional[tuple] = None,
+                    legend: bool = True) -> None:
         """Plots the SLD profile of the lipid sample.
 
         Args:
@@ -186,7 +202,9 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename)
 
-    def reflectivity_profile(self, save_path, filename='reflectivity_profile'):
+    def reflectivity_profile(self,
+                             save_path: str,
+                             filename: str = 'reflectivity_profile') -> None:
         """Plots the reflectivity profile of the lipid sample.
 
         Args:
@@ -205,7 +223,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             r_model = objective.model(q)
 
             # Offset the data, for clarity.
-            offset = 10**(-2*i)
+            offset = 10 ** (-2 * i)
             r *= offset
             dr *= offset
             r_model *= offset
@@ -213,7 +231,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             # Add the offset in the label.
             label = self.labels[i]
             if offset != 1:
-                label += ' $\mathregular{(x10^{-'+str(2*i)+'})}$'
+                label += ' $\\mathregular{(x10^{-' + str(2 * i) + '})}$'
 
             # Plot the measured data and the model reflectivity.
             ax.errorbar(q, r, dr,
@@ -221,7 +239,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
                         color=colours[i], label=label)
             ax.plot(q, r_model, color=colours[i], zorder=20)
 
-        x_label = '$\mathregular{Q\ (Å^{-1})}$'
+        x_label = '$\\mathregular{Q\\ (Å^{-1})}$'
         y_label = 'Reflectivity (arb.)'
 
         ax.set_xlabel(x_label, fontsize=11, weight='bold')
@@ -235,8 +253,13 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename)
 
-    def nested_sampling(self, contrasts, angle_times, save_path, filename,
-                        underlayers=None, dynamic=False):
+    def nested_sampling(self,
+                        contrasts: list,
+                        angle_times: list,
+                        save_path: str,
+                        filename: str,
+                        underlayers=None,
+                        dynamic=False) -> None:
         """Runs nested sampling on simulated data of the lipid sample.
 
         Args:
@@ -254,9 +277,15 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             # Simulate an experiment using the given contrast.
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
-            background_level = 2e-6*contrast_point + 4e-6*(1-contrast_point)
-            model, data = simulate(sample, angle_times, scale=1, bkg=background_level, dq=2)
-            dataset = refnx.dataset.ReflectDataset([data[:,0], data[:,1], data[:,2]])
+            background_level = 2e-6 * contrast_point + 4e-6 * (
+                1 - contrast_point
+            )
+            model, data = simulate(
+                sample, angle_times, scale=1, bkg=background_level, dq=2
+            )
+            dataset = refnx.dataset.ReflectDataset(
+                [data[:, 0], data[:, 1], data[:, 2]]
+            )
             objectives.append(refnx.analysis.Objective(model, dataset))
 
         # Combine objectives into a single global objective.
@@ -266,7 +295,9 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         if underlayers is None:
             global_objective.varying_parameters = lambda: self.params
         else:
-            global_objective.varying_parameters = lambda: self.underlayer_params
+            global_objective.varying_parameters = (
+                lambda: self.underlayer_params
+            )
 
         # Sample the objective using nested sampling.
         sampler = Sampler(global_objective)
@@ -274,4 +305,4 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'nested_sampling_'+filename)
+        save_plot(fig, save_path, 'nested_sampling_' + filename)

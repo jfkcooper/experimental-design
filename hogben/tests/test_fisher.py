@@ -66,13 +66,20 @@ def mock_refnx_model():
     bounds
     """
     # Parameters described as tuples: (value, lower bound, upper bound)
-    parameter_values = [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5),
-                        (2, 1.5, 2.5)]
+    parameter_values = [
+        (20, 15, 25),
+        (50, 45, 55),
+        (10, 7.5, 8.5),
+        (2, 1.5, 2.5),
+    ]
 
     # Fill parameter values and bounds
     parameters = [
-        Mock(spec=refnx.analysis.Parameter, value=value,
-             bounds=Mock(lb=lb, ub=ub))
+        Mock(
+            spec=refnx.analysis.Parameter,
+            value=value,
+            bounds=Mock(lb=lb, ub=ub),
+        )
         for value, lb, ub in parameter_values
     ]
     model = Mock(spec=refnx.reflect.ReflectModel, xi=parameters)
@@ -87,13 +94,20 @@ def mock_refl1d_model():
     bounds
     """
     # Parameters described as tuples: (value, lower bound, upper bound)
-    parameter_values = [(20, 15, 25), (50, 45, 55), (10, 7.5, 8.5),
-                        (2, 1.5, 2.5)]
+    parameter_values = [
+        (20, 15, 25),
+        (50, 45, 55),
+        (10, 7.5, 8.5),
+        (2, 1.5, 2.5),
+    ]
 
     # Fill parameter values and bounds
     parameters = [
-        Mock(spec=bumps.parameter.Parameter, value=value,
-             bounds=Mock(limits=[lb, ub]))
+        Mock(
+            spec=bumps.parameter.Parameter,
+            value=value,
+            bounds=Mock(limits=[lb, ub]),
+        )
         for value, lb, ub in parameter_values
     ]
     model = Mock(spec=refl1d.experiment.Experiment, xi=parameters)
@@ -123,7 +137,7 @@ def test_fisher_workflow_refnx(refnx_model):
         [5.17704306e-06, 2.24179068e-06, -5.02221954e-07, -7.91886209e-07],
         [2.24179068e-06, 1.00559528e-06, -2.09433754e-07, -3.18583142e-07],
         [-5.02221954e-07, -2.09433754e-07, 5.75647233e-08, 1.03142100e-07],
-        [-7.91886209e-07, -3.18583142e-07, 1.03142100e-07, 1.99470835e-07]
+        [-7.91886209e-07, -3.18583142e-07, 1.03142100e-07, 1.99470835e-07],
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
 
@@ -138,14 +152,15 @@ def test_fisher_workflow_refl1d(refl1d_model):
         [4.58294661e-06, 2.07712766e-06, -4.23068571e-07, -6.80596824e-07],
         [2.07712766e-06, 9.76175381e-07, -1.84017555e-07, -2.83513452e-07],
         [-4.23068571e-07, -1.84017555e-07, 4.51142562e-08, 8.21397190e-08],
-        [-6.80596824e-07, -2.83513452e-07, 8.21397190e-08, 1.62625881e-07]
+        [-6.80596824e-07, -2.83513452e-07, 8.21397190e-08, 1.62625881e-07],
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
 
 
 @patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
+@pytest.mark.parametrize(
+    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
+)
 def test_fisher_analytical_values(mock_reflectivity, model_class, request):
     """
     Tests that the values of the calculated Fisher information matrix (FIM)
@@ -197,15 +212,16 @@ def test_fisher_analytical_values(mock_reflectivity, model_class, request):
     g_correct = [
         [1.28125, 0.5125, 25.625],
         [0.5125, 0.205, 10.25],
-        [25.625, 10.25, 512.5]
+        [25.625, 10.25, 512.5],
     ]
     g_reference = fisher(QS, xi, COUNTS, [model])
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
 @patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
+@pytest.mark.parametrize(
+    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
+)
 def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
     """
     Tests that the values of the calculated Fisher information matrix
@@ -233,14 +249,13 @@ def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
     g_correct = [
         [1.28125, 1.025, 76.875],
         [0.5125, 0.41, 30.75],
-        [25.625, 20.5, 1537.5]
+        [25.625, 20.5, 1537.5],
     ]
     g_reference = fisher(QS, xi, COUNTS, [model])
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
-@pytest.mark.parametrize('model_class', ("refl1d_model",
-                                         "refnx_model"))
+@pytest.mark.parametrize('model_class', ('refl1d_model', 'refnx_model'))
 @pytest.mark.parametrize('step', (0.01, 0.0075, 0.0025, 0.001, 0.0001))
 def test_fisher_consistent_steps(step, model_class, request):
     """
@@ -254,8 +269,9 @@ def test_fisher_consistent_steps(step, model_class, request):
 
 
 @patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
+@pytest.mark.parametrize(
+    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
+)
 @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
 def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
     """
@@ -273,25 +289,33 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
 
 
 @patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
-@pytest.mark.parametrize('qs',
-                         (np.arange(0.001, 1.0, 0.25),
-                          np.arange(0.001, 1.0, 0.10),
-                          np.arange(0.001, 1.0, 0.05),
-                          np.arange(0.001, 1.0, 0.01)))
-def test_fisher_diagonal_non_negative(mock_reflectivity, qs, model_class,
-                                   request):
+@pytest.mark.parametrize(
+    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
+)
+@pytest.mark.parametrize(
+    'qs',
+    (
+        np.arange(0.001, 1.0, 0.25),
+        np.arange(0.001, 1.0, 0.10),
+        np.arange(0.001, 1.0, 0.05),
+        np.arange(0.001, 1.0, 0.01),
+    ),
+)
+def test_fisher_diagonal_non_negative(
+    mock_reflectivity, qs, model_class, request
+):
     """Tests whether the diagonal values in the Fisher information matrix
-     are all zero or greater"""
+    are all zero or greater"""
     model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = (np.random.rand(len(qs)) for _ in range(9))
     counts = [np.ones(len(qs)) * 100]
     g = fisher([qs], model.xi, counts, [model])
     assert np.all(np.diag(g)) >= 0
 
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
+
+@pytest.mark.parametrize(
+    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
+)
 @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
 def test_fisher_no_data(model_params, model_class, request):
     """Tests whether a model with zero data points properly returns an empty
@@ -302,8 +326,9 @@ def test_fisher_no_data(model_params, model_class, request):
     np.testing.assert_equal(g, np.zeros((len(xi), len(xi))))
 
 
-@pytest.mark.parametrize('model_class', ("mock_refl1d_model",
-                                         "mock_refnx_model"))
+@pytest.mark.parametrize(
+    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
+)
 @patch('hogben.utils.reflectivity')
 def test_fisher_no_parameters(mock_reflectivity, model_class, request):
     """Tests whether a model without any parameters properly returns a
@@ -314,8 +339,7 @@ def test_fisher_no_parameters(mock_reflectivity, model_class, request):
     np.testing.assert_equal(g.shape, (0, 0))
 
 
-@pytest.mark.parametrize('model_class', ("refnx_model",
-                                         "refl1d_model"))
+@pytest.mark.parametrize('model_class', ('refnx_model', 'refl1d_model'))
 def test_fisher_doubling_with_two_identical_models(model_class, request):
     """
     Tests that using two identical models with the same q-points and counts
@@ -331,8 +355,7 @@ def test_fisher_doubling_with_two_identical_models(model_class, request):
     np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
 
 
-@pytest.mark.parametrize('model_class', ("refnx_model",
-                                         "refl1d_model"))
+@pytest.mark.parametrize('model_class', ('refnx_model', 'refl1d_model'))
 def test_multiple_models_shape(model_class, request):
     """
     Tests that shape of the Fisher information matrix is equal to the total

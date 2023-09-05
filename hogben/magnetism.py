@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import os
-import sys
 
 import numpy as np
 
@@ -26,33 +25,32 @@ def _magnetism_results_visualise(save_path):
     sample.pt_mag.value = 0.01638
 
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.5, 100, 20),
-                   (1.0, 100, 40),
-                   (2.0, 100, 80)]
+    angle_times = [(0.5, 100, 20), (1.0, 100, 40), (2.0, 100, 80)]
 
     # Range of YIG and Pt layer thicknesses to calculate over.
     yig_thick_range = np.linspace(400, 900, 75)
-    pt_thick_range = np.concatenate((np.linspace(21.5, 30, 50),
-                                     np.linspace(30, 100, 50)))
+    pt_thick_range = np.concatenate(
+        (np.linspace(21.5, 30, 50), np.linspace(30, 100, 50))
+    )
 
     # Iterate over each YIG and Pt layer thickness being considered.
     x, y, infos = [], [], []
-    n = len(pt_thick_range)*len(yig_thick_range) # Number of calculations.
+    n = len(pt_thick_range) * len(yig_thick_range)  # Number of calculations.
     for i, yig_thick in enumerate(yig_thick_range):
         # Display progress.
         if i % 5 == 0:
-            print('>>> {0}/{1}'.format(i*len(pt_thick_range), n))
+            print('>>> {0}/{1}'.format(i * len(pt_thick_range), n))
 
         for pt_thick in pt_thick_range:
             # Calculate the Fisher information using current thicknesses.
             g = sample.underlayer_info(angle_times, yig_thick, pt_thick)
 
-            infos.append(g[0,0])
+            infos.append(g[0, 0])
             x.append(yig_thick)
             y.append(pt_thick)
 
     # Create plot of YIG and Pt layer thicknesses versus Fisher information.
-    fig = plt.figure(figsize=[10,8])
+    fig = plt.figure(figsize=[10, 8])
     ax = fig.add_subplot(111, projection='3d')
 
     # Create the surface plot and add colour bar.
@@ -66,7 +64,7 @@ def _magnetism_results_visualise(save_path):
     ax.set_xlabel(x_label, fontsize=11, weight='bold')
     ax.set_ylabel(y_label, fontsize=11, weight='bold')
     ax.set_zlabel(z_label, fontsize=11, weight='bold')
-    ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
+    ax.ticklabel_format(axis='z', style='sci', scilimits=(0, 0))
 
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
@@ -85,6 +83,7 @@ def _magnetism_results_visualise(save_path):
     maximum = np.argmax(infos)
     return x[maximum], y[maximum]
 
+
 def _magnetism_results_optimise(save_path):
     """Optimises the choice of YIG and Pt layer thicknesses for the
        magnetic YIG sample.
@@ -97,9 +96,7 @@ def _magnetism_results_optimise(save_path):
     sample.pt_mag.value = 0.01638
 
     # Number of points and counting times for each angle to simulate.
-    angle_times = [(0.5, 100, 20),
-                   (1.0, 100, 40),
-                   (2.0, 100, 80)]
+    angle_times = [(0.5, 100, 20), (1.0, 100, 40), (2.0, 100, 80)]
 
     # Itervals of YIG and Pt layer thicknesses to optimise over.
     yig_thick_bounds = (200, 900)
@@ -114,10 +111,16 @@ def _magnetism_results_optimise(save_path):
     file_path = os.path.join(save_path, 'optimised_underlayers.txt')
     with open(file_path, 'w') as file:
         # Optimise thicknesses using differential evolution.
-        res = differential_evolution(_optimisation_func, bounds, args=args,
-                                     polish=False, tol=0.001,
-                                     updating='deferred', workers=-1,
-                                     disp=False)
+        res = differential_evolution(
+            _optimisation_func,
+            bounds,
+            args=args,
+            polish=False,
+            tol=0.001,
+            updating='deferred',
+            workers=-1,
+            disp=False,
+        )
 
         yig_thick, pt_thick = res.x[0], res.x[1]
 
@@ -131,6 +134,7 @@ def _magnetism_results_optimise(save_path):
         file.write('YIG Thickness: {}\n'.format(round(yig_thick, 1)))
         file.write('Pt Thickness: {}\n'.format(round(pt_thick, 1)))
         file.write('Fisher Information: {}\n\n'.format(-res.fun))
+
 
 def _optimisation_func(x, sample, angle_times):
     """Defines the function for optimising YIG and Pt layer thicknesses for
@@ -148,7 +152,8 @@ def _optimisation_func(x, sample, angle_times):
     """
     # Calculate the Fisher information matrix using the given thicknesses.
     g = sample.underlayer_info(angle_times, x[0], x[1])
-    return -g[0,0]
+    return -g[0, 0]
+
 
 def _magnetism_results_ratios(save_path):
     """Calculates log ratio of likelihoods between two models, one with an
@@ -167,28 +172,28 @@ def _magnetism_results_ratios(save_path):
     times = np.linspace(40, 4000, 250)
 
     # Points and split of total counting time for each angle to simulate.
-    angle_splits = [(0.5, 100, 1/7),
-                    (1.0, 100, 2/7),
-                    (2.0, 100, 4/7)]
+    angle_splits = [(0.5, 100, 1 / 7), (1.0, 100, 2 / 7), (2.0, 100, 4 / 7)]
 
     # Calculate log ratio of likelihoods with optimal and sub-optimal designs.
     _calc_log_ratios(26, times, angle_splits, save_path)
     _calc_log_ratios(80, times, angle_splits, save_path)
 
     # Create the plot of counting time versus log ratio of likelihoods.
-    fig = plt.figure(figsize=(6,7))
+    fig = plt.figure(figsize=(6, 7))
     ax = fig.add_subplot(111)
 
     # Iterate over the results for the two designs.
     save_path = os.path.join(save_path, 'YIG_sample')
     for pt_thick in [26, 80]:
-        file_path = os.path.join(save_path, 'log_ratios_{}.csv'.format(pt_thick))
+        file_path = os.path.join(
+            save_path, 'log_ratios_{}.csv'.format(pt_thick)
+        )
 
         # Load and plot the calculated ratios.
         data = np.loadtxt(file_path, delimiter=',')
-        times, ratios = data[:,0], data[:,1]
+        times, ratios = data[:, 0], data[:, 1]
 
-        ax.plot(1.5*times, ratios, label='{}Å Pt Thickness'.format(pt_thick))
+        ax.plot(1.5 * times, ratios, label='{}Å Pt Thickness'.format(pt_thick))
 
     ax.set_xlabel('Counting Time (min.)', fontsize=11, weight='bold')
     ax.set_ylabel('Log Ratio of Likelihoods', fontsize=11, weight='bold')
@@ -196,6 +201,7 @@ def _magnetism_results_ratios(save_path):
 
     # Save the plot.
     save_plot(fig, save_path, 'log_ratios')
+
 
 def _calc_log_ratios(pt_thick, times, angle_splits, save_path):
     """Calculates log ratio of likelihoods between two models, one with an
@@ -219,8 +225,10 @@ def _calc_log_ratios(pt_thick, times, angle_splits, save_path):
             # Get the ratio for 100 simulated data sets using the time.
             for _ in range(100):
                 # Define the number of points and times for each angle.
-                angle_times = [(angle, points, split*total_time)
-                               for angle, points, split in angle_splits]
+                angle_times = [
+                    (angle, points, split * total_time)
+                    for angle, points, split in angle_splits
+                ]
 
                 # Simulate data for the YIG sample with a 1 uB/atom magnetic
                 # moment in the Pt layer.
@@ -243,13 +251,14 @@ def _calc_log_ratios(pt_thick, times, angle_splits, save_path):
                 logl_2 = _logl(models)
 
                 # Record the ratio of likelihoods.
-                ratio = logl_1-logl_2
+                ratio = logl_1 - logl_2
                 ratios.append(ratio)
 
             # Calculate and save median ratio.
             median_ratio = np.median(ratios)
             file.write('{0},{1}\n'.format(total_time, median_ratio))
             print(median_ratio)
+
 
 def _logl(models):
     """Calculates the log-likelihood for a given list of `models`
@@ -263,7 +272,7 @@ def _logl(models):
 
     """
     # Extract the Q, R, dR and model R for the simulated spin states.
-    q, r, dr, r_model = [], [] , [], []
+    q, r, dr, r_model = [], [], [], []
     for model in models:
         probe = model.probe.xs[model.probe.spin_state]
         q.append(probe.Q)
@@ -278,7 +287,8 @@ def _logl(models):
     r_model = np.concatenate(r_model)
 
     # Calculate the log-likelihood over all the models.
-    return -0.5*np.sum(((r-r_model)/dr)**2 + np.log(2*np.pi*dr**2))
+    return -0.5 * np.sum((r - r_model) / dr) ** 2 + np.log(2 * np.pi * dr**2)
+
 
 if __name__ == '__main__':
     save_path = './results'

@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import sys
 
 import matplotlib.pyplot as plt
 
@@ -36,18 +35,18 @@ def _kinetics_results_visualise(save_path):
 
     # Iterate over each contrast and angle being considered.
     x, y, infos = [], [], []
-    n = len(angle_range)*len(contrast_range) # Number of calculations.
+    n = len(angle_range) * len(contrast_range)  # Number of calculations.
     for i, contrast_sld in enumerate(contrast_range):
         # Display progress.
         if i % 5 == 0:
-            print('>>> {0}/{1}'.format(i*len(angle_range), n))
+            print('>>> {0}/{1}'.format(i * len(angle_range), n))
 
         for angle in angle_range:
             # Record the "true" lipid APM value.
             apm = monolayer.lipid_apm.value
 
             # Split the time budget based on number of APM values.
-            angle_times = [(angle, points, time/len(apm_range))]
+            angle_times = [(angle, points, time / len(apm_range))]
 
             # Calculate the lipid APM Fisher information for each value.
             information = 0
@@ -57,13 +56,13 @@ def _kinetics_results_visualise(save_path):
                 g = monolayer.contrast_info(angle_times, [contrast_sld])
                 information += g[0, 0]
 
-            monolayer.lipid_apm.value = apm # Reset the APM parameter.
+            monolayer.lipid_apm.value = apm  # Reset the APM parameter.
             infos.append(information)
             x.append(contrast_sld)
             y.append(angle)
 
     # Create the plot of angle and contrast SLD versus Fisher information.
-    fig = plt.figure(figsize=[10,8])
+    fig = plt.figure(figsize=[10, 8])
     ax = fig.add_subplot(111, projection='3d')
 
     # Create the surface plot and add colour bar.
@@ -77,7 +76,7 @@ def _kinetics_results_visualise(save_path):
     ax.set_xlabel(x_label, fontsize=11, weight='bold')
     ax.set_ylabel(y_label, fontsize=11, weight='bold')
     ax.set_zlabel(z_label, fontsize=11, weight='bold')
-    ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
+    ax.ticklabel_format(axis='z', style='sci', scilimits=(0, 0))
 
     # Save the plot.
     save_path = os.path.join(save_path, monolayer.name)
@@ -100,6 +99,7 @@ def _kinetics_results_visualise(save_path):
     maximum = np.argmax(infos)
     return x[maximum], y[maximum]
 
+
 def _kinetics_results_optimise(save_path):
     """Optimises the choice of measurement angle and contrast SLD for the
        DPPG monolayer model where the lipid area per molecule is decreasing
@@ -110,7 +110,7 @@ def _kinetics_results_optimise(save_path):
 
     """
     # Counting time and number of points to use when simulating.
-    time = 1000 # A large time improves DE convergence.
+    time = 1000  # A large time improves DE convergence.
     points = 100
 
     # Intervals containing angles and contrasts to consider.
@@ -133,7 +133,7 @@ def _kinetics_results_optimise(save_path):
 
             # Optimise angle and contrast.
             res = differential_evolution(_optimisation_func, bounds,
-                                         args=[monolayer]+args, polish=False,
+                                         args=[monolayer] + args, polish=False,
                                          tol=0.001, updating='deferred',
                                          workers=-1, disp=False)
 
@@ -144,6 +144,7 @@ def _kinetics_results_optimise(save_path):
             file.write('Angle: {}\n'.format(round(angle, 2)))
             file.write('Contrast: {}\n'.format(round(contrast, 2)))
             file.write('Objective value: {}\n\n'.format(res.fun))
+
 
 def _optimisation_func(x, sample, apm_range, points, time):
     """Defines the function for optimising the DPPG monolayer measurement
@@ -163,7 +164,7 @@ def _optimisation_func(x, sample, apm_range, points, time):
     """
     # Define the points and counting times for each angle to simulate.
     angle, contrast_sld = x[0], x[1]
-    angle_times = [(angle, points, time/len(apm_range))]
+    angle_times = [(angle, points, time / len(apm_range))]
 
     # Calculate the information in the experiment using the given conditions.
     information = 0
@@ -175,6 +176,7 @@ def _optimisation_func(x, sample, apm_range, points, time):
     # Return negative of the Fisher information as the algorithm is minimising.
     sample.lipid_apm.value = apm
     return -information
+
 
 if __name__ == '__main__':
     save_path = './results'

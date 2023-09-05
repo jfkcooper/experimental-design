@@ -1,5 +1,4 @@
 import os
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,14 +6,28 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from itertools import combinations
 
 from hogben.utils import save_plot
-from hogben.models.base import VariableAngle, VariableContrast, VariableUnderlayer
+from hogben.models.base import (
+    BaseLipid,
+    BaseSample,
+    VariableAngle,
+    VariableContrast,
+    VariableUnderlayer,
+)
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
 
-def angle_choice(sample, initial_angle_times, angle_range, points_new,
-                 time_new, save_path, filename, contrasts=[]):
+def angle_choice(
+    sample: BaseSample,
+    initial_angle_times: list,
+    angle_range: np.ndarray,
+    points_new: int,
+    time_new: type,
+    save_path: str,
+    filename: str,
+    contrasts: list = [],
+):
     """Plots the minimum eigenvalue of the Fisher information matrix
        as a function of measurement angle.
 
@@ -50,7 +63,7 @@ def angle_choice(sample, initial_angle_times, angle_range, points_new,
         g_new = sample.angle_info(new_angle_times, contrasts)
 
         # Combine the new information with the existing information.
-        min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
+        min_eigs.append(np.linalg.eigvalsh(g_init + g_new)[0])
 
     # Plot measurement angle versus minimum eigenvalue.
     fig = plt.figure()
@@ -61,13 +74,22 @@ def angle_choice(sample, initial_angle_times, angle_range, points_new,
 
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
-    save_plot(fig, save_path, 'angle_choice_'+filename)
+    save_plot(fig, save_path, 'angle_choice_' + filename)
 
     # Return the angle with largest minimum eigenvalue.
     return angle_range[np.argmax(min_eigs)]
 
-def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
-                           points, new_time, save_path, contrasts=[]):
+
+def angle_choice_with_time(
+    sample: BaseSample,
+    initial_angle: float,
+    angle_range: type,
+    time_range: type,
+    points: int,
+    new_time: float,
+    save_path: str,
+    contrasts: list = [],
+):
     """Investigates how the second choice of angle for a `sample` changes
        as the counting time of the initial angle is increased.
 
@@ -93,7 +115,7 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
     ax.set_xlim(angle_range[0], angle_range[-1])
 
     # Create the line that will have data added to it.
-    line, = ax.plot([], [], lw=3)
+    (line,) = ax.plot([], [], lw=3)
 
     # Initialiser function for the line.
     def init():
@@ -116,7 +138,7 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
             # Combine the information from the first and second angles.
             angle_times_new = [(new_angle, points, new_time)]
             g_new = sample.angle_info(angle_times_new, contrasts)
-            min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
+            min_eigs.append(np.linalg.eigvalsh(g_init + g_new)[0])
 
         # Update the data of the line.
         ax.set_ylim(min(min_eigs), max(min_eigs))
@@ -125,21 +147,28 @@ def angle_choice_with_time(sample, initial_angle, angle_range, time_range,
         return line,
 
     # Define the animation.
-    anim_length = 4000 # Animation length in milliseconds.
-    frames = len(time_range) # Number of frames for animation.
+    anim_length = 4000  # Animation length in milliseconds.
+    frames = len(time_range)  # Number of frames for animation.
     anim = FuncAnimation(fig, animate, init_func=init, blit=True,
-                         frames=frames, interval=anim_length//frames)
+                         frames=frames, interval=anim_length // frames)
     plt.close()
 
     # Save the animation as a .gif file.
     writergif = PillowWriter()
     save_path = os.path.join(save_path, sample.name,
                              'angle_choice_with_time.gif')
+
     anim.save(save_path, writer=writergif)
     return anim
 
-def contrast_choice_single(sample, contrast_range, initial_contrasts,
-                           angle_times, save_path, filename):
+
+def contrast_choice_single(sample: BaseLipid,
+                           contrast_range: np.ndarray,
+                           initial_contrasts: list,
+                           angle_times: list,
+                           save_path: str,
+                           filename: str
+                           ) -> float:
     """Plots the minimum eigenvalue of the Fisher information matrix
        as a function of a single contrast SLD.
 
@@ -170,7 +199,7 @@ def contrast_choice_single(sample, contrast_range, initial_contrasts,
 
         # Get the information from the new contrast and combine with initial.
         g_new = sample.contrast_info(angle_times, [new_contrast])
-        min_eigs.append(np.linalg.eigvalsh(g_init+g_new)[0])
+        min_eigs.append(np.linalg.eigvalsh(g_init + g_new)[0])
 
     # Plot contrast SLD versus minimum eigenvalue.
     fig = plt.figure()
@@ -182,10 +211,11 @@ def contrast_choice_single(sample, contrast_range, initial_contrasts,
 
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
-    save_plot(fig, save_path, 'contrast_choice_single_'+filename)
+    save_plot(fig, save_path, 'contrast_choice_single_' + filename)
 
     # Return the contrast SLD with largest minimum eigenvalue.
     return contrast_range[np.argmax(min_eigs)]
+
 
 def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     """Plots the minimum eigenvalue of the Fisher information matrix
@@ -221,12 +251,12 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     # Duplicate the data so that the plot is not half-empty (or half-full?).
     # This is valid since the choice of contrast is commutative.
     # I.e., the order in which contrasts are measured is not important.
-    x = np.concatenate([contrasts[:,0], contrasts[:,1]])
-    y = np.concatenate([contrasts[:,1], contrasts[:,0]])
+    x = np.concatenate([contrasts[:, 0], contrasts[:, 1]])
+    y = np.concatenate([contrasts[:, 1], contrasts[:, 0]])
     min_eigs.extend(min_eigs)
 
     # Create a 3D plot of contrast pair versus minimum eigenvalue.
-    fig = plt.figure(figsize=[12,9])
+    fig = plt.figure(figsize=[12, 9])
     ax = fig.add_subplot(111, projection='3d')
 
     # Create the surface plot and add colour bar.
@@ -240,7 +270,7 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     ax.set_xlabel(x_label, fontsize=11, weight='bold')
     ax.set_ylabel(y_label, fontsize=11, weight='bold')
     ax.set_zlabel(z_label, fontsize=11, weight='bold')
-    ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
+    ax.ticklabel_format(axis='z', style='sci', scilimits=(0, 0))
 
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
@@ -261,8 +291,16 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     maximum = np.argmax(min_eigs)
     return x[maximum], y[maximum]
 
-def underlayer_choice(sample, thickness_range, sld_range, contrasts,
-                      angle_times, save_path, filename=''):
+
+def underlayer_choice(
+    sample: BaseLipid,
+    thickness_range: np.ndarray,
+    sld_range: np.ndarray,
+    contrasts: list,
+    angle_times: list,
+    save_path: str,
+    filename: str = '',
+):
     """Plots the minimum eigenvalue of the Fisher information matrix
        as a function of a sample's underlayer thickness and SLD.
 
@@ -284,11 +322,11 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts,
 
     # Iterate over each underlayer thickness to investigate.
     x, y, min_eigs = [], [], []
-    n = len(thickness_range)*len(sld_range) # Number of calculations.
+    n = len(thickness_range) * len(sld_range)  # Number of calculations.
     for i, thick in enumerate(thickness_range):
         # Display progress.
         if i % 5 == 0:
-            print('>>> {0}/{1}'.format(i*len(sld_range), n))
+            print('>>> {0}/{1}'.format(i * len(sld_range), n))
 
         # Iterate over each underlayer SLD to investigate.
         for sld in sld_range:
@@ -299,7 +337,7 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts,
             y.append(sld)
 
     # Create 3D plot of underlayer thickness and SLD versus minimum eigenvalue.
-    fig = plt.figure(figsize=[10,8])
+    fig = plt.figure(figsize=[10, 8])
     ax = fig.add_subplot(111, projection='3d')
 
     # Create the surface plot and add colour bar.
@@ -313,11 +351,11 @@ def underlayer_choice(sample, thickness_range, sld_range, contrasts,
     ax.set_xlabel(x_label, fontsize=11, weight='bold')
     ax.set_ylabel(y_label, fontsize=11, weight='bold')
     ax.set_zlabel(z_label, fontsize=11, weight='bold')
-    ax.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
+    ax.ticklabel_format(axis='z', style='sci', scilimits=(0, 0))
 
     # Save the plot.
     save_path = os.path.join(save_path, sample.name)
-    filename = 'underlayer_choice' + ('_'+filename if filename != '' else '')
+    filename = 'underlayer_choice' + ('_' + filename if filename != '' else '')
     save_plot(fig, save_path, filename)
 
     # Save different views of the 3D plot.

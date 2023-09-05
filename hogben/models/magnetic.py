@@ -1,5 +1,4 @@
 import os
-import sys
 
 import matplotlib.pyplot as plt
 
@@ -39,8 +38,10 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         pt_rough (bumps.parameter.Parameter): air/platinum roughness.
         pt_mag (bumps.parameter.Parameter): platinum layer magnetic SLD.
         intermediary_sld (bumps.parameter.Parameter): intermediary layer SLD.
-        intermediary_thick (bumps.parameter.Parameter): intermediary layer thickness.
-        intermediary_rough (bumps.parameter.Parameter): platinum/intermediary roughness.
+        intermediary_thick (bumps.parameter.Parameter): intermediary layer
+                                                        thickness.
+        intermediary_rough (bumps.parameter.Parameter): platinum/intermediary
+                                                        roughness.
         yig_sld (bumps.parameter.Parameter): YIG layer SLD.
         yig_thick (bumps.parameter.Parameter): YIG layer thickness.
         yig_rough (bumps.parameter.Parameter): intermediary/YIG roughness.
@@ -49,15 +50,16 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         yag_rough (bumps.parameter.Parameter): YIG/YAG roughness.
         params (list): parameters of the model.
         structure (refl1d.model.Stack): Refl1D representation of sample.
-        experiment (refl1d.experiment.Experiment): fittable experiment for sample.
+        experiment (refl1d.experiment.Experiment): fittable experiment for
+                                                   sample.
 
     """
+
     def __init__(self):
         self.name = 'YIG_sample'
-        self.data_path = os.path.join(os.path.dirname(__file__),
-                                      '..',
-                                      'data',
-                                      'YIG_sample')
+        self.data_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'YIG_sample'
+        )
 
         self.labels = ['Up', 'Down']
         self.mag_angle = 90
@@ -68,20 +70,34 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         # Define the parameters of the model.
         self.pt_sld = bumps.parameter.Parameter(5.646, name='Pt SLD')
         self.pt_thick = bumps.parameter.Parameter(21.08, name='Pt Thickness')
-        self.pt_rough = bumps.parameter.Parameter(8.211, name='Air/Pt Roughness')
+        self.pt_rough = bumps.parameter.Parameter(
+            8.211, name='Air/Pt Roughness'
+        )
         self.pt_mag = bumps.parameter.Parameter(0, name='Pt Magnetic SLD')
 
-        self.intermediary_sld = bumps.parameter.Parameter(4.678, name='Intermediary SLD')
-        self.intermediary_thick = bumps.parameter.Parameter(19.67, name='Intermediary Thickness')
-        self.intermediary_rough = bumps.parameter.Parameter(2, name='Pt/Intermediary Roughness')
+        self.intermediary_sld = bumps.parameter.Parameter(
+            4.678, name='Intermediary SLD'
+        )
+        self.intermediary_thick = bumps.parameter.Parameter(
+            19.67, name='Intermediary Thickness'
+        )
+        self.intermediary_rough = bumps.parameter.Parameter(
+            2, name='Pt/Intermediary Roughness'
+        )
 
         self.yig_sld = bumps.parameter.Parameter(5.836, name='YIG SLD')
         self.yig_thick = bumps.parameter.Parameter(713.8, name='YIG Thickness')
-        self.yig_rough = bumps.parameter.Parameter(13.55, name='Intermediary/YIG Roughness')
-        self.yig_mag = bumps.parameter.Parameter(0.349, name='YIG Magnetic SLD')
+        self.yig_rough = bumps.parameter.Parameter(
+            13.55, name='Intermediary/YIG Roughness'
+        )
+        self.yig_mag = bumps.parameter.Parameter(
+            0.349, name='YIG Magnetic SLD'
+        )
 
         self.yag_sld = bumps.parameter.Parameter(5.304, name='YAG SLD')
-        self.yag_rough = bumps.parameter.Parameter(30, name='YIG/YAG Roughness')
+        self.yag_rough = bumps.parameter.Parameter(
+            30, name='YIG/YAG Roughness'
+        )
 
         """
         self.params = [self.pt_sld,
@@ -127,11 +143,13 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         file_path_up = os.path.join(self.data_path, 'YIG_up.dat')
         file_path_down = os.path.join(self.data_path, 'YIG_down.dat')
 
-        pp = refl1d.probe.load4(file_path_up, sep='\t',
-                                intensity=self.scale, background=self.bkg)
+        pp = refl1d.probe.load4(
+            file_path_up, sep='\t', intensity=self.scale, background=self.bkg
+        )
 
-        mm = refl1d.probe.load4(file_path_down, sep='\t',
-                                intensity=self.scale, background=self.bkg)
+        mm = refl1d.probe.load4(
+            file_path_down, sep='\t', intensity=self.scale, background=self.bkg
+        )
 
         # Set the resolution to be constant dQ/q.
         self.__set_dq(pp)
@@ -142,7 +160,9 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         # Define the experiment using the probe and sample structure.
         self.structure = self.using_conditions()
-        self.experiment = refl1d.experiment.Experiment(sample=self.structure, probe=probe)
+        self.experiment = refl1d.experiment.Experiment(
+            sample=self.structure, probe=probe
+        )
 
     def using_conditions(self, yig_thick=None, pt_thick=None):
         """Creates a structure representing the YIG sample measured using
@@ -169,18 +189,32 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             assert pt_thick >= 0
 
         # 1 uB/atom = 1.638
-        pt_magnetism = refl1d.magnetism.Magnetism(rhoM=self.pt_mag, thetaM=self.mag_angle)
-        yig_magnetism = refl1d.magnetism.Magnetism(rhoM=self.yig_mag, thetaM=self.mag_angle)
+        pt_magnetism = refl1d.magnetism.Magnetism(
+            rhoM=self.pt_mag, thetaM=self.mag_angle
+        )
+        yig_magnetism = refl1d.magnetism.Magnetism(
+            rhoM=self.yig_mag, thetaM=self.mag_angle
+        )
 
         # Define the sample structure.
         air = refl1d.material.SLD(rho=0, name='Air')
-        pt = refl1d.material.SLD(rho=self.pt_sld, name='Pt')(self.pt_thick, self.pt_rough, magnetism=pt_magnetism)
-        intermediary = refl1d.material.SLD(rho=self.intermediary_sld, name='Intermediary')(self.intermediary_thick, self.intermediary_rough)
-        yig = refl1d.material.SLD(rho=self.yig_sld, name='YIG')(yig_thick, self.yig_rough, magnetism=yig_magnetism)
-        yag = refl1d.material.SLD(rho=self.yag_sld, name='Substrate')(0, self.yag_rough)
+        pt = refl1d.material.SLD(rho=self.pt_sld, name='Pt')(
+            self.pt_thick, self.pt_rough, magnetism=pt_magnetism
+        )
+        intermediary = refl1d.material.SLD(
+            rho=self.intermediary_sld, name='Intermediary'
+        )(self.intermediary_thick, self.intermediary_rough)
+        yig = refl1d.material.SLD(rho=self.yig_sld, name='YIG')(
+            yig_thick, self.yig_rough, magnetism=yig_magnetism
+        )
+        yag = refl1d.material.SLD(rho=self.yag_sld, name='Substrate')(
+            0, self.yag_rough
+        )
 
         # Define the added platinum thickness, if applicable.
-        pt_extra = refl1d.material.SLD(rho=self.pt_sld, name='Pt Extra')(pt_thick, 0)
+        pt_extra = refl1d.material.SLD(rho=self.pt_sld, name='Pt Extra')(
+            pt_thick, 0
+        )
 
         # Add the extra platinum layer if requested.
         if pt_thick == 0:
@@ -207,8 +241,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
                                              mp=False, mm=True)
 
         # Calculate the Fisher information matrix.
-        qs = [data[:,0] for data in datasets]
-        counts = [data[:,3] for data in datasets]
+        qs = [data[:, 0] for data in datasets]
+        counts = [data[:, 3] for data in datasets]
         return fisher(qs, self.params, counts, models)
 
     def underlayer_info(self, angle_times, yig_thick, pt_thick):
@@ -234,8 +268,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
                                              mp=False, mm=True)
 
         # Calculate the Fisher information matrix.
-        qs = [data[:,0] for data in datasets]
-        counts = [data[:,3] for data in datasets]
+        qs = [data[:, 0] for data in datasets]
+        counts = [data[:, 3] for data in datasets]
         return fisher(qs, self.params, counts, models)
 
     def __set_dq(self, probe):
@@ -246,7 +280,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         """
         # Transform the resolution from refnx to Refl1D format.
-        dq = self.dq / (100*np.sqrt(8*np.log(2)))
+        dq = self.dq / (100 * np.sqrt(8 * np.log(2)))
 
         q_array = probe.Q
 
@@ -256,9 +290,9 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         # Adjust probe calculation for constant resolution.
         argmin, argmax = np.argmin(q_array), np.argmax(q_array)
-        probe.calc_Qo = np.linspace(q_array[argmin] - 3.5*dq_array[argmin],
-                                    q_array[argmax] + 3.5*dq_array[argmax],
-                                    21*len(q_array))
+        probe.calc_Qo = np.linspace(q_array[argmin] - 3.5 * dq_array[argmin],
+                                    q_array[argmax] + 3.5 * dq_array[argmax],
+                                    21 * len(q_array))
 
     def sld_profile(self, save_path):
         """Plots the SLD profile of the sample.
@@ -270,7 +304,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
         # Get the SLD profile values.
         z, slds, _, slds_mag, _ = self.experiment.magnetic_smooth_profile()
 
-        fig = plt.figure(figsize=(8,6))
+        fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111)
 
         # Plot the SLD profile.
@@ -295,7 +329,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
             save_path (str): path to directory to save profile to.
 
         """
-        fig = plt.figure(figsize=(6,7))
+        fig = plt.figure(figsize=(6, 7))
         ax = fig.add_subplot(111)
 
         colours = ['b', 'g']
@@ -310,12 +344,12 @@ class SampleYIG(BaseSample, VariableUnderlayer):
                 ax.errorbar(probe.Q, probe.R, probe.dR, marker='o', ms=2,
                             lw=0, elinewidth=0.5, capsize=0.5,
                             color=colours[count],
-                            label=self.labels[count]+' Data')
+                            label=self.labels[count] + ' Data')
 
                 # Plot the model reflectivity.
                 ax.plot(probe.Q, qr[1], zorder=20,
                         color=colours[count],
-                        label=self.labels[count]+' Fitted')
+                        label=self.labels[count] + ' Fitted')
 
                 count += 1
 
@@ -350,7 +384,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'nested_sampling_'+filename)
+        save_plot(fig, save_path, 'nested_sampling_' + filename)
+
 
 if __name__ == '__main__':
     save_path = '../results'

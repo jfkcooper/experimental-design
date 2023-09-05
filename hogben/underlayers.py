@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 
 import numpy as np
@@ -15,7 +14,7 @@ def _underlayer_results_visualise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from models.bilayers import BilayerDMPC, BilayerDPPC
+    from models.bilayers import BilayerDMPC
 
     # Choose sample here.
     bilayer = BilayerDMPC()
@@ -38,8 +37,8 @@ def _underlayer_results_visualise(save_path):
                           save_path, label)
 
     angle_times = [(0.7, 100, 40)]
-    underlayers = [(127.1, 5.39)] # Optimal DMPC bilayer underlayer.
-    #underlayers = [(76.5, 9.00)] # Optimal DPPC/Ra LPS bilayer underlayer.
+    underlayers = [(127.1, 5.39)]  # Optimal DMPC bilayer underlayer.
+    # underlayers = [(76.5, 9.00)] # Optimal DPPC/Ra LPS bilayer underlayer.
 
     # Use nested sampling to validate the improvements.
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path,
@@ -48,6 +47,7 @@ def _underlayer_results_visualise(save_path):
     bilayer.nested_sampling([-0.56, 6.36], angle_times, save_path,
                             'D2O_H2O_with_underlayer', underlayers=underlayers)
 
+
 def _underlayer_results_optimise(save_path):
     """Optimises choice of underlayer thickness and SLD for a bilayer sample.
 
@@ -55,7 +55,7 @@ def _underlayer_results_optimise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from bilayers import BilayerDMPC, BilayerDPPC
+    from bilayers import BilayerDMPC
 
     # Choose sample here.
     bilayer = BilayerDMPC()
@@ -74,7 +74,7 @@ def _underlayer_results_optimise(save_path):
     save_path = os.path.join(save_path, bilayer.name)
     file_path = os.path.join(save_path, 'optimised_underlayers.txt')
     with open(file_path, 'w') as file:
-        optimiser = Optimiser(bilayer) # Optimiser for the experiment.
+        optimiser = Optimiser(bilayer)  # Optimiser for the experiment.
 
         # Calculate the objective value using no underlayers.
         g = optimiser.sample.underlayer_info(angle_times, contrasts, [])
@@ -88,7 +88,8 @@ def _underlayer_results_optimise(save_path):
 
         # Calculate the objective value using a gold underlayer.
         underlayer = [(100, 4.7)]
-        g = optimiser.sample.underlayer_info(angle_times, contrasts, underlayer)
+        g = optimiser.sample.underlayer_info(angle_times, contrasts,
+                                             underlayer)
         val = -np.linalg.eigvalsh(g)[0]
         val = np.format_float_positional(val, precision=4, unique=False,
                                          fractional=False, trim='k')
@@ -99,7 +100,8 @@ def _underlayer_results_optimise(save_path):
 
         # Calculate the objective value using a Permalloy underlayer.
         underlayer = [(100, 8.4)]
-        g = optimiser.sample.underlayer_info(angle_times, contrasts, underlayer)
+        g = optimiser.sample.underlayer_info(angle_times, contrasts,
+                                             underlayer)
         val = -np.linalg.eigvalsh(g)[0]
         val = np.format_float_positional(val, precision=4, unique=False,
                                          fractional=False, trim='k')
@@ -127,11 +129,16 @@ def _underlayer_results_optimise(save_path):
                                              fractional=False, trim='k')
 
             # Save the conditions, objective value and computation time.
-            file.write('------------ {} Underlayers ------------\n'.format(num_underlayers))
-            file.write('Thicknesses: {}\n'.format(list(np.round(thicknesses, 1))))
+            file.write('------------ {} Underlayers ------------\n'.format(
+                num_underlayers))
+            file.write('Thicknesses: {}\n'.format(
+                list(np.round(thicknesses, 1))))
+
             file.write('SLDs: {}\n'.format(list(np.round(slds, 2))))
             file.write('Objective value: {}\n'.format(val))
-            file.write('Computation time: {}\n\n'.format(round(end-start, 1)))
+            file.write('Computation time: {}\n\n'.format(
+                round(end - start, 1)))
+
 
 if __name__ == '__main__':
     save_path = './results'

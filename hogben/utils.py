@@ -223,7 +223,7 @@ def fisher(qs: list[np.ndarray],
         # scale with one if no importance was specified.
         importance_array = []
         for param in xi:
-            if hasattr(param, "importance"):
+            if hasattr(param, 'importance'):
                 importance_array.append(param.importance)
             else:
                 importance_array.append(1)
