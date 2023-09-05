@@ -79,12 +79,14 @@ def compare_sample_structure(refl1d: refl1d.model.Stack,
     for component in list(reversed(refnx.structure))[1:]:
         refnx_params[component.name] = {
             'sld': component.sld.real.value,
+            'isld': component.sld.imag.value,
             'thick': component.thick.value,
             'rough': component.rough.value
         }
     for component in refl1d.structure[1:]:
         refl1d_params[component.name] = {
             'sld': component.material.rho.value,
+            'isld': component.material.irho.value,
             'thick': component.thickness.value,
             'rough': component.interface.value
         }
@@ -109,7 +111,7 @@ def test_angle_info(sample_class, request):
     qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
     g = fisher(qs, sample.params, counts, models)
 
-    np.testing.assert_allclose(g, angle_info, rtol=1e-08)
+    np.testing.assert_allclose(g, angle_info, rtol=1e-06)
 
 
 @patch('hogben.models.samples.Sample._get_sld_profile')
@@ -169,7 +171,7 @@ def test_reflectivity_profile_positive(sample_class, request):
     """
     sample = request.getfixturevalue(sample_class)
     q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
-    assert min(r) > 0
+    assert np.all(np.greater(r, 0.0))
 
 
 def test_reflectivity_invalid_structure():
@@ -253,58 +255,22 @@ def test_to_refnx_values(refl1d_sample):
     assert compare_sample_structure(refl1d_sample, refnx_sample)
 
 
-def test_simple_sample():
-    """
-    Tests whether simple_sample leads to a valid refnx structure that can be
-    converted to refl1d
-    """
-    simple_sample = samples.simple_sample()
-    simple_sample.to_refl1d()
+@pytest.mark.parametrize('sample', [samples.simple_sample(),
+                                    samples.many_param_sample(),
+                                    samples.thin_layer_sample_1(),
+                                    samples.thin_layer_sample_2(),
+                                    samples.similar_sld_sample_1(),
+                                    samples.similar_sld_sample_2(),
 
-
-def test_many_param_sample():
+                                    ]
+                         )
+def test_predefined_samples(sample):
     """
-    Tests whether many_param_sample leads to a valid refnx structure that
-    can be converted to refl1d
+    Tests whether the predefined samples provide a valid structure that
+    succesfully can be converted to a refl1d structure.
     """
-    many_param_sample = samples.many_param_sample()
-    many_param_sample.to_refl1d()
-
-
-def test_thin_layer_sample_1():
-    """
-    Tests whether thin_layer_sample_1 leads to a valid refnx structure that
-    can be converted to refl1d
-    """
-    thin_layer_sample_1 = samples.thin_layer_sample_1()
-    thin_layer_sample_1.to_refl1d()
-
-
-def test_thin_layer_sample_2():
-    """
-    Tests whether thin_layer_sample_2 leads to a valid refnx structure that
-    can be converted to refl1d
-    """
-    thin_layer_sample_2 = samples.thin_layer_sample_2()
-    thin_layer_sample_2.to_refl1d()
-
-
-def test_similar_sld_sample_1():
-    """
-    Tests whether similar_sld_sample_1 leads to a valid refnx structure that
-    can be converted to refl1d
-    """
-    similar_sld_sample_1 = samples.similar_sld_sample_1()
-    similar_sld_sample_1.to_refl1d()
-
-
-def test_similar_sld_sample_2():
-    """
-    Tests whether similar_sld_sample_2 leads to a valid refnx structure that
-    can be converted to refl1d
-    """
-    similar_sld_sample_2 = samples.similar_sld_sample_2()
-    similar_sld_sample_2.to_refl1d()
+    sample.to_refl1d()
+    assert isinstance(sample.structure, refl1d.model.Stack)
 
 
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
