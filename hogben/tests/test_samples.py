@@ -27,6 +27,7 @@ def refnx_sample():
     structure = air | layer1 | layer2 | substrate
     return Sample(structure)
 
+
 @pytest.fixture
 def refl1d_sample():
     """Define a bilayer sample, and return the associated refl1d model"""
@@ -37,6 +38,7 @@ def refl1d_sample():
                                                         interface=2)
     structure = substrate | layer2 | layer1 | air
     return Sample(structure)
+
 
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
@@ -54,6 +56,7 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
         os.makedirs(save_path)
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=40)
+
 
 def compare_sample_structure(refl1d: refl1d.model.Stack,
                              refnx: refnx.reflect.Structure) -> None:
@@ -75,20 +78,20 @@ def compare_sample_structure(refl1d: refl1d.model.Stack,
     # Check structure in reversed order, so it matches with refl1d
     for component in list(reversed(refnx.structure))[1:]:
         refnx_params[component.name] = {
-            "sld": component.sld.real.value,
-            "thick": component.thick.value,
-            "rough": component.rough.value
+            'sld': component.sld.real.value,
+            'thick': component.thick.value,
+            'rough': component.rough.value
         }
     for component in refl1d.structure[1:]:
         refl1d_params[component.name] = {
-            "sld": component.material.rho.value,
-            "thick": component.thickness.value,
-            "rough": component.interface.value
+            'sld': component.material.rho.value,
+            'thick': component.thickness.value,
+            'rough': component.interface.value
         }
     return refnx_params == refl1d_params
 
-@pytest.mark.parametrize('sample_class', ("refnx_sample",
-                                         "refl1d_sample"))
+
+@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
 def test_angle_info(sample_class, request):
     """
     Tests whether the angle_info function correctly calculates the Fisher
@@ -108,6 +111,7 @@ def test_angle_info(sample_class, request):
 
     np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
+
 @patch('hogben.models.samples.Sample._get_sld_profile')
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
 def test_sld_profile_valid_figure(_mock_save_plot,
@@ -118,12 +122,12 @@ def test_sld_profile_valid_figure(_mock_save_plot,
     mock_sld_profile.return_value = ([0, 10, 60, 110, 160, 210],
                                      [4, 9, -2, 9, -2, 9])
 
-
     # Use temporary directory, so it doesn't leave any files after testing
     with tempfile.TemporaryDirectory() as temp_dir:
         refnx_sample.sld_profile(temp_dir)
         img_test = os.path.join(temp_dir, refnx_sample.name, 'sld_profile.png')
         assert os.path.isfile(img_test)
+
 
 @patch('hogben.models.samples.Sample._get_reflectivity_profile')
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
@@ -143,11 +147,10 @@ def test_reflectivity_profile_valid_figure(_mock_save_plot,
                                 'reflectivity_profile.png')
         assert os.path.isfile(img_test)
 
+
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
-@pytest.mark.parametrize('sample_class', ("refnx_sample",
-                                         "refl1d_sample"))
-def test_sld_profile_length(_mock_save_plot, sample_class,
-                                        request):
+@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
+def test_sld_profile_length(_mock_save_plot, sample_class, request):
     """
     Tests whether _get_sld_profile() succesfully retrieves two arrays with
     equal lengths, representing an SLD profile that can be plotted in a figure
@@ -155,12 +158,11 @@ def test_sld_profile_length(_mock_save_plot, sample_class,
     sample = request.getfixturevalue(sample_class)
     z, slds = sample._get_sld_profile()
     assert len(z) == len(slds)
-    assert len(z) > 0 # Make sure arrays are not empty
+    assert len(z) > 0  # Make sure arrays are not empty
 
-@pytest.mark.parametrize('sample_class', ("refnx_sample",
-                                         "refl1d_sample"))
-def test_reflectivity_profile_positive(sample_class,
-                                        request):
+
+@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
+def test_reflectivity_profile_positive(sample_class, request):
     """
     Tests whether _get_reflectivity_profile() succesfully obtains reflectivity
     values that are all positively valued
@@ -169,6 +171,7 @@ def test_reflectivity_profile_positive(sample_class,
     q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert min(r) > 0
 
+
 def test_reflectivity_invalid_structure():
     """
     Test whether a RunTimeError is correctly given when an invalid sample
@@ -176,8 +179,8 @@ def test_reflectivity_invalid_structure():
     """
     sample = Mock(spec=None)
     with pytest.raises(RuntimeError):
-        Sample._get_reflectivity_profile(sample, 0.005, 0.4, 500, 1,
-                                            1e-7, 2)
+        Sample._get_reflectivity_profile(sample, 0.005, 0.4, 500, 1, 1e-7, 2)
+
 
 def test_sld_invalid_structure():
     """
@@ -188,6 +191,7 @@ def test_sld_invalid_structure():
     with pytest.raises(RuntimeError):
         Sample._get_sld_profile(sample)
 
+
 def test_vary_structure_invalid_structure():
     """
     Test whether a RunTimeError is correctly given when an invalid sample
@@ -197,10 +201,9 @@ def test_vary_structure_invalid_structure():
     with pytest.raises(RuntimeError):
         Sample._Sample__vary_structure(structure)
 
-@pytest.mark.parametrize('sample_class', ("refnx_sample",
-                                         "refl1d_sample"))
-def test_reflectivity_profile_length(sample_class,
-                                        request):
+
+@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
+def test_reflectivity_profile_length(sample_class, request):
     """
     Tests whether _get_reflectivity_profile() succesfully retrieves two arrays
     with equal lengths, representing a reflectivity profile that can be
@@ -209,7 +212,8 @@ def test_reflectivity_profile_length(sample_class,
     sample = request.getfixturevalue(sample_class)
     q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert len(q) == len(r)
-    assert len(q) > 0 # Make sure array is not empty
+    assert len(q) > 0  # Make sure array is not empty
+
 
 def test_to_refl1d_instance(refnx_sample):
     """
@@ -219,6 +223,7 @@ def test_to_refl1d_instance(refnx_sample):
     refnx_sample.to_refl1d()
     assert isinstance(refnx_sample.structure, refl1d.model.Stack)
 
+
 def test_to_refnx_instance(refl1d_sample):
     """
     Tests whether a conversion from refl1d to a refnx structure correctly
@@ -226,6 +231,7 @@ def test_to_refnx_instance(refl1d_sample):
     """
     refl1d_sample.to_refnx()
     assert isinstance(refl1d_sample.structure, refnx.reflect.Structure)
+
 
 def test_to_refl1d_values(refnx_sample):
     """
@@ -236,6 +242,7 @@ def test_to_refl1d_values(refnx_sample):
     refl1d_sample.to_refl1d()
     assert compare_sample_structure(refl1d_sample, refnx_sample)
 
+
 def test_to_refnx_values(refl1d_sample):
     """
     Tests whether the structural parameters are correctly carried over when
@@ -245,6 +252,7 @@ def test_to_refnx_values(refl1d_sample):
     refnx_sample.to_refnx()
     assert compare_sample_structure(refl1d_sample, refnx_sample)
 
+
 def test_simple_sample():
     """
     Tests whether simple_sample leads to a valid refnx structure that can be
@@ -252,6 +260,7 @@ def test_simple_sample():
     """
     simple_sample = samples.simple_sample()
     simple_sample.to_refl1d()
+
 
 def test_many_param_sample():
     """
@@ -261,6 +270,7 @@ def test_many_param_sample():
     many_param_sample = samples.many_param_sample()
     many_param_sample.to_refl1d()
 
+
 def test_thin_layer_sample_1():
     """
     Tests whether thin_layer_sample_1 leads to a valid refnx structure that
@@ -268,6 +278,7 @@ def test_thin_layer_sample_1():
     """
     thin_layer_sample_1 = samples.thin_layer_sample_1()
     thin_layer_sample_1.to_refl1d()
+
 
 def test_thin_layer_sample_2():
     """
@@ -277,6 +288,7 @@ def test_thin_layer_sample_2():
     thin_layer_sample_2 = samples.thin_layer_sample_2()
     thin_layer_sample_2.to_refl1d()
 
+
 def test_similar_sld_sample_1():
     """
     Tests whether similar_sld_sample_1 leads to a valid refnx structure that
@@ -285,6 +297,7 @@ def test_similar_sld_sample_1():
     similar_sld_sample_1 = samples.similar_sld_sample_1()
     similar_sld_sample_1.to_refl1d()
 
+
 def test_similar_sld_sample_2():
     """
     Tests whether similar_sld_sample_2 leads to a valid refnx structure that
@@ -292,6 +305,7 @@ def test_similar_sld_sample_2():
     """
     similar_sld_sample_2 = samples.similar_sld_sample_2()
     similar_sld_sample_2.to_refl1d()
+
 
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
 def test_main_function(_mock_save_plot):

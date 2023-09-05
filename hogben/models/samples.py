@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Optional
 
 import matplotlib.pyplot as plt
@@ -150,8 +149,8 @@ class Sample(BaseSample):
 
         # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
-            q = np.geomspace(0.005, 0.3, 500) # This is not used.
-            scale, bkg, dq = 1, 1e-6, 2 # These are not used.
+            q = np.geomspace(0.005, 0.3, 500)  # This is not used.
+            scale, bkg, dq = 1, 1e-6, 2  # These are not used.
             experiment = refl1d_experiment(self.structure, q, scale, bkg, dq)
             z, slds, _ = experiment.smooth_profile()
         # Otherwise, the structure is invalid.
@@ -183,7 +182,7 @@ class Sample(BaseSample):
         """
         # Calculate the model reflectivity.
         q, r = self._get_reflectivity_profile(q_min, q_max, points, scale,
-                                                  bkg, dq)
+                                              bkg, dq)
 
         # Plot Q versus model reflectivity.
         fig = plt.figure()
@@ -215,7 +214,8 @@ class Sample(BaseSample):
 
         # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
-            model = refnx.reflect.ReflectModel(self.structure, scale=scale, bkg=bkg, dq=dq)
+            model = refnx.reflect.ReflectModel(self.structure, scale=scale,
+                                               bkg=bkg, dq=dq)
 
         # Determine if the structure was defined in Refl1D.
         elif isinstance(self.structure, refl1d.model.Stack):
@@ -227,8 +227,6 @@ class Sample(BaseSample):
 
         r = reflectivity(q, model)
         return q, r
-
-
 
     def nested_sampling(self,
                         angle_times: list,
@@ -416,6 +414,7 @@ def similar_sld_sample_2():
     structure.name = 'similar_sld_sample_2'
     return Sample(structure)
 
+
 def run_main(save_path: Optional[str] = '../results') -> None:
     """
     Runs the main function of the module, retrieves an SLD and
@@ -437,7 +436,6 @@ def run_main(save_path: Optional[str] = '../results') -> None:
 
         # Close the plots.
         plt.close('all')
-
 
 
 if __name__ == '__main__':
