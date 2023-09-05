@@ -20,6 +20,7 @@ import bumps.fitproblem
 from hogben.simulate import simulate, refl1d_experiment, reflectivity
 from hogben.utils import fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
+from refnx.analysis import Parameter
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -276,12 +277,14 @@ class Sample(BaseSample):
         # Iterate over each component.
         structure = refl1d.material.SLD(rho=0, name='Air')
         for component in self.structure[1:]:
-            name, sld = component.name, component.sld.real.value,
+            name = component.name
+            sld, sld_imag = component.sld.real.value, component.sld.imag.value
             thick, rough = component.thick.value, component.rough.value
 
             # Add the component in the opposite direction to the refnx
             # definition.
-            layer = refl1d.material.SLD(rho=sld, name=name)(thick, rough)
+            layer = refl1d.material.SLD(rho=sld, irho=sld_imag, name=name)(
+                thick, rough)
             structure = layer | structure
 
         # Update the current structure to use the new version.
@@ -296,12 +299,16 @@ class Sample(BaseSample):
         # Iterate over each component.
         structure = refnx.reflect.SLD(0, name='Air')
         for component in list(reversed(self.structure))[1:]:
-            name, sld = component.name, component.material.rho.value,
+            name = component.name
+            sld, sld_imag = \
+                Parameter(component.material.rho.value), \
+                Parameter(component.material.irho.value)
             thick, rough = component.thickness.value, component.interface.value
 
             # Add the component in the opposite direction to the Refl1D
             # definition.
-            structure |= refnx.reflect.SLD(sld, name=name)(thick, rough)
+            structure |= refnx.reflect.SLD([sld, sld_imag], name=name)(
+                thick, rough)
 
         # Update the current structure to use the new version.
         structure.name = self.structure.name
