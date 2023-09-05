@@ -103,7 +103,7 @@ def test_angle_info(sample_class, request):
 
     # Get Fisher information from tested unit
     sample = request.getfixturevalue(sample_class)
-    angle_times = [(0.7, 100, 10000), (2.0, 100, 10000)]
+    angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
     angle_info = sample.angle_info(angle_times)
 
     # Get Fisher information directly
@@ -111,7 +111,7 @@ def test_angle_info(sample_class, request):
     qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
     g = fisher(qs, sample.params, counts, models)
 
-    np.testing.assert_allclose(g, angle_info, rtol=1e-06)
+    np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
 
 @patch('hogben.models.samples.Sample._get_sld_profile')
