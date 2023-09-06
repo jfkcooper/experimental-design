@@ -161,7 +161,7 @@ def _figure_2(save_path):
     # Calculate the minimum eigenvalue for each choice of third contrast.
     min_eigs_1, min_eigs_2 = [], []
     contrast_range = np.linspace(-0.56, 6.36, 500)
-    for i, new_contrast in enumerate(contrast_range):
+    for new_contrast in contrast_range:
         # Combine Fisher information matrices from initial and third contrasts.
         g_new_1 = sample_1.contrast_info(nxt_angle_times_1, [new_contrast])
         g_new_2 = sample_2.contrast_info(nxt_angle_times_2, [new_contrast])
