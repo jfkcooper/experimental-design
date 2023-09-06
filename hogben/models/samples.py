@@ -1,3 +1,7 @@
+"""
+Contains class and methods related to the Sample class.
+"""
+
 import os
 import matplotlib.pyplot as plt
 
@@ -37,6 +41,13 @@ class Sample(BaseSample):
     """
 
     def __init__(self, structure):
+        """
+        Initializes a sample given a structure, and sets the sample name and
+        parameters
+
+        Args:
+            structure: Sample structure defined in the refnx or refl1d model
+        """
         self.structure = structure
         self.name = structure.name
         self.params = Sample.__vary_structure(structure)

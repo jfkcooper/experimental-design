@@ -1,8 +1,12 @@
+"""Module containing the Optimiser class used to optimise a neutron
+reflectometry experiment"""
+
 import numpy as np
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
 
 from hogben.models.base import (
+    BaseSample,
     VariableAngle,
     VariableContrast,
     VariableUnderlayer,
@@ -17,7 +21,13 @@ class Optimiser:
 
     """
 
-    def __init__(self, sample):
+    def __init__(self, sample: BaseSample):
+        """
+        Initializes Optimiser given a sample
+
+        Args:
+            sample: The sample to optimise an experiment for
+        """
         self.sample = sample
 
     def optimise_angle_times(
@@ -58,14 +68,23 @@ class Optimiser:
 
         # Constrain the counting times to sum to the fixed time budget.
         # Also constrain the angles to be in non-decreasing order.
-        def sum_of_splits(x):
+        def _sum_of_splits(x):
+            """
+            Sets the constraint for the counting times to the sum of the
+            fixed time budget
+            """
             return sum(x[num_angles:])
 
-        def non_decreasing(x):
+        def _non_decreasing(x):
+            """
+            Sets the constraint for the angles to be in non-decreasing
+            order
+            """
             return int(np.all(np.diff(x[:num_angles]) >= 0))
 
-        constraints = [NonlinearConstraint(sum_of_splits, 1, 1),
-                       NonlinearConstraint(non_decreasing, 1, 1)]
+        # Set both constrains as equality constraints
+        constraints = [NonlinearConstraint(_sum_of_splits, 1, 1),
+                       NonlinearConstraint(_non_decreasing, 1, 1)]
 
         # Optimise angles and times, and return the results.
         res, val = Optimiser.__optimise(self._angle_times_func, bounds,
@@ -105,15 +124,24 @@ class Optimiser:
 
         # Constrain the counting times to sum to the fixed time budget.
         # Also constrain the contrasts to be in non-decreasing order.
-        def sum_of_splits(x):
+        def _sum_of_splits(x):
+            """
+            Sets the constraint for the counting times to the sum of the
+            fixed time budget
+            """
             return sum(x[num_contrasts:])
 
-        def non_decreasing(x):
+        def _non_decreasing(x):
+            """
+            Sets the constraint for the contrasts to be in non-decreasing
+            order
+            """
             return int(np.all(np.diff(x[:num_contrasts]) >= 0))
 
+        # Set both constrains as equality constraints
         constraints = [
-            NonlinearConstraint(sum_of_splits, 1, 1),
-            NonlinearConstraint(non_decreasing, 1, 1),
+            NonlinearConstraint(_sum_of_splits, 1, 1),
+            NonlinearConstraint(_non_decreasing, 1, 1),
         ]
 
         # Arguments for the optimisation function.

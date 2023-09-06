@@ -1,3 +1,6 @@
+"""Functions for visualizing and optimizing angle and contrast for magnetic
+experiments."""
+
 import matplotlib.pyplot as plt
 import os
 

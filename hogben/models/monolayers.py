@@ -1,3 +1,6 @@
+"""Contains the class for monolayer samples"""
+
+
 import os
 from typing import Optional
 

@@ -1,3 +1,6 @@
+"""General utility functions to run nested sampling, calculate the Fisher
+information, and save plots"""
+
 import os
 from typing import Union
 
@@ -30,6 +33,12 @@ class Sampler:
     """
 
     def __init__(self, objective):
+        """
+        Initialise the sample given an objective to the sample
+
+        Args:
+            objective: objective to the sample
+        """
         self.objective = objective
 
         # Determine if the objective is from refnx or Refl1D.

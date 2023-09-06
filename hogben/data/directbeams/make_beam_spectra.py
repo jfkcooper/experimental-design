@@ -1,9 +1,12 @@
+"""Module to create valid beam spectra for a given set of instruments."""
+
 # Load files and do flood correction
 # import mantid algorithms, numpy and matplotlib
 from mantid.simpleapi import *
 
 
 def pre_process(runno, detectors='75-95'):
+    """Pre-process data"""
     LoadISISNexus(
         str(runno), OutputWorkspace=str(runno), LoadMonitors='Exclude'
     )

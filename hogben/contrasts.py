@@ -1,3 +1,7 @@
+"""
+Functions for visualizing and optimizing angle choice for a given sample.
+"""
+
 import os
 import time
 
@@ -7,6 +11,7 @@ import numpy as np
 from hogben.optimise import Optimiser
 from hogben.visualise import contrast_choice_single, contrast_choice_double
 from hogben.utils import save_plot
+from models.bilayers import BilayerDMPC, BilayerDPPC
 
 
 def _contrast_results_visualise(save_path):
@@ -16,7 +21,6 @@ def _contrast_results_visualise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from models.bilayers import BilayerDMPC
 
     # Choose sample here.
     bilayer = BilayerDMPC()
@@ -52,8 +56,6 @@ def _contrast_results_optimise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from bilayers import BilayerDMPC
-
     # Choose sample here.
     bilayer = BilayerDMPC()
 
@@ -111,8 +113,6 @@ def _figure_2(save_path):
         save_path (str): path to directory to save figure to.
 
     """
-    from bilayers import BilayerDMPC, BilayerDPPC
-
     # Load the two bilayer models.
     sample_1, sample_2 = BilayerDMPC(), BilayerDPPC()
 
