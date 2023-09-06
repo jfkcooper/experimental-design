@@ -1,3 +1,5 @@
+"""Functions to parse a chemical formula from a string as a dictionary"""
+
 __author__ = 'github.com/arm61'
 
 import re

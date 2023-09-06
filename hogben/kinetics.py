@@ -1,3 +1,6 @@
+"""Functions for visualizing and optimizing angle and contrast for kinetic
+experiments."""
+
 import numpy as np
 import os
 

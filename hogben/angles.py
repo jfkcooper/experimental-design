@@ -1,9 +1,13 @@
+"""
+Functions for visualizing and optimizing angle choice for a given sample.
+"""
 import os
 import time
 
 import numpy as np
 
 from hogben.optimise import Optimiser
+from models.samples import simple_sample
 from hogben.visualise import angle_choice, angle_choice_with_time
 
 
@@ -11,12 +15,11 @@ def _angle_results_visualise(save_path):
     """Visualises the initial angle choice for a sample and how the choice of
        next angle changes as the counting time of the initial angle increases.
 
+
     Args:
         save_path (str): path to directory to save results to.
 
     """
-    from models.samples import simple_sample
-
     # Choose sample here.
     sample = simple_sample()
 
@@ -46,7 +49,6 @@ def _angle_results_optimise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from models.samples import simple_sample
     # Choose sample here.
     sample = simple_sample()
 

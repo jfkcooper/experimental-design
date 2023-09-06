@@ -1,3 +1,5 @@
+"""Unit tests for the methods that relate directly to the Fisher information"""
+
 import copy
 
 import bumps.parameter

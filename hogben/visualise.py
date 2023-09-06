@@ -1,3 +1,6 @@
+"""Methods to visualise the optimised experimental conditions using a saved
+plot"""
+
 import os
 from typing import Optional
 
@@ -125,13 +128,14 @@ def angle_choice_with_time(
     # Create the line that will have data added to it.
     (line,) = ax.plot([], [], lw=3)
 
-    # Initialiser function for the line.
     def init():
+        """Initialiser function for the line"""
         line.set_data([], [])
         return line,
 
     # Annimation function for the line.
     def animate(i):
+        """Describes how the function should be animated"""
         # Display progress.
         if i % 5 == 0:
             print('>>> {0}/{1}'.format(i, len(time_range)))

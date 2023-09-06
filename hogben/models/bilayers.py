@@ -1,3 +1,5 @@
+"""Contains the classes for different types of lipid bilayers"""
+
 import os
 
 import matplotlib.pyplot as plt

@@ -1,3 +1,8 @@
+"""
+Functions for visualizing and optimizing the choice of underlayer thickness
+and SLD for a given bilayer sample.
+"""
+
 import os
 import time
 
@@ -5,6 +10,7 @@ import numpy as np
 
 from hogben.optimise import Optimiser
 from hogben.visualise import underlayer_choice
+from models.bilayers import BilayerDMPC
 
 
 def _underlayer_results_visualise(save_path):
@@ -14,7 +20,6 @@ def _underlayer_results_visualise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from models.bilayers import BilayerDMPC
 
     # Choose sample here.
     bilayer = BilayerDMPC()
@@ -55,7 +60,6 @@ def _underlayer_results_optimise(save_path):
         save_path (str): path to directory to save results to.
 
     """
-    from bilayers import BilayerDMPC
 
     # Choose sample here.
     bilayer = BilayerDMPC()
