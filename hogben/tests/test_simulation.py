@@ -1,3 +1,5 @@
+"""Tests for the simulation module"""
+
 import pytest
 
 import numpy as np

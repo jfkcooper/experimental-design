@@ -1,3 +1,5 @@
+"""Base classes for different sample types """
+
 import os
 from abc import ABC, abstractmethod
 from typing import Optional
@@ -73,6 +75,10 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
 
     def __init__(self):
+        """
+        Initialize a BaseLipid object sample, and loads the
+        experimentally measured data
+        """
         self._create_objectives()  # Load experimentally-measured data.
 
     @abstractmethod

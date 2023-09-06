@@ -1,3 +1,5 @@
+"""Contains the class to define magnetic samples"""
+
 import os
 
 import matplotlib.pyplot as plt
