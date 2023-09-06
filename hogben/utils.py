@@ -1,3 +1,6 @@
+"""General utility functions to run nested sampling, calculate the Fisher
+information, and save plots"""
+
 import os
 from typing import Union
 
@@ -30,6 +33,12 @@ class Sampler:
     """
 
     def __init__(self, objective):
+        """
+        Initialise the sample given an objective to the sample
+
+        Args:
+            objective: objective to the sample
+        """
         self.objective = objective
 
         # Determine if the objective is from refnx or Refl1D.
@@ -223,7 +232,7 @@ def fisher(qs: list[np.ndarray],
         # scale with one if no importance was specified.
         importance_array = []
         for param in xi:
-            if hasattr(param, "importance"):
+            if hasattr(param, 'importance'):
                 importance_array.append(param.importance)
             else:
                 importance_array.append(1)
