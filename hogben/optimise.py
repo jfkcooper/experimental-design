@@ -62,7 +62,7 @@ class Optimiser:
         assert isinstance(self.sample, VariableAngle)
 
         # Set contrasts to empty list if not provided
-        contrasts = contrasts or []
+        contrasts = [] if contrasts is None else contrasts
 
         # Define bounds on each condition to optimise (angles and time splits).
         bounds = [angle_bounds] * num_angles + [(0, 1)] * num_angles
