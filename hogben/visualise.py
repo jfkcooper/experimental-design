@@ -54,7 +54,7 @@ def angle_choice(
     assert isinstance(sample, VariableAngle)
 
     # Set contrasts to empty list if not provided
-    contrasts = contrasts or []
+    contrasts = [] if contrasts is None else contrasts
 
     # Calculate the information from the measurements taken so far.
     g_init = sample.angle_info(initial_angle_times, contrasts)
@@ -116,7 +116,7 @@ def angle_choice_with_time(
     assert isinstance(sample, VariableAngle)
 
     # Set contrasts to empty list if not provided
-    contrasts = contrasts or []
+    contrasts = [] if contrasts is None else contrasts
 
     # Create plot of angle versus minimum eigenvalue.
     fig = plt.figure()
