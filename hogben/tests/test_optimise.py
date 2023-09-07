@@ -6,6 +6,7 @@ from hogben.optimise import Optimiser
 from refnx.reflect import SLD as SLD_refnx
 from hogben.models.samples import Sample
 from hogben.models.bilayers import BilayerDMPC
+from hogben.models.magnetic import SampleYIG
 from unittest.mock import patch
 
 
@@ -22,6 +23,10 @@ def refnx_sample():
 
 @patch('hogben.optimise.Optimiser._Optimiser__optimise')
 def test_optimise_angle_times_length(mock_optimise, refnx_sample):
+    """
+    Tests that the optimise_angle_times method outputs the correct amount of
+    angles and counting times.
+    """
     num_angles = 2
     optimiser = Optimiser(refnx_sample)
     mock_optimise.return_value = np.array([0.8847156, 0.88834418,
@@ -34,22 +39,52 @@ def test_optimise_angle_times_length(mock_optimise, refnx_sample):
 
 
 @patch('hogben.optimise.Optimiser._Optimiser__optimise')
-def test_optimise_optimise_contrasts(mock_optimise):
+def test_optimise_contrasts(mock_optimise):
+    """
+    Tests that the optimise_contrasts method outputs the correct amount of
+    contrasts and counting times.
+    """
     optimiser = Optimiser(BilayerDMPC())
+    num_contrasts = 3
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
 
     # Get mock values from older run
     mock_optimise.return_value = (
         np.array([-0.56, 2.15, 6.36, 0.17, 0.28, 0.56]), -0.18
     )
-    num_contrasts = 3
-    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
-
     contrasts, splits, _ = optimiser.optimise_contrasts(num_contrasts,
                                                         angle_times,
                                                         workers=-1,
                                                         verbose=False)
     assert len(contrasts) == num_contrasts and len(splits) == num_contrasts
 
+@patch('hogben.optimise.Optimiser._Optimiser__optimise')
+def test_optimise_underlayers(mock_optimise):
+    """
+    Tests that the optimise_contrasts method outputs the correct amount of
+    contrasts and counting times.
+    """
+    optimiser = Optimiser(BilayerDMPC())
+
+    num_underlayers = 3
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
+    contrasts = [-0.56, 6.36]
+    thick_bounds = (0, 500)
+    sld_bounds = (1, 9)
+
+
+    # Get mock values from older run
+    mock_optimise.return_value = (
+        np.array([-0.56, 2.15, 6.36, 0.17, 0.28, 0.56]), -0.18
+    )
+
+    contrasts, splits, _ = optimiser.optimise_underlayers(num_underlayers,
+                                                          angle_times,
+                                                          contrasts,
+                                                          thick_bounds,
+                                                          sld_bounds,
+                                                          verbose=False)
+    assert len(contrasts) == num_underlayers and len(splits) == num_underlayers
 
 def test_angle_times_func_result(refnx_sample):
     x = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
@@ -64,3 +99,32 @@ def test_angle_times_func_result(refnx_sample):
     expected_result = -1.7721879778537162
 
     np.testing.assert_allclose(result, expected_result, rtol=1e-08)
+
+def test_contrasts_func_result():
+    x = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
+    num_angles = 2
+    angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
+    total_time = 10000
+
+    optimiser = Optimiser(BilayerDMPC())
+    result = optimiser._contrasts_func(x, num_angles, angle_times,
+                                         total_time)
+    expected_result = -0.18368728373120113
+    np.testing.assert_allclose(result, expected_result, rtol=1e-08)
+
+def test_underlayers_func():
+    x = [50, 20, -5, 10]  # [angle,
+    # angle, time, time]
+
+    bilayer = BilayerDMPC()
+    optimiser = Optimiser(bilayer)
+    num_underlayers = 2
+    contrasts = [-0.56, 6.36]
+
+    angle_times = [(0.7, 100, 10000),
+                   (2.3, 100, 10000)]
+    result = optimiser._underlayers_func(x, num_underlayers, angle_times,
+                                         contrasts)
+
+    expected_result = -1.500100627963951
+    np.testing.assert_allclose(result, expected_result, rtol=1e-06)
