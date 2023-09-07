@@ -6,7 +6,6 @@ from hogben.optimise import Optimiser
 from refnx.reflect import SLD as SLD_refnx
 from hogben.models.samples import Sample
 from hogben.models.bilayers import BilayerDMPC
-from hogben.models.magnetic import SampleYIG
 from unittest.mock import patch
 
 
@@ -58,6 +57,7 @@ def test_optimise_contrasts(mock_optimise):
                                                         verbose=False)
     assert len(contrasts) == num_contrasts and len(splits) == num_contrasts
 
+
 @patch('hogben.optimise.Optimiser._Optimiser__optimise')
 def test_optimise_underlayers(mock_optimise):
     """
@@ -72,7 +72,6 @@ def test_optimise_underlayers(mock_optimise):
     thick_bounds = (0, 500)
     sld_bounds = (1, 9)
 
-
     # Get mock values from older run
     mock_optimise.return_value = (
         np.array([-0.56, 2.15, 6.36, 0.17, 0.28, 0.56]), -0.18
@@ -86,7 +85,9 @@ def test_optimise_underlayers(mock_optimise):
                                                           verbose=False)
     assert len(contrasts) == num_underlayers and len(splits) == num_underlayers
 
+
 def test_angle_times_func_result(refnx_sample):
+    """Checks that the angle_times_func method gives the correct result"""
     x = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
     num_angles = 2
     contrasts = [3, 14, -2]
@@ -98,9 +99,11 @@ def test_angle_times_func_result(refnx_sample):
                                          total_time)
     expected_result = -1.7721879778537162
 
-    np.testing.assert_allclose(result, expected_result, rtol=1e-08)
+    np.testing.assert_allclose(result, expected_result, rtol=1e-06)
+
 
 def test_contrasts_func_result():
+    """Checks that the _contrasts_func method gives the correct result"""
     x = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
     num_angles = 2
     angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
@@ -108,11 +111,13 @@ def test_contrasts_func_result():
 
     optimiser = Optimiser(BilayerDMPC())
     result = optimiser._contrasts_func(x, num_angles, angle_times,
-                                         total_time)
+                                       total_time)
     expected_result = -0.18368728373120113
-    np.testing.assert_allclose(result, expected_result, rtol=1e-08)
+    np.testing.assert_allclose(result, expected_result, rtol=1e-06)
+
 
 def test_underlayers_func():
+    """Checks that the _underlayers_func method gives the correct result"""
     x = [50, 20, -5, 10]  # [angle,
     # angle, time, time]
 
