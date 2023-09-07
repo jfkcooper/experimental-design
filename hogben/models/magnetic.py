@@ -58,6 +58,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
     """
 
     def __init__(self):
+        """Initialise YIG sample and set the sample properties"""
         self.name = 'YIG_sample'
         self.data_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'YIG_sample'

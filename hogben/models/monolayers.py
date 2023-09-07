@@ -43,6 +43,7 @@ class MonolayerDPPG(BaseLipid):
     """
 
     def __init__(self, deuterated: bool = False):
+        """Initialise a DPPG monolayer sample and set the sample properties"""
         self.name = 'DPPG_monolayer'
         self.data_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'DPPG_monolayer'

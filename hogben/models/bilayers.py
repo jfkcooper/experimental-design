@@ -74,6 +74,7 @@ class BilayerPOPC(BaseLipid):
     """
 
     def __init__(self):
+        """Initialise BilayerPOPC sample and set the sample properties"""
         self.name = 'POPC_bilayer'
         self.data_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'POPC_bilayer'
@@ -336,6 +337,7 @@ class BilayerDMPC(BaseLipid):
     """
 
     def __init__(self):
+        """Initialise BilayerDMPC sample and set the sample properties"""
         self.name = 'DMPC_bilayer'
         self.data_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'DMPC_bilayer'
@@ -617,6 +619,7 @@ class BilayerDPPC(BaseLipid):
     """
 
     def __init__(self):
+        """Initialise BilayerDPPC sample and set the sample properties"""
         self.name = 'DPPC_RaLPS_bilayer'
         self.data_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'DPPC_RaLPS_bilayer'
