@@ -1,3 +1,4 @@
+"""Unit tests for the methods in the optimise module"""
 import pytest
 import numpy as np
 
@@ -6,6 +7,7 @@ from refnx.reflect import SLD as SLD_refnx
 from hogben.models.samples import Sample
 from hogben.models.bilayers import BilayerDMPC
 from unittest.mock import patch
+
 
 @pytest.fixture
 def refnx_sample():
@@ -18,7 +20,7 @@ def refnx_sample():
     return Sample(structure)
 
 
-@patch("hogben.optimise.Optimiser._Optimiser__optimise")
+@patch('hogben.optimise.Optimiser._Optimiser__optimise')
 def test_optimise_angle_times_length(mock_optimise, refnx_sample):
     num_angles = 2
     optimiser = Optimiser(refnx_sample)
@@ -31,7 +33,7 @@ def test_optimise_angle_times_length(mock_optimise, refnx_sample):
     assert len(angles) == num_angles and len(splits) == num_angles
 
 
-@patch("hogben.optimise.Optimiser._Optimiser__optimise")
+@patch('hogben.optimise.Optimiser._Optimiser__optimise')
 def test_optimise_optimise_contrasts(mock_optimise):
     optimiser = Optimiser(BilayerDMPC())
 
@@ -48,6 +50,7 @@ def test_optimise_optimise_contrasts(mock_optimise):
                                                         verbose=False)
     assert len(contrasts) == num_contrasts and len(splits) == num_contrasts
 
+
 def test_angle_times_func_result(refnx_sample):
     x = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
     num_angles = 2
@@ -56,8 +59,8 @@ def test_angle_times_func_result(refnx_sample):
     total_time = 10000
 
     optimiser = Optimiser(refnx_sample)
-    result = optimiser._angle_times_func(x, num_angles, contrasts, points, total_time)
+    result = optimiser._angle_times_func(x, num_angles, contrasts, points,
+                                         total_time)
     expected_result = -1.7721879778537162
 
     np.testing.assert_allclose(result, expected_result, rtol=1e-08)
-
