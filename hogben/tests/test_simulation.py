@@ -20,6 +20,10 @@ def sample_structure():
 
 
 class Test_Simulate():
+    """
+    Contains the unit tests and attributes that are used to test the
+    simulate module
+    """
     ref = 'OFFSPEC'
     angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
     scale = 1
