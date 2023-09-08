@@ -2,6 +2,8 @@
 plot"""
 
 import os
+from typing import Optional
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -29,7 +31,7 @@ def angle_choice(
     time_new: type,
     save_path: str,
     filename: str,
-    contrasts: list = [],
+    contrasts: Optional[list] = None,
 ):
     """Plots the minimum eigenvalue of the Fisher information matrix
        as a function of measurement angle.
@@ -50,6 +52,9 @@ def angle_choice(
     """
     # Check that the angle can be varied for the sample.
     assert isinstance(sample, VariableAngle)
+
+    # Set contrasts to empty list if not provided
+    contrasts = [] if contrasts is None else contrasts
 
     # Calculate the information from the measurements taken so far.
     g_init = sample.angle_info(initial_angle_times, contrasts)
@@ -91,7 +96,7 @@ def angle_choice_with_time(
     points: int,
     new_time: float,
     save_path: str,
-    contrasts: list = [],
+    contrasts: Optional[list] = None,
 ):
     """Investigates how the second choice of angle for a `sample` changes
        as the counting time of the initial angle is increased.
@@ -109,6 +114,9 @@ def angle_choice_with_time(
     """
     # Check that the angle can be varied for the sample.
     assert isinstance(sample, VariableAngle)
+
+    # Set contrasts to empty list if not provided
+    contrasts = [] if contrasts is None else contrasts
 
     # Create plot of angle versus minimum eigenvalue.
     fig = plt.figure()

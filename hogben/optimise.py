@@ -2,6 +2,7 @@
 reflectometry experiment"""
 
 import numpy as np
+from typing import Optional
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
 
@@ -33,7 +34,7 @@ class Optimiser:
     def optimise_angle_times(
         self,
         num_angles: int,
-        contrasts: list = [],
+        contrasts: Optional[list] = None,
         total_time: float = 1000,
         angle_bounds: tuple = (0.2, 4),
         points: int = 100,
@@ -59,6 +60,9 @@ class Optimiser:
         """
         # Check that the measurement angle of the sample can be varied.
         assert isinstance(self.sample, VariableAngle)
+
+        # Set contrasts to empty list if not provided
+        contrasts = [] if contrasts is None else contrasts
 
         # Define bounds on each condition to optimise (angles and time splits).
         bounds = [angle_bounds] * num_angles + [(0, 1)] * num_angles
