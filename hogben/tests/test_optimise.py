@@ -28,6 +28,8 @@ def test_optimise_angle_times_length(mock_optimise, refnx_sample):
     """
     num_angles = 2
     optimiser = Optimiser(refnx_sample)
+
+    # Mock values retreived from previous run
     mock_optimise.return_value = np.array([0.8847156, 0.88834418,
                                            0.00139696,
                                            0.99860304]), -0.7573710562837207
@@ -47,7 +49,7 @@ def test_optimise_contrasts(mock_optimise):
     num_contrasts = 3
     angle_times = [(0.7, 100, 10), (2.3, 100, 40)]
 
-    # Get mock values from older run
+    # Mock values retreived from previous run
     mock_optimise.return_value = (
         np.array([-0.56, 2.15, 6.36, 0.17, 0.28, 0.56]), -0.18
     )
@@ -72,7 +74,7 @@ def test_optimise_underlayers(mock_optimise):
     thick_bounds = (0, 500)
     sld_bounds = (1, 9)
 
-    # Get mock values from older run
+    # Mock values retreived from previous run
     mock_optimise.return_value = (
         np.array([-0.56, 2.15, 6.36, 0.17, 0.28, 0.56]), -0.18
     )
