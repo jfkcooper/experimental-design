@@ -277,7 +277,7 @@ class Fisher():
         Returns:
             numpy.ndarray: The scaled Fisher information matrix.
         """
-        importance_array = [param.importance if hasattr(param, "importance")
+        importance_array = [param.importance if hasattr(param, 'importance')
                             else 1 for param in self.xi]
         importance = np.diag(importance_array)
         return np.dot(g, importance)
