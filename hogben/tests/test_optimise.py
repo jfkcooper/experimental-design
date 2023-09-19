@@ -90,36 +90,36 @@ def test_optimise_underlayers(mock_optimise):
 
 def test_angle_times_func_result(refnx_sample):
     """Checks that the angle_times_func method gives the correct result"""
-    x = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
+    angle_time_split = [0.3, 1.3, 0.8, 0.2]  # [angle, angle, time, time]
     num_angles = 2
     contrasts = [3, 14, -2]
     points = 100
     total_time = 10000
 
     optimiser = Optimiser(refnx_sample)
-    result = optimiser._angle_times_func(x, num_angles, contrasts, points,
-                                         total_time)
-    expected_result = -1.7721879778537162
-    np.testing.assert_allclose(result, expected_result, rtol=1e-06)
+    result = optimiser._angle_times_func(angle_time_split, num_angles,
+                                         contrasts, points, total_time)
+    expected_result = -1.7721880
+    np.testing.assert_allclose(result, expected_result)
 
 
 def test_contrasts_func_result():
     """Checks that the _contrasts_func method gives the correct result"""
-    x = [0.3, 9.3, 0.8, 8.2]  # [SLD, SLD, time, time]
+    contrasts_time = [0.3, 9.3, 0.8, 8.2]  # [SLD, SLD, time, time]
     num_contrasts = 2
     angle_splits = [(0.7, 100, 0.6), (2.3, 100, 0.4)]
     total_time = 100000
 
     optimiser = Optimiser(BilayerDMPC())
-    result = optimiser._contrasts_func(x, num_contrasts, angle_splits,
-                                       total_time)
-    expected_result = -2.557881096447291
-    np.testing.assert_allclose(result, expected_result, rtol=1e-06)
+    result = optimiser._contrasts_func(contrasts_time, num_contrasts,
+                                       angle_splits, total_time)
+    expected_result = -2.5578811
+    np.testing.assert_allclose(result, expected_result)
 
 
 def test_underlayers_func():
     """Checks that the _underlayers_func method gives the correct result"""
-    x = [50, 20, -5, 10]  # [thickness, thickness, SLD, SLD]
+    thickness_SLD = [50, 20, -5, 10]  # [thickness, thickness, SLD, SLD]
 
     bilayer = BilayerDMPC()
     optimiser = Optimiser(bilayer)
@@ -128,7 +128,7 @@ def test_underlayers_func():
 
     angle_times = [(0.7, 100, 10000),
                    (2.3, 100, 10000)]
-    result = optimiser._underlayers_func(x, num_underlayers, angle_times,
-                                         contrasts)
-    expected_result = -1.500100627963951
-    np.testing.assert_allclose(result, expected_result, rtol=1e-06)
+    result = optimiser._underlayers_func(thickness_SLD, num_underlayers,
+                                         angle_times, contrasts)
+    expected_result = -1.5001006
+    np.testing.assert_allclose(result, expected_result)
