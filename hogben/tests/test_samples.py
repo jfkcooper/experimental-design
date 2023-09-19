@@ -11,7 +11,7 @@ import hogben.models.samples as samples
 
 from hogben.models.samples import Sample
 from hogben.simulate import simulate
-from hogben.utils import fisher
+from hogben.utils import Fisher
 from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import Mock, patch
@@ -104,12 +104,12 @@ def test_angle_info(sample_class, request):
     # Get Fisher information from tested unit
     sample = request.getfixturevalue(sample_class)
     angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
-    angle_info = sample.angle_info(angle_times)
+    angle_info = sample.angle_info(angle_times).fisher_information
 
     # Get Fisher information directly
     model, data = simulate(sample.structure, angle_times)
     qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
-    g = fisher(qs, sample.params, counts, models)
+    g = Fisher(qs, sample.params, counts, models).fisher_information
 
     np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
