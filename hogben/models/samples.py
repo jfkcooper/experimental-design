@@ -22,7 +22,7 @@ import bumps.parameter
 import bumps.fitproblem
 
 from hogben.simulate import simulate, refl1d_experiment, reflectivity
-from hogben.utils import fisher, Sampler, save_plot
+from hogben.utils import Fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
 from refnx.analysis import Parameter
 
@@ -113,13 +113,13 @@ class Sample(BaseSample):
             angle_times (list): points and times for each angle to simulate.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information object
 
         """
         # Return the Fisher information matrix calculated from simulated data.
         model, data = simulate(self.structure, angle_times)
         qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
-        return fisher(qs, self.params, counts, models)
+        return Fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path):
         """Plots the SLD profile of the sample.

@@ -228,10 +228,10 @@ class Optimiser:
         ]
 
         # Calculate the Fisher information matrix.
-        g = self.sample.angle_info(angle_times, contrasts)
+        fisher = self.sample.angle_info(angle_times, contrasts)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     def _contrasts_func(self,
                         x: list,
@@ -250,23 +250,22 @@ class Optimiser:
             float: negative of minimum eigenvalue using given conditions.
 
         """
-        # Define the initial Fisher information matrix.
-        m = len(self.sample.params)
-        g = np.zeros((m, m))
+        # Define the initial angle times.
+        angle_times = []
 
         # Iterate over each contrast.
         for i in range(num_contrasts):
             # Calculate proportion of the total counting time for each angle.
-            angle_times = [
-                (angle, points, total_time * x[num_contrasts + i] * split)
-                for angle, points, split in angle_splits
-            ]
+            angle_times_new = \
+                [(angle, points, total_time * x[num_contrasts + i] * split) for
+                 angle, points, split in angle_splits]
+            angle_times.append(angle_times_new)
 
-            # Add to the initial Fisher information matrix.
-            g += self.sample.contrast_info(angle_times, [x[i]])
+        # Calculate the Fisher Information Matrix for the total information.
+        fisher = self.sample.contrast_info(angle_times, [x])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     def _underlayers_func(self,
                           x: list,
