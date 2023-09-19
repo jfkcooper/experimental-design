@@ -1,3 +1,5 @@
+"""Functions to parse a chemical formula from a string as a dictionary"""
+
 __author__ = 'github.com/arm61'
 
 import re
@@ -38,7 +40,8 @@ def _fuse(mol1: dict, mol2: dict, w: int = 1) -> dict:
 def _parse(formula: str) -> Tuple[dict, int]:
     """
     :param formula: Chemical formula as a string
-    :return: Tuple containing; formula as a dictwith occurences of each atom and an iterator.
+    :return: Tuple containing; formula as a dictwith occurences of each atom
+             and an iterator.
     """
     q = []
     mol = {}
@@ -75,7 +78,7 @@ def _parse(formula: str) -> Tuple[dict, int]:
 
 
 def parse_formula(formula: str) -> dict:
-    """    
+    """
     :param formula: Chemical formula as a string
     :return: Formula as a dict with occurences of each atom.
     """

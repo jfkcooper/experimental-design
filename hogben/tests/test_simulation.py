@@ -1,4 +1,5 @@
-import unittest
+"""Tests for the simulation module"""
+
 import pytest
 
 import numpy as np
@@ -19,6 +20,10 @@ def sample_structure():
 
 
 class Test_Simulate():
+    """
+    Contains the unit tests and attributes that are used to test the
+    simulate module
+    """
     ref = 'OFFSPEC'
     angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
     scale = 1
@@ -29,14 +34,19 @@ class Test_Simulate():
     model_1, data_1 = simulate(sample_1, angle_times, scale, bkg, dq, ref)
 
     def test_data_streaming(self):
-        """Tests that without an input for the datafile, the correct one is picked up"""
+        """Tests that without an input for the datafile, the correct one is
+         picked up"""
         angle_times = [(0.3, 100, 1000)]
-        _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq, self.ref)
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
+        _, simulated_datapoints = simulate(
+            self.sample_1, angle_times, self.scale, self.bkg, self.dq,
+            self.ref)
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:, 3])  # counts
 
-        _, simulated_datapoints = simulate(self.sample_1, angle_times, self.scale, self.bkg, self.dq)
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)), simulated_datapoints[:, 3])  # counts
-
+        _, simulated_datapoints = simulate(self.sample_1, angle_times,
+                                           self.scale, self.bkg, self.dq)
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:, 3])  # counts
 
     def test_refnx_simulate_model(self):
         """
@@ -58,11 +68,12 @@ class Test_Simulate():
         _, simulated_datapoints = simulate(self.sample_1, angle_times,
                                            self.scale, self.bkg, self.dq,
                                            self.ref)
-
+        # reflectivity
         np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                     simulated_datapoints[:,1])  # reflectivity
+                                     simulated_datapoints[:, 1])
+        # counts
         np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                     simulated_datapoints[:, 3])  # counts
+                                     simulated_datapoints[:, 3])
 
     @pytest.mark.parametrize('instrument',
                              ('OFFSPEC',
@@ -84,18 +95,16 @@ class Test_Simulate():
         np.testing.assert_array_less(np.zeros(angle_times[0][1]),
                                      simulated_datapoints[:, 3])  # counts
 
-    @pytest.mark.parametrize('instrument',
-                             ('OFFSPEC',
-                             'POLREF'))
+    @pytest.mark.parametrize('instrument', ('OFFSPEC', 'POLREF'))
     def test_simulation_magnetic_instruments(self, instrument):
         """
         Tests that all of the instruments are able to simulate a model and
         counts data.
         """
         angle_times = [(0.3, 100, 1000)]
-        _, simulated_datapoints = simulate_magnetic(self.sample_1, angle_times,
-                                           self.scale, self.bkg, self.dq,
-                                           inst_or_path=instrument)
+        _, simulated_datapoints = simulate_magnetic(
+            self.sample_1, angle_times,
+            self.scale, self.bkg, self.dq, inst_or_path=instrument)
 
         for i in range(4):
             # reflectivity
