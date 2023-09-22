@@ -59,20 +59,43 @@ class TestSimulate:
         sim = SimulateReflectivity(refnx_model, self.angle_times)
         simulated_datapoints = sim.simulate()
         np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints)  # counts
-        _, simulated_datapoints = simulate(self.sample_1, angle_times,
-                                           self.scale, self.bkg, self.dq)
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                     simulated_datapoints[:, 3])  # counts
 
-    def test_direct_beam_path(self):
+    def test_incident_flux_data(self):
         """
         Tests that the `direct_beam_path` function correctly returns the path
         - external or hogben internal, or raises an error if neither exist
         """
-        simulation = Simulation(sample_structure, angle_times=self.angle_times,
-                                scale=self.scale, bkg=self.bkg, dq=self.dq,
-                                inst_or_path=self.instrument, polarised=False)
-        pass
+        # Test that non-polarised instruments work and have counts in
+        for instrument in ['OFFSPEC', 'SURF', 'INTER', 'POLREF']:
+            sim_no_pol = SimulateReflectivity(None, angle_times=self.angle_times,
+                                              inst_or_path=instrument)
+            assert len(sim_no_pol._incident_flux_data(polarised=False)) > 1
+            assert np.sum(sim_no_pol._incident_flux_data(polarised=False)) > 10
+
+        # Test that polarised instruments work and have counts in
+        for instrument in ['OFFSPEC', 'POLREF']:
+            sim_pol = SimulateReflectivity(None, angle_times=self.angle_times,
+                                              inst_or_path=instrument)
+            assert len(sim_pol._incident_flux_data(polarised=True)) > 1
+            assert np.sum(sim_pol._incident_flux_data(polarised=True)) > 10
+
+        # Test that a non-existing path raises an error
+        with pytest.raises(FileNotFoundError):
+            sim_wrong_path = SimulateReflectivity(None, angle_times=self.angle_times,
+                                     inst_or_path='no_instrument_exists')
+            sim_wrong_path._incident_flux_data()
+
+        # Test that a blank instrument raises an error
+        with pytest.raises(FileNotFoundError):
+            sim_no_path = SimulateReflectivity(None, angle_times=self.angle_times,
+                                                  inst_or_path='')
+            sim_no_path._incident_flux_data()
+
+        # Test that a non-polarised instrument can't be used for a polarised simulation
+        with pytest.raises(FileNotFoundError):
+            sim_not_in_pol = SimulateReflectivity(None, angle_times=self.angle_times,
+                                                  inst_or_path='SURF')
+            sim_not_in_pol._incident_flux_data(polarised=True)
 
     def test_refnx_simulate_model(self):
         """

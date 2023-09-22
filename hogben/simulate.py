@@ -66,25 +66,19 @@ class SimulateReflectivity:
         """
         # Check if the key isn't in the dictionary and check if it is a
         # a local filepath instead
-        if self.inst_or_path not in (
-                self.non_pol_instr_dict or self.pol_instr_dict):
 
+        inst_dict = self.pol_instr_dict if polarised is True\
+                    else self.non_pol_instr_dict
+
+        if self.inst_or_path not in inst_dict:
             if os.path.isfile(self.inst_or_path):
                 return np.loadtxt(self.inst_or_path, delimiter=',')
-
             else:
                 msg = "Please provide an instrument name or a local filepath"
                 raise FileNotFoundError(str(msg))
 
-        if polarised is True:
-            path = importlib_resources.files(
-                   'hogben.data.directbeams').joinpath(
-                   self.pol_instr_dict[self.inst_or_path])
-
-            return np.loadtxt(path, delimiter=',')
-
         path = importlib_resources.files('hogben.data.directbeams').joinpath(
-               self.non_pol_instr_dict[self.inst_or_path])
+               inst_dict[self.inst_or_path])
 
         return np.loadtxt(path, delimiter=',')
 
