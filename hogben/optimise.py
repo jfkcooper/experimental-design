@@ -1,11 +1,17 @@
-import os
-import sys
+"""Module containing the Optimiser class used to optimise a neutron
+reflectometry experiment"""
 
 import numpy as np
+from typing import Optional
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
 
-from hogben.models.base import VariableAngle, VariableContrast, VariableUnderlayer
+from hogben.models.base import (
+    BaseSample,
+    VariableAngle,
+    VariableContrast,
+    VariableUnderlayer,
+)
 
 
 class Optimiser:
@@ -15,12 +21,26 @@ class Optimiser:
         sample (base.BaseSample): sample to optimise an experiment for.
 
     """
-    def __init__(self, sample):
+
+    def __init__(self, sample: BaseSample):
+        """
+        Initializes Optimiser given a sample
+
+        Args:
+            sample: The sample to optimise an experiment for
+        """
         self.sample = sample
 
-    def optimise_angle_times(self, num_angles, contrasts=[], total_time=1000,
-                             angle_bounds=(0.2, 4), points=100,
-                             workers=-1, verbose=True):
+    def optimise_angle_times(
+        self,
+        num_angles: int,
+        contrasts: Optional[list] = None,
+        total_time: float = 1000,
+        angle_bounds: tuple = (0.2, 4),
+        points: int = 100,
+        workers: int = -1,
+        verbose: bool = True,
+    ) -> tuple:
         """Optimises the measurement angles and associated counting times
            of an experiment, given a fixed time budget.
 
@@ -41,27 +61,49 @@ class Optimiser:
         # Check that the measurement angle of the sample can be varied.
         assert isinstance(self.sample, VariableAngle)
 
+        # Set contrasts to empty list if not provided
+        contrasts = [] if contrasts is None else contrasts
+
         # Define bounds on each condition to optimise (angles and time splits).
-        bounds = [angle_bounds]*num_angles + [(0, 1)]*num_angles
+        bounds = [angle_bounds] * num_angles + [(0, 1)] * num_angles
 
         # Arguments for the optimisation function.
         args = [num_angles, contrasts, points, total_time]
 
         # Constrain the counting times to sum to the fixed time budget.
         # Also constrain the angles to be in non-decreasing order.
-        sum_of_splits = lambda x: sum(x[num_angles:])
-        non_decreasing = lambda x: int(np.all(np.diff(x[:num_angles]) >= 0))
-        constraints = [NonlinearConstraint(sum_of_splits, 1, 1),
-                       NonlinearConstraint(non_decreasing, 1, 1)]
+        def _sum_of_splits(x):
+            """
+            Sets the constraint for the counting times to the sum of the
+            fixed time budget
+            """
+            return sum(x[num_angles:])
+
+        def _non_decreasing(x):
+            """
+            Sets the constraint for the angles to be in non-decreasing
+            order
+            """
+            return int(np.all(np.diff(x[:num_angles]) >= 0))
+
+        # Set both constrains as equality constraints
+        constraints = [NonlinearConstraint(_sum_of_splits, 1, 1),
+                       NonlinearConstraint(_non_decreasing, 1, 1)]
 
         # Optimise angles and times, and return the results.
         res, val = Optimiser.__optimise(self._angle_times_func, bounds,
                                         constraints, args, workers, verbose)
         return res[:num_angles], res[num_angles:], val
 
-    def optimise_contrasts(self, num_contrasts, angle_splits,
-                           total_time=1000, contrast_bounds=(-0.56, 6.36),
-                           workers=-1, verbose=True):
+    def optimise_contrasts(
+        self,
+        num_contrasts: int,
+        angle_splits: list,
+        total_time: float = 1000,
+        contrast_bounds: tuple = (-0.56, 6.36),
+        workers: int = -1,
+        verbose: bool = True,
+    ) -> tuple:
         """Finds the optimal contrasts, given a fixed time budget.
 
         Args:
@@ -82,26 +124,49 @@ class Optimiser:
 
         # Define the bounds on each condition to optimise
         # (contrast SLDs and time splits).
-        bounds = [contrast_bounds]*num_contrasts + [(0, 1)]*num_contrasts
+        bounds = [contrast_bounds] * num_contrasts + [(0, 1)] * num_contrasts
 
         # Constrain the counting times to sum to the fixed time budget.
         # Also constrain the contrasts to be in non-decreasing order.
-        sum_of_splits = lambda x: sum(x[num_contrasts:])
-        non_decreasing = lambda x: int(np.all(np.diff(x[:num_contrasts]) >= 0))
-        constraints = [NonlinearConstraint(sum_of_splits, 1, 1),
-                       NonlinearConstraint(non_decreasing, 1, 1)]
+        def _sum_of_splits(x):
+            """
+            Sets the constraint for the counting times to the sum of the
+            fixed time budget
+            """
+            return sum(x[num_contrasts:])
+
+        def _non_decreasing(x):
+            """
+            Sets the constraint for the contrasts to be in non-decreasing
+            order
+            """
+            return int(np.all(np.diff(x[:num_contrasts]) >= 0))
+
+        # Set both constrains as equality constraints
+        constraints = [
+            NonlinearConstraint(_sum_of_splits, 1, 1),
+            NonlinearConstraint(_non_decreasing, 1, 1),
+        ]
 
         # Arguments for the optimisation function.
         args = [num_contrasts, angle_splits, total_time]
 
         # Optimise contrasts and counting time splits, and return the results.
-        res, val = Optimiser.__optimise(self._contrasts_func, bounds,
-                                        constraints, args, workers, verbose)
+        res, val = Optimiser.__optimise(
+            self._contrasts_func, bounds, constraints, args, workers, verbose
+        )
         return res[:num_contrasts], res[num_contrasts:], val
 
-    def optimise_underlayers(self, num_underlayers, angle_times, contrasts,
-                             thick_bounds=(0, 500), sld_bounds=(1, 9),
-                             workers=-1, verbose=True):
+    def optimise_underlayers(
+        self,
+        num_underlayers,
+        angle_times,
+        contrasts,
+        thick_bounds=(0, 500),
+        sld_bounds=(1, 9),
+        workers=-1,
+        verbose=True,
+    ) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
         Args:
@@ -123,17 +188,25 @@ class Optimiser:
 
         # Define bounds on each condition to optimise
         # (underlayer thicknesses and SLDs).
-        bounds = [thick_bounds]*num_underlayers + [sld_bounds]*num_underlayers
+        bounds = [thick_bounds] * num_underlayers + [
+            sld_bounds
+        ] * num_underlayers
 
         # Arguments for the optimisation function.
         args = [num_underlayers, angle_times, contrasts]
 
         # Optimise underlayer thicknesses and SLDs, and return the results.
-        res, val = Optimiser.__optimise(self._underlayers_func, bounds, [],
-                                        args, workers, verbose)
+        res, val = Optimiser.__optimise(
+            self._underlayers_func, bounds, [], args, workers, verbose
+        )
         return res[:num_underlayers], res[num_underlayers:], val
 
-    def _angle_times_func(self, x, num_angles, contrasts, points, total_time):
+    def _angle_times_func(self,
+                          x: list,
+                          num_angles: int,
+                          contrasts: list,
+                          points: int,
+                          total_time: float) -> float:
         """Defines the function for optimising an experiment's measurement
            angles and associated counting times.
 
@@ -149,8 +222,10 @@ class Optimiser:
 
         """
         # Extract the angles and counting times from given list, `x`.
-        angle_times = [(x[i], points, total_time*x[num_angles+i])
-                       for i in range(num_angles)]
+        angle_times = [
+            (x[i], points, total_time * x[num_angles + i])
+            for i in range(num_angles)
+        ]
 
         # Calculate the Fisher information matrix.
         g = self.sample.angle_info(angle_times, contrasts)
@@ -158,7 +233,11 @@ class Optimiser:
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
 
-    def _contrasts_func(self, x, num_contrasts, angle_splits, total_time):
+    def _contrasts_func(self,
+                        x: list,
+                        num_contrasts: int,
+                        angle_splits: type,
+                        total_time: float) -> float:
         """Defines the function for optimising an experiment's contrasts.
 
         Args:
@@ -178,8 +257,10 @@ class Optimiser:
         # Iterate over each contrast.
         for i in range(num_contrasts):
             # Calculate proportion of the total counting time for each angle.
-            angle_times = [(angle, points, total_time*x[num_contrasts+i]*split)
-                           for angle, points, split in angle_splits]
+            angle_times = [
+                (angle, points, total_time * x[num_contrasts + i] * split)
+                for angle, points, split in angle_splits
+            ]
 
             # Add to the initial Fisher information matrix.
             g += self.sample.contrast_info(angle_times, [x[i]])
@@ -187,7 +268,11 @@ class Optimiser:
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
 
-    def _underlayers_func(self, x, num_underlayers, angle_times, contrasts):
+    def _underlayers_func(self,
+                          x: list,
+                          num_underlayers: int,
+                          angle_times: type,
+                          contrasts: list) -> float:
         """Defines the function for optimising an experiment's underlayers.
 
         Args:
@@ -201,8 +286,9 @@ class Optimiser:
 
         """
         # Extract the underlayer thicknesses and SLDs from the given `x` list.
-        underlayers = [(x[i], x[num_underlayers+i])
-                       for i in range(num_underlayers)]
+        underlayers = [
+            (x[i], x[num_underlayers + i]) for i in range(num_underlayers)
+        ]
 
         # Calculate the Fisher information matrix using the conditions.
         g = self.sample.underlayer_info(angle_times, contrasts, underlayers)
@@ -211,7 +297,12 @@ class Optimiser:
         return -np.linalg.eigvalsh(g)[0]
 
     @staticmethod
-    def __optimise(func, bounds, constraints, args, workers, verbose):
+    def __optimise(func: callable,
+                   bounds: list,
+                   constraints: list,
+                   args: list,
+                   workers: int,
+                   verbose: bool) -> tuple:
         """Optimises a given `func` using the differential evolution
            global optimisation algorithm.
 
@@ -229,7 +320,8 @@ class Optimiser:
         """
         # Run differential evolution on the given optimisation function.
         res = differential_evolution(func, bounds, constraints=constraints,
-                                    args=args, polish=False, tol=0.001,
-                                    updating='deferred', workers=workers,
-                                    disp=verbose)
+                                     args=args, polish=False, tol=0.001,
+                                     updating='deferred', workers=workers,
+                                     disp=verbose)
+
         return res.x, res.fun
