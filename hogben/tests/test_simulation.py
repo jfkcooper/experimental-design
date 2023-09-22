@@ -1,3 +1,5 @@
+"""Tests for the simulation module"""
+
 import pytest
 
 import numpy as np
@@ -7,7 +9,6 @@ from refl1d.material import SLD as refl1dSLD
 
 from unittest import mock
 from hogben.simulate import SimulateReflectivity
-
 
 
 @pytest.fixture(scope="module")
@@ -21,12 +22,14 @@ def refnx_structure():
     sample_1 = air | layer1 | layer2 | substrate
     return sample_1
 
+
 @pytest.fixture(scope="module")
 def refnx_model(refnx_structure):
     return ReflectModel(refnx_structure)
 
-def refl1d_model(refnx_structure):
-    # Make a refl1d model out of the refnx structure
+
+def refl1d_structure(refnx_structure):
+    # Make a refl1d structure out of the refnx structure
     structure = refl1dSLD(rho=0, name='Air')
     for component in refnx_structure[1:]:
         name, sld = component.name, component.sld.real.value,
@@ -46,8 +49,6 @@ class TestSimulate:
     bkg = 1e-6
     dq = 2
     instrument = 'OFFSPEC'
-
-
     def test_data_streaming(self, refnx_model):
         """Tests that without an input for the datafile, the correct one is picked up"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
@@ -58,7 +59,10 @@ class TestSimulate:
         sim = SimulateReflectivity(refnx_model, self.angle_times)
         simulated_datapoints = sim.simulate()
         np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints)  # counts
-
+        _, simulated_datapoints = simulate(self.sample_1, angle_times,
+                                           self.scale, self.bkg, self.dq)
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:, 3])  # counts
 
     def test_direct_beam_path(self):
         """
@@ -82,6 +86,7 @@ class TestSimulate:
         r_model = sim.reflectivity(q)
 
         np.testing.assert_array_less(np.zeros(len(r_model)), r_model)
+
 
 def test_refnx_simulate_data(self):
     """
@@ -139,3 +144,4 @@ def test_simulation_magnetic_instruments(self, instrument):
         # counts
         np.testing.assert_array_less(np.zeros(angle_times[0][1]),
                                      simulated_datapoints[i][:, 3])
+

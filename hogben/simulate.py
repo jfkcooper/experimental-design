@@ -1,3 +1,5 @@
+"""Methods used to simulate an experiment """
+
 import os.path
 from typing import Optional, Union
 from enum import Enum
