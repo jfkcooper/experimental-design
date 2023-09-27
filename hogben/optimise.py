@@ -13,6 +13,9 @@ from hogben.models.base import (
     VariableUnderlayer,
 )
 
+def new_function():
+    print("hello there")
+    
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
