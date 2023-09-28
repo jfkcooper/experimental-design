@@ -11,6 +11,10 @@ import refl1d.model
 import refl1d.probe
 import refl1d.experiment
 
+def bad_code():
+  print("hello there")
+  
+
 
 def direct_beam_path(inst_or_path: str = 'OFFSPEC',
                      polarised: bool = False) -> str:
