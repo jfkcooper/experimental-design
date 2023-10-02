@@ -188,9 +188,8 @@ class Optimiser:
 
         # Define bounds on each condition to optimise
         # (underlayer thicknesses and SLDs).
-        bounds = [thick_bounds] * num_underlayers + [
-            sld_bounds
-        ] * num_underlayers
+        bounds = [thick_bounds] * num_underlayers \
+                 + [sld_bounds] * num_underlayers
 
         # Arguments for the optimisation function.
         args = [num_underlayers, angle_times, contrasts]
