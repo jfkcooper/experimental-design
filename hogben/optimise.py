@@ -262,7 +262,7 @@ class Optimiser:
             angle_times.append(angle_times_new)
 
         # Calculate the Fisher Information Matrix for the total information.
-        fisher = self.sample.contrast_info(angle_times, [x])
+        fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
@@ -289,11 +289,15 @@ class Optimiser:
             (x[i], x[num_underlayers + i]) for i in range(num_underlayers)
         ]
 
+        # Make sure the angle times is set for each contrast
+        angle_times = [angle_times for _ in contrasts]
+
         # Calculate the Fisher information matrix using the conditions.
-        g = self.sample.underlayer_info(angle_times, contrasts, underlayers)
+        fisher = self.sample.underlayer_info(angle_times, contrasts,
+                                             underlayers)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     @staticmethod
     def __optimise(func: callable,

@@ -144,7 +144,8 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         """
         # Iterate over each contrast to simulate.
         qs, counts, models = [], [], []
-        for contrast in contrasts:
+
+        for angle_times, contrast in zip(angle_times, contrasts):
             # Simulate data for the contrast.
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
