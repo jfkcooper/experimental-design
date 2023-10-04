@@ -161,11 +161,9 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Exclude certain parameters if underlayers are being used.
         if underlayers is None:
-            return Fisher(qs, self.params, counts,
-                          models)
+            return Fisher(qs, self.params, counts, models)
         else:
-            return Fisher(qs, self.underlayer_params, counts,
-                          models)
+            return Fisher(qs, self.underlayer_params, counts, models)
 
     @abstractmethod
     def _using_conditions(self):
