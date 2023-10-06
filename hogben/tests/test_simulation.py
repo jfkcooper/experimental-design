@@ -25,7 +25,8 @@ def refnx_structure():
 
 @pytest.fixture(scope="module")
 def refnx_model(refnx_structure):
-    return ReflectModel(refnx_structure)
+    model = ReflectModel(refnx_structure)
+    return model
 
 
 def refl1d_structure(refnx_structure):
@@ -62,8 +63,8 @@ class TestSimulate:
 
     def test_incident_flux_data(self):
         """
-        Tests that the `direct_beam_path` function correctly returns the path
-        - external or hogben internal, or raises an error if neither exist
+        Tests that the `_incident_flux_data` function correctly returns count data
+        when instruments are loaded, and raises errors when given an incorrect path
         """
         # Test that non-polarised instruments work and have counts in
         for instrument in ['OFFSPEC', 'SURF', 'INTER', 'POLREF']:
@@ -97,18 +98,16 @@ class TestSimulate:
                                                   inst_or_path='SURF')
             sim_not_in_pol._incident_flux_data(polarised=True)
 
-    def test_refnx_simulate_model(self):
+    def test_refnx_reflectivity_model(self, refnx_model):
         """
-        Checks that a model reflectivity from refnx generated through
-        `hogben.simulate` is always greater than zero.
+        Checks that a refnx model reflectivity generated through
+        `hogben.reflectivity` is always greater than zero.
         """
-        sim = Simulation(sample_structure(), self.angle_times, self.scale,
-                         self.bkg, self.dq, self.instrument)
-        model_1, data_1 = sim.simulate()
-        q = data_1[:, 0]
-        r_model = sim.reflectivity(q)
+        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
+        ideal_reflectivity = sim.reflectivity(np.linspace(0.001, 0.3, 200))
 
-        np.testing.assert_array_less(np.zeros(len(r_model)), r_model)
+        np.testing.assert_array_less(np.zeros(len(ideal_reflectivity)),
+                                     ideal_reflectivity)
 
 
 def test_refnx_simulate_data(self):
