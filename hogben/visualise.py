@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from itertools import combinations
 
-from hogben.utils import save_plot
+from hogben.utils import save_plot, Fisher
 from hogben.models.base import (
     BaseLipid,
     BaseSample,
@@ -53,9 +53,6 @@ def angle_choice(
     # Check that the angle can be varied for the sample.
     assert isinstance(sample, VariableAngle)
 
-    # Set contrasts to empty list if not provided
-    contrasts = [] if contrasts is None else contrasts
-
     # Iterate over each angle to consider.
     min_eigs = []
     for i, angle_new in enumerate(angle_range):
@@ -68,7 +65,7 @@ def angle_choice(
             (initial_angle_times + [(angle_new, points_new, time_new)])
         # Calculate the total Fisher information at the new angle together
         # with the initial angle
-        fisher_new = sample.angle_info(new_angle_times, contrasts)
+        fisher_new = Fisher.from_sample(sample, new_angle_times, contrasts)
         min_eigs.append(fisher_new.min_eigenval)
 
     # Plot measurement angle versus minimum eigenvalue.
@@ -113,9 +110,6 @@ def angle_choice_with_time(
     # Check that the angle can be varied for the sample.
     assert isinstance(sample, VariableAngle)
 
-    # Set contrasts to empty list if not provided
-    contrasts = [] if contrasts is None else contrasts
-
     # Create plot of angle versus minimum eigenvalue.
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -149,7 +143,7 @@ def angle_choice_with_time(
                 angle_times_init + [(new_angle, points, new_time)]
             # Calculate the total Fisher information using the first and
             # second angle together
-            fisher_new = sample.angle_info(angle_times_new, contrasts)
+            fisher_new = Fisher.from_sample(sample, angle_times_new, contrasts)
             min_eigs.append(fisher_new.min_eigenval)
 
         # Update the data of the line.
@@ -209,7 +203,7 @@ def contrast_choice_single(sample: BaseLipid,
         # Get the information from the new contrast, and calculate the total
         # Fisher information for the initial and new contrast together.
         new_contrast = initial_contrasts + [new_contrast]
-        fisher_new = sample.contrast_info(angle_times, new_contrast)
+        fisher_new = Fisher.from_sample(sample, angle_times, new_contrast)
         min_eigs.append(fisher_new.min_eigenval)
 
     # Plot contrast SLD versus minimum eigenvalue.
@@ -256,7 +250,7 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
             print('>>> {0}/{1}'.format(i, len(contrasts)))
 
         # Calculate the minimum eigenvalue of the Fisher information matrix.
-        fisher = sample.contrast_info(angle_times, contrast_pair)
+        fisher = Fisher.from_sample(sample, angle_times, contrast_pair)
         min_eigs.append(fisher.min_eigenval)
 
     # Duplicate the data so that the plot is not half-empty (or half-full?).

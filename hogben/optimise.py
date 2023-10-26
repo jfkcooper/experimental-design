@@ -62,9 +62,6 @@ class Optimiser:
         # Check that the measurement angle of the sample can be varied.
         assert isinstance(self.sample, VariableAngle)
 
-        # Set contrasts to empty list if not provided
-        contrasts = [1] if contrasts is None else contrasts
-
         # Define bounds on each condition to optimise (angles and time splits).
         bounds = [angle_bounds] * num_angles + [(0, 1)] * num_angles
 
@@ -336,7 +333,8 @@ class Optimiser:
             angle_times.append(angle_times_new)
 
         # Calculate the Fisher Information Matrix for the total information.
-        fisher = Fisher.from_sample(self.sample, angle_times, x[:num_contrasts])
+        fisher = Fisher.from_sample(self.sample, angle_times[0],
+                                    x[:num_contrasts])
         #fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.

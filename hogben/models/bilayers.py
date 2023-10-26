@@ -539,7 +539,6 @@ class BilayerDMPC(BaseLipid):
             si_DMPC_D2O_structure,
             si_DMPC_H2O_structure,
         ]
-
         # Iterate over each measured structure.
         self.objectives = []
         for i, structure in enumerate(self.structures):
@@ -588,7 +587,6 @@ class BilayerDMPC(BaseLipid):
         tg = refnx.reflect.Slab(
             tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv
         )
-
         # Add underlayers if specified.
         if underlayers is None:
             sio2 = refnx.reflect.Slab(

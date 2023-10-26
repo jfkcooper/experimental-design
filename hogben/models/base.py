@@ -158,7 +158,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
                                 + 4e-6 * (1 - contrast_point)
                                 )
             model, data = simulate(
-                sample, angle_times, scale=1, bkg=background_level, dq=2
+                sample, [angle_times], scale=1, bkg=background_level, dq=2
             )
             qs.append(data[:, 0])
             counts.append(data[:, 3])
