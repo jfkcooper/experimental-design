@@ -232,11 +232,11 @@ class Fisher():
                     None):
         if contrasts == None:
             contrasts = [0]
-        for angle_times, contrast in zip(angle_times, contrasts):
+        for contrast in contrasts:
             new_sample = sample._using_conditions(contrast, underlayers)
            # new_sample = sample.structure
             model, data = simulate(
-            new_sample, angle_times, scale=1, bkg=2e-6, dq=2
+                new_sample, angle_times, scale=1, bkg=2e-6, dq=2
             )
             qs, counts, models = [], [], []
             qs.append(data[:, 0])

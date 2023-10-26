@@ -33,18 +33,18 @@ class Multilayer(BaseSample):
                 num_underlayers += 1 if layer.underlayer else 0
         return num_underlayers
 
-    def _using_conditions(self, contrast_sld, underlayers=None):
-        new_structure = self.structure[0]
-        for component in self.structure[1:]:
-            name = component.name
-            sld, sld_imag = component.sld.real.value, component.sld.imag.value
-            thick, rough = component.thick.value, component.rough.value
-
-            new_structure |= refnx.reflect.SLD([sld, sld_imag], name=name)(
-                thick, rough)
-        new_structure.name = self.structure.name
-        new_structure.parameters[0].parameters[1][0].value = contrast_sld
-        return new_structure
+    #def _using_conditions(self, contrast_sld, underlayers=None):
+        # new_structure = self.structure[0]
+        # for component in self.structure[1:]:
+        #     name = component.name
+        #     sld, sld_imag = component.sld.real.value, component.sld.imag.value
+        #     thick, rough = component.thick.value, component.rough.value
+        #
+        #     new_structure |= refnx.reflect.SLD([sld, sld_imag], name=name)(
+        #         thick, rough)
+        # new_structure.name = self.structure.name
+        # new_structure.parameters[0].parameters[1][0].value = contrast_sld
+        # return new_structure
 
     def angle_info(self):
         pass

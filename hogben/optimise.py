@@ -63,7 +63,7 @@ class Optimiser:
         assert isinstance(self.sample, VariableAngle)
 
         # Set contrasts to empty list if not provided
-        contrasts = [] if contrasts is None else contrasts
+        contrasts = [1] if contrasts is None else contrasts
 
         # Define bounds on each condition to optimise (angles and time splits).
         bounds = [angle_bounds] * num_angles + [(0, 1)] * num_angles
@@ -272,7 +272,7 @@ class Optimiser:
                 layer.sld.real.value = underlayer_conditions[i][1]
                 i += 1
 
-        fisher = Fisher.from_sample(sample, [angle_times])
+        fisher = Fisher.from_sample(sample, angle_times)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -(fisher.min_eigenval)
@@ -302,10 +302,8 @@ class Optimiser:
             (x[i], points, total_time * x[num_angles + i])
             for i in range(num_angles)
         ]
-
         # Calculate the Fisher information matrix.
-        fisher = self.sample.angle_info(angle_times, contrasts)
-
+        fisher = Fisher.from_sample(self.sample, angle_times, contrasts)
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
 
@@ -338,7 +336,8 @@ class Optimiser:
             angle_times.append(angle_times_new)
 
         # Calculate the Fisher Information Matrix for the total information.
-        fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
+        fisher = Fisher.from_sample(self.sample, angle_times, x[:num_contrasts])
+        #fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval

@@ -70,6 +70,11 @@ class BaseSample(VariableAngle):
         """Runs nested sampling on measured or simulated data of the sample."""
         pass
 
+    def _using_conditions(self, contrast_sld, underlayers=None):
+        new_structure = self.structure
+        new_structure.parameters[0].parameters[1][0].value = contrast_sld
+        return new_structure
+
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
