@@ -272,7 +272,7 @@ class Optimiser:
                 layer.sld.real.value = underlayer_conditions[i][1]
                 i += 1
 
-        fisher = Fisher.from_sample(sample, angle_times)
+        fisher = Fisher.from_sample(sample, [angle_times])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -(fisher.min_eigenval)

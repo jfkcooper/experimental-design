@@ -228,27 +228,33 @@ class Fisher():
         return len(self.xi)
 
     @classmethod
-    def from_sample(cls, sample, angle_times):
-        model, data = simulate(
-            sample.structure, angle_times, scale=1, bkg=2e-6, dq=2
-        )
-        qs, counts, models = [], [], []
-        qs.append(data[:, 0])
-        counts.append(data[:, 3])
-        models.append(model)
+    def from_sample(cls, sample, angle_times, contrasts = None, underlayers =
+                    None):
+        if contrasts == None:
+            contrasts = [0]
+        for angle_times, contrast in zip(angle_times, contrasts):
+            new_sample = sample._using_conditions(contrast, underlayers)
+           # new_sample = sample.structure
+            model, data = simulate(
+            new_sample, angle_times, scale=1, bkg=2e-6, dq=2
+            )
+            qs, counts, models = [], [], []
+            qs.append(data[:, 0])
+            counts.append(data[:, 3])
+            models.append(model)
 
-        xi = []
-        for layer in sample.structure:
-            # Ugly hack to deal with the nested nature of SLD parameter
-            # find something better for production
-            for param in layer.parameters:
-                try:
-                    if param.vary:
-                        xi.append(param)
-                except:
-                    for nested_param in param:
-                        if nested_param.vary:
-                            xi.append(nested_param)
+            xi = []
+            for layer in sample.structure:
+                # Ugly hack to deal with the nested nature of SLD parameter
+                # find something better for production
+                for param in layer.parameters:
+                    try:
+                        if param.vary:
+                            xi.append(param)
+                    except:
+                        for nested_param in param:
+                            if nested_param.vary:
+                                xi.append(nested_param)
 
         return cls(qs, xi, counts, models)
 
