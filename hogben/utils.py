@@ -13,7 +13,7 @@ import refnx.analysis
 import bumps.parameter
 import bumps.fitproblem
 
-from hogben.simulate import reflectivity
+from hogben.simulate import reflectivity, simulate
 
 
 class Sampler:
@@ -226,6 +226,31 @@ class Fisher():
             int: total number of parameters.
         """
         return len(self.xi)
+
+    @classmethod
+    def from_sample(cls, sample, angle_times):
+        model, data = simulate(
+            sample.structure, angle_times, scale=1, bkg=2e-6, dq=2
+        )
+        qs, counts, models = [], [], []
+        qs.append(data[:, 0])
+        counts.append(data[:, 3])
+        models.append(model)
+
+        xi = []
+        for layer in sample.structure:
+            # Ugly hack to deal with the nested nature of SLD parameter
+            # find something better for production
+            for param in layer.parameters:
+                try:
+                    if param.vary:
+                        xi.append(param)
+                except:
+                    for nested_param in param:
+                        if nested_param.vary:
+                            xi.append(nested_param)
+
+        return cls(qs, xi, counts, models)
 
     def _calculate_fisher_information(self) -> np.ndarray:
         """Calculates the Fisher information matrix using the class attributes.

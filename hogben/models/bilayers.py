@@ -13,11 +13,36 @@ import refnx.analysis
 import periodictable as pt
 
 from hogben.models.parsing import parse_formula
-from hogben.models.base import BaseLipid
+from hogben.models.base import BaseLipid, BaseSample
+from hogben.simulate import simulate
+from hogben.utils import Fisher
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
+class Multilayer(BaseSample):
+    def __init__(self, model):
+        self.structure = model.structure
+        self.model = model
+
+    @property
+    def num_underlayers(self):
+        num_underlayers = 0
+        for layer in self.structure:
+            if hasattr(layer, 'underlayer'):
+                num_underlayers += 1 if layer.underlayer else 0
+        return num_underlayers
+    def angle_info(self):
+        pass
+
+    def nested_sampling(self):
+        pass
+
+    def reflectivity_profile(self):
+        pass
+
+    def sld_profile(self):
+        pass
 
 def neutron_scattering_length(formula: str):
     """
