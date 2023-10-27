@@ -2,6 +2,7 @@
 
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import Optional
 
 import matplotlib.pyplot as plt
@@ -75,6 +76,30 @@ class BaseSample(VariableAngle):
         new_structure.parameters[0].parameters[1][0].value = contrast_sld
         return new_structure
 
+    def get_params(self):
+        """Get list of parameters that are varying
+        Current implementation won't win any beauty prices, but works as
+        temporary solution. Will clean this a bit...
+        """
+        if not hasattr(self, "params"):
+            self.params = []
+        else:
+            # This else is kinda a temp. workaround, for the predefined cases
+            # where no structure is defined (so it doesn't crash on the
+            # self.structures). Originally, the idea was to add parameters
+            # to FI if vary was set to true.
+            return self.params
+        for layer in self.structure:
+            for param in layer.parameters:
+                if isinstance(param, Iterable):
+                    for nested_param in param:
+                        if nested_param.vary:
+                            self.params.append(nested_param)
+                else:
+                    if param.vary:
+                        self.params.append(param)
+        self.params = list(set(self.params))
+        return self.params
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
@@ -150,7 +175,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         # Iterate over each contrast to simulate.
         qs, counts, models = [], [], []
 
-        for angle_times, contrast in zip(angle_times, contrasts):
+        for contrast in contrasts:
             # Simulate data for the contrast.
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
@@ -158,7 +183,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
                                 + 4e-6 * (1 - contrast_point)
                                 )
             model, data = simulate(
-                sample, [angle_times], scale=1, bkg=background_level, dq=2
+                sample, angle_times, scale=1, bkg=background_level, dq=2
             )
             qs.append(data[:, 0])
             counts.append(data[:, 3])

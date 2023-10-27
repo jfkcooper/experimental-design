@@ -170,7 +170,6 @@ def simulate(sample: Union['refnx.reflect.Stucture', 'refl1d.model.Stack'],
     # Iterate over each angle to simulate.
     q, r, dr, counts = [], [], [], []
     total_points = 0
-    print(angle_times)
 
     for angle, points, time in angle_times:
         # Simulate the experiment.

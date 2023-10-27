@@ -57,7 +57,7 @@ def angle_choice(
     min_eigs = []
     for i, angle_new in enumerate(angle_range):
         # Display progress.
-        if i % 100 == 0:
+        if i % 50 == 0:
             print('>>> {0}/{1}'.format(i, len(angle_range)))
 
         # Get the information for the new angle.
@@ -145,7 +145,6 @@ def angle_choice_with_time(
             # second angle together
             fisher_new = Fisher.from_sample(sample, angle_times_new, contrasts)
             min_eigs.append(fisher_new.min_eigenval)
-
         # Update the data of the line.
         ax.set_ylim(min(min_eigs), max(min_eigs))
         line.set_data(angle_range, min_eigs)
@@ -205,7 +204,6 @@ def contrast_choice_single(sample: BaseLipid,
         new_contrast = initial_contrasts + [new_contrast]
         fisher_new = Fisher.from_sample(sample, angle_times, new_contrast)
         min_eigs.append(fisher_new.min_eigenval)
-
     # Plot contrast SLD versus minimum eigenvalue.
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -246,7 +244,7 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
     min_eigs = []
     for i, contrast_pair in enumerate(contrasts):
         # Display progress.
-        if i % 500 == 0:
+        if i % 50 == 0:
             print('>>> {0}/{1}'.format(i, len(contrasts)))
 
         # Calculate the minimum eigenvalue of the Fisher information matrix.

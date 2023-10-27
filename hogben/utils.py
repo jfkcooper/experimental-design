@@ -228,37 +228,41 @@ class Fisher():
         return len(self.xi)
 
     @classmethod
-    def from_sample(cls, sample, angle_times, contrasts = None, underlayers =
-                    None):
-        # Stupid workaround, will fix
-        try:
-            if contrasts == None:
-                contrasts = [0]
-        except:
-            contrasts = [0]
+    def from_sample(cls,
+                    sample,
+                    angle_times,
+                    contrasts = None,
+                    underlayers = None):
+        """
+        Get Fisher object using a sample.
+        Seperate constructor for magnetic simulation maybe? Probably depends
+        on new simulate function either way.
+        """
+
         qs, counts, models = [], [], []
-        xi = []
-        for contrast in contrasts:
-            new_sample = sample._using_conditions(contrast, underlayers)
+        if contrasts is None:
             model, data = simulate(
-                new_sample, angle_times, scale=1, bkg=2e-6, dq=2
+                sample.structure, angle_times, scale=1, bkg=2e-6, dq=2
             )
             qs.append(data[:, 0])
             counts.append(data[:, 3])
             models.append(model)
+        else:
+            for contrast in contrasts:
+                contrast_point = (contrast + 0.56) / (6.35 + 0.56)
+                background_level = (2e-6 * contrast_point
+                                    + 4e-6 * (1 - contrast_point)
+                                    )
+                new_structure = sample._using_conditions(contrast, underlayers)
+                model, data = simulate(
+                    new_structure, angle_times, scale=1, bkg=background_level,
+                    dq=2
+                )
+                qs.append(data[:, 0])
+                counts.append(data[:, 3])
+                models.append(model)
 
-        for layer in new_sample:
-            # Ugly hack to deal with the nested nature of SLD parameter
-            # find something better for production
-            for param in layer.parameters:
-                try:
-                    if param.vary:
-                        xi.append(param)
-                except:
-                    for nested_param in param:
-                        if nested_param.vary:
-                            xi.append(nested_param)
-        xi = list(set(xi))
+        xi = sample.get_params()
         return cls(qs, xi, counts, models)
 
     def _calculate_fisher_information(self) -> np.ndarray:
