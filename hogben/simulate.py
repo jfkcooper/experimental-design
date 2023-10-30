@@ -8,9 +8,6 @@ import importlib_resources
 import numpy as np
 
 import refnx.reflect
-import refl1d.model
-import refl1d.probe
-import refl1d.experiment
 
 class SpinStates(str, Enum):
     PP = 'pp'
@@ -21,12 +18,12 @@ class SpinStates(str, Enum):
 
 class SimulateReflectivity:
     """
-    A class for simulating experimental reflectivity data from a refnx or
-    refl1D model. It takes a single model, but can simulate a list
-    of experimental conditions, e.g. different angles for different times.
+    A class for simulating experimental reflectivity data from a refnx model.
+    It takes a single model, but can simulate a list of experimental
+    conditions, e.g. different angles for different times.
 
     Attributes:
-        sample_model: A refnx or a refl1d model
+        sample_model: A refnx model
         angle_times: a list of tuples of experimental conditions to simulate,
                     in the order (angle, # of points, time)
         inst_or_path: either the name of an instrument already in HOGBEN, or
@@ -44,8 +41,7 @@ class SimulateReflectivity:
                       'POLREF': 'POLREF_polarised.dat'}
 
     def __init__(self,
-                 sample_model: Union['refnx.reflect.ReflectModel',
-                                     'refl1d.model'],
+                 sample_model: refnx.reflect.ReflectModel,
                  angle_times: list[tuple],
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
@@ -80,17 +76,17 @@ class SimulateReflectivity:
         path = importlib_resources.files('hogben.data.directbeams').joinpath(
                inst_dict[self.inst_or_path])
 
-        return np.loadtxt(path, delimiter=',')
+        return np.loadtxt(str(path), delimiter=',')
 
     def simulate(self, spin_states: 'Optional[list[SpinStates]]' = None) -> \
             list[tuple[np.ndarray]]:
-        """Simulates a measurement of self.sample taken at the angles and
+        """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
         specified in self.inst_or_path
 
         Args:
             spin_states: optional, spin states to simulate if the sample
-            is magnetic, options are ['mm', 'mp', 'pm', 'pp'], defaults
+            is magnetic, options are ['mm', 'pp'], defaults
             to None i.e. non-magnetic
 
         Returns:
@@ -115,69 +111,8 @@ class SimulateReflectivity:
                 simulation.append(simulated_angle)
 
             simulated_spin_states.append(simulation)
-        return [np.array(simulated_spin_states)[:,i] for i in range(4)]
+        return [np.array(simulated_spin_states)[:,i] for i in range(2)]  #TODO: typing
 
-
-    def simulate_magnetic(self, mm: bool = True, mp: bool = True,
-                          pm: bool = True, pp: bool = True) -> tuple:
-        """Simulates an experiment of a given magnetic `sample` measured
-           over a number of angles.
-        Args:
-            pp: whether to simulate "plus plus" spin state
-            pm: whether to simulate "plus minus" spin state
-            mp: whether to simulate "minus plus" spin state
-            mm: whether to simulate "minus minus" spin state
-
-        Returns:
-            tuple: model and simulated data for the given `sample`
-        """
-        models, datasets = [], []
-        # Simulate the spin states if requested.
-        for i, spin_state in enumerate([mm, mp, pm, pp]):
-            if spin_state is True:
-                model, data = self.simulate(i)
-                models.append(model)
-                datasets.append(data)
-
-        return models, datasets
-
-    def refl1d_experiment(self, q_array: np.ndarray, spin_state: Optional[
-        int] = None) -> refl1d.experiment.Experiment:
-        """Creates a Refl1D experiment for a given `sample` and `q_array`.
-        Also calculates the resolution for refl1D to be the same as is defined
-        for refnx as it is not by default.
-
-        Args:
-            q_array: Q points to use in the experiment.
-            spin_state: spin state to simulate if given a magnetic sample.
-
-        Returns:
-            refl1d.experiment.Experiment: experiment for the given `sample`.
-
-        """
-        # Transform the resolution from refnx to Refl1D format.
-        refl1d_dq = self.dq / (100 * np.sqrt(8 * np.log(2)))
-
-        # Calculate the dq array and use it to define a QProbe.
-        dq_array = q_array * refl1d_dq
-        probe = refl1d.probe.QProbe(q_array, dq_array, intensity=self.scale,
-                                    background=self.bkg)
-        probe.dq = self.dq
-
-        # Adjust probe calculation for constant dQ/Q resolution.
-        argmin, argmax = np.argmin(q_array), np.argmax(q_array)
-        probe.calc_Qo = np.linspace(q_array[argmin] - 3.5 * dq_array[argmin],
-                                    q_array[argmax] + 3.5 * dq_array[argmax],
-                                    21 * len(q_array))
-
-        # If the sample is magnetic, create a polarised QProbe.
-        if self.sample_model.ismagnetic:
-            probes = [None] * 4
-            probes[spin_state] = probe
-            probe = refl1d.probe.PolarizedQProbe(xs=probes, name='')
-            probe.spin_state = spin_state
-
-        return refl1d.experiment.Experiment(probe=probe, sample=self.sample_model)
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
         """Calculates the model reflectivity at given `q` points.

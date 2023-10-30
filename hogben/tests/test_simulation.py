@@ -29,21 +29,6 @@ def refnx_model(refnx_structure):
     return model
 
 
-def refl1d_structure(refnx_structure):
-    # Make a refl1d structure out of the refnx structure
-    structure = refl1dSLD(rho=0, name='Air')
-    for component in refnx_structure[1:]:
-        name, sld = component.name, component.sld.real.value,
-        thick, rough = component.thick.value, component.rough.value
-
-        # Add the component in the opposite direction to the refnx definition.
-        layer = refl1dSLD(rho=sld, name=name)(thick, rough)
-        structure = layer | structure
-
-    return structure
-
-
-
 class TestSimulate:
     angle_times = [(0.3, 100, 1000)]  # (Angle, Points, Time)
     scale = 1
