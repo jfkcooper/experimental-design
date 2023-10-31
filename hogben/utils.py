@@ -3,6 +3,8 @@ from typing import Union
 
 import numpy as np
 
+from collections.abc import Iterable
+
 from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
@@ -190,6 +192,47 @@ class Fisher():
         self.models = models
         self.step = step
 
+    @classmethod
+    def from_sample(cls,
+                    sample,
+                    angle_times,
+                    contrasts = None,
+                    underlayers = None):
+        """
+        Get Fisher object using a sample.
+        Seperate constructor for magnetic simulation maybe? Probably depends
+        on new simulate function either way.
+        """
+
+        qs, counts, models = [], [], []
+        if contrasts is None:
+            model, data = simulate(
+                sample.structure, angle_times, scale=sample.scale,
+                bkg=sample.bkg,
+                dq=sample.dq
+            )
+            qs.append(data[:, 0])
+            counts.append(data[:, 3])
+            models.append(model)
+        else:
+            for contrast in contrasts:
+                contrast_point = (contrast + 0.56) / (6.35 + 0.56)
+                background_level = (2e-6 * contrast_point
+                                    + 4e-6 * (1 - contrast_point)
+                                    )
+                new_structure = sample._using_conditions(contrast, underlayers)
+                model, data = simulate(
+                    new_structure, angle_times, scale=sample.scale,
+                    bkg=background_level,
+                    dq=sample.dq
+                )
+                qs.append(data[:, 0])
+                counts.append(data[:, 3])
+                models.append(model)
+
+        xi = sample.get_varying_parameters()
+        return cls(qs, xi, counts, models)
+
     @property
     def fisher_information(self) -> np.ndarray:
         """Calculate and return the Fisher information matrix.
@@ -226,44 +269,6 @@ class Fisher():
             int: total number of parameters.
         """
         return len(self.xi)
-
-    @classmethod
-    def from_sample(cls,
-                    sample,
-                    angle_times,
-                    contrasts = None,
-                    underlayers = None):
-        """
-        Get Fisher object using a sample.
-        Seperate constructor for magnetic simulation maybe? Probably depends
-        on new simulate function either way.
-        """
-
-        qs, counts, models = [], [], []
-        if contrasts is None:
-            model, data = simulate(
-                sample.structure, angle_times, scale=1, bkg=2e-6, dq=2
-            )
-            qs.append(data[:, 0])
-            counts.append(data[:, 3])
-            models.append(model)
-        else:
-            for contrast in contrasts:
-                contrast_point = (contrast + 0.56) / (6.35 + 0.56)
-                background_level = (2e-6 * contrast_point
-                                    + 4e-6 * (1 - contrast_point)
-                                    )
-                new_structure = sample._using_conditions(contrast, underlayers)
-                model, data = simulate(
-                    new_structure, angle_times, scale=1, bkg=background_level,
-                    dq=2
-                )
-                qs.append(data[:, 0])
-                counts.append(data[:, 3])
-                models.append(model)
-
-        xi = sample.get_params()
-        return cls(qs, xi, counts, models)
 
     def _calculate_fisher_information(self) -> np.ndarray:
         """Calculates the Fisher information matrix using the class attributes.
@@ -381,3 +386,13 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
+
+def flatten(seq):
+    for el in seq:
+        try:
+            iter(el)
+            if isinstance(el, (str, bytes)):
+                raise TypeError
+            yield from flatten(el)
+        except TypeError:
+            yield el

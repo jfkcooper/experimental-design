@@ -198,9 +198,8 @@ class Optimiser:
         )
         return res[:num_underlayers], res[num_underlayers:], val
 
-    @classmethod
     def optimise_underlayer_experiment(
-        cls,
+        self,
         sample,
         conditions,
         workers=-1,
@@ -224,9 +223,10 @@ class Optimiser:
         """
         # Check that the underlayers of the sample can be varied.
         #angle_times = experiment.angle_times
-        angle_times = conditions["angle_times"]
-        thick_bounds = conditions["thick_bounds"]
-        sld_bounds = conditions["sld_bounds"]
+        conditions = {} if conditions is None else conditions
+        angle_times = conditions.get("angle_times", None)
+        thick_bounds = conditions.get("thick_bounds", None)
+        sld_bounds = conditions.get("sld_bounds", None)
         num_underlayers = sample.num_underlayers
         bounds = [thick_bounds] * num_underlayers + [sld_bounds] * num_underlayers
 
@@ -235,12 +235,11 @@ class Optimiser:
 
         # Optimise underlayer thicknesses and SLDs, and return the results.
         res, val = Optimiser.__optimise(
-            cls._underlayers_func2, bounds, [], args, workers, verbose
+            self._underlayers_func2, bounds, [], args, workers, verbose
         )
         return res[:num_underlayers], res[num_underlayers:], val
 
-    @classmethod
-    def _underlayers_func2(cls,
+    def _underlayers_func2(self,
                           x: list,
                           sample,
                           angle_times: type) -> float:

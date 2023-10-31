@@ -41,7 +41,7 @@ class Sample(BaseSample):
 
     """
 
-    def __init__(self, structure):
+    def __init__(self, structure, **settings):
         """
         Initializes a sample given a structure, and sets the sample name and
         parameters
@@ -51,7 +51,24 @@ class Sample(BaseSample):
         """
         self.structure = structure
         self.name = structure.name
-        self.params = Sample.__vary_structure(structure)
+        self.scale = settings.get('scale', 1)
+        self.bkg = settings.get('bkg', 5e-6)
+        self.dq = settings.get('dq', 0.02)
+      #  self.params = Sample.__vary_structure(structure)
+
+    @property
+    def model(self):
+        return refnx.reflect.ReflectModel(self.structure,
+                                          scale=self.scale,
+                                          bkg=self.bkg, dq=self.dq)
+
+    @property
+    def num_underlayers(self):
+        num_underlayers = 0
+        for layer in self.structure:
+            if hasattr(layer, 'underlayer'):
+                num_underlayers += 1 if layer.underlayer else 0
+        return num_underlayers
 
     @staticmethod
     def __vary_structure(structure, bound_size=0.2):

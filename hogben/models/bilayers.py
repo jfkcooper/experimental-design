@@ -20,31 +20,6 @@ from hogben.utils import Fisher
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
-class Multilayer(BaseSample):
-    def __init__(self, model):
-        self.structure = model.structure
-        self.model = model
-
-    @property
-    def num_underlayers(self):
-        num_underlayers = 0
-        for layer in self.structure:
-            if hasattr(layer, 'underlayer'):
-                num_underlayers += 1 if layer.underlayer else 0
-        return num_underlayers
-
-    def angle_info(self):
-        pass
-
-    def nested_sampling(self):
-        pass
-
-    def reflectivity_profile(self):
-        pass
-
-    def sld_profile(self):
-        pass
-
 def neutron_scattering_length(formula: str):
     """
     Determine the neutron scattering length for a chemical formula.
@@ -372,6 +347,7 @@ class BilayerDMPC(BaseLipid):
         self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
         self.distances = np.linspace(-20, 95, 500)
         self.scales = [0.677763, 0.645217, 0.667776]
+        self.scale = 1
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
 
