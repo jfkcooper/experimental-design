@@ -26,14 +26,14 @@ def refnx_structure():
 @pytest.fixture(scope="module")
 def refnx_model(refnx_structure):
     model = ReflectModel(refnx_structure)
+    model.bkg = 1e-6
+    model.dq = 2
+    model.scale = 1.0
     return model
 
 
 class TestSimulate:
     angle_times = [(0.3, 100, 1000)]  # (Angle, Points, Time)
-    scale = 1
-    bkg = 1e-6
-    dq = 2
     instrument = 'OFFSPEC'
     def test_data_streaming(self, refnx_model):
         """Tests that without an input for the datafile, the correct one is picked up"""
@@ -94,6 +94,12 @@ class TestSimulate:
         np.testing.assert_array_less(np.zeros(len(ideal_reflectivity)),
                                      ideal_reflectivity)
 
+    def test_run_experiment_unpolarised(self, refnx_model):
+        """Checks the output of _run_experiment gives the right outputs"""
+        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
+        for angle, points, time in self.angle_times:
+            q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
+        assert len(q_binned) == self.angle_times[0][1]
 
 def test_refnx_simulate_data(self):
     """

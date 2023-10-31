@@ -9,21 +9,16 @@ import numpy as np
 
 import refnx.reflect
 
-class SpinStates(str, Enum):
-    PP = 'pp'
-    PM = 'pm'
-    MP = 'mp'
-    MM = 'mm'
-
 
 class SimulateReflectivity:
     """
     A class for simulating experimental reflectivity data from a refnx model.
-    It takes a single model, but can simulate a list of experimental
-    conditions, e.g. different angles for different times.
+    It takes a single model or list of models for polarised simulations, and
+    can simulate a list of experimental conditions, e.g. different angles for
+    different times.
 
     Attributes:
-        sample_model: A refnx model
+        sample_model: A refnx model or list of models (if magnetic)
         angle_times: a list of tuples of experimental conditions to simulate,
                     in the order (angle, # of points, time)
         inst_or_path: either the name of an instrument already in HOGBEN, or
@@ -46,7 +41,8 @@ class SimulateReflectivity:
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
 
-        self.sample_model = sample_model
+        self.sample_model = sample_model if isinstance(sample_model, list)\
+                            else [sample_model]
         self.angle_times = angle_times
         self.inst_or_path = inst_or_path
         self.angle_scale = angle_scale
@@ -78,7 +74,7 @@ class SimulateReflectivity:
 
         return np.loadtxt(str(path), delimiter=',')
 
-    def simulate(self, spin_states: 'Optional[list[SpinStates]]' = None) -> \
+    def simulate(self, spin_states: 'Optional[list[int]]' = None) -> \
             list[tuple[np.ndarray]]:
         """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
@@ -86,7 +82,7 @@ class SimulateReflectivity:
 
         Args:
             spin_states: optional, spin states to simulate if the sample
-            is magnetic, options are ['mm', 'pp'], defaults
+            is magnetic, options are [0, 1], for up (0) and down (1) defaults
             to None i.e. non-magnetic
 
         Returns:
@@ -111,14 +107,17 @@ class SimulateReflectivity:
                 simulation.append(simulated_angle)
 
             simulated_spin_states.append(simulation)
-        return [np.array(simulated_spin_states)[:,i] for i in range(2)]  #TODO: typing
+        return simulated_spin_states
 
 
-    def reflectivity(self, q: np.ndarray) -> np.ndarray:
+    def reflectivity(self, q: np.ndarray,
+                     spin_state: Optional[int] = None) -> np.ndarray:
         """Calculates the model reflectivity at given `q` points.
 
         Args:
             q: Q points to calculate reflectance at.
+            spin_state: optional, 0, or 1 representing an up or a
+            down spin state
 
         Returns:
             numpy.ndarray: reflectivity for each Q point.
@@ -129,23 +128,15 @@ class SimulateReflectivity:
             return np.array([])
 
         # Calculate the reflectance in either refnx or Refl1D.
-        if isinstance(self.sample_model, refnx.reflect.ReflectModel):
-            return self.sample_model(q)
+        if spin_state is None:
+            return self.sample_model[0](q)
+        else:
+            return self.sample_model[spin_state](q)
 
-        if isinstance(self.sample_model, refl1d.model.Stack):
-            # If magnetic, use the correct spin state.
-            experiment = self.refl1d_experiment(q,
-                                                self.sample_model.probe.spin_state)
 
-            if self.sample_model.ismagnetic:
-                return experiment.reflectivity()[self.sample_model.probe.spin_state][1]
-            # experiment.reflectivity() returns q, r, or an array if magnetic
-
-            else:
-                return experiment.reflectivity()[1]
 
     def _run_experiment(self, angle: float, points: int, time: float,
-                        spin_state: Optional[str] = None) -> tuple:
+                        spin_state: Optional[int] = None) -> tuple:
         """Simulates a single angle measurement of a given 'model' on the
         instrument set in self.incident_flux_data with the defined spin state,
         unpolarised measurements (the default) have the set to None
@@ -159,9 +150,8 @@ class SimulateReflectivity:
         Returns:
             tuple: simulated Q, R, dR data and incident neutron counts.
         """
-        # direct_beam = [wavelength, flux]
         polarised = True if spin_state else False
-        wavelengths, flux, _ = self._incident_flux_data(polarised).T
+        wavelengths, flux, _ = self._incident_flux_data(polarised=polarised).T
 
         # Scale flux by relative measurement angle squared (assuming both slits
         # scale linearly with angle, this should be correct)
@@ -169,8 +159,8 @@ class SimulateReflectivity:
 
         q = 4 * np.pi * np.sin(np.radians(angle)) / wavelengths
 
-        # Bin Q's' in equally geometrically-spaced bins using flux as weighting
-        q_bin_edges = np.geomspace(min(q), max(q), points + 1)
+        # Bin q's in equally geometrically-spaced bins using flux as weighting
+        q_bin_edges = np.geomspace(q[-1], q[0], points + 1)
         flux_binned, _ = np.histogram(q, q_bin_edges, weights=scaled_flux)
         # Calculate the number of incident neutrons for each bin.
         counts_incident = flux_binned * time
@@ -179,7 +169,7 @@ class SimulateReflectivity:
         q_binned = np.asarray(
             [(q_bin_edges[i] + q_bin_edges[i + 1]) / 2 for i in range(points)])
 
-        r_model = self.reflectivity(q_binned)
+        r_model = self.reflectivity(q_binned, spin_state)
 
         # Get the measured reflected count for each bin.
         # r_model accounts for background.
