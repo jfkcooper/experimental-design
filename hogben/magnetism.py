@@ -289,7 +289,7 @@ def _logl(models):
     r_model = np.concatenate(r_model)
 
     # Calculate the log-likelihood over all the models.
-    return -0.5 * np.sum(((r - r_model) / dr) ** 2 + np.log(2 * np.pi * dr**2))
+    return -0.5 * np.sum((r - r_model) / dr) ** 2 + np.log(2 * np.pi * dr**2)
 
 
 if __name__ == '__main__':

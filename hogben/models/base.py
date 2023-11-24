@@ -71,9 +71,21 @@ class BaseSample(VariableAngle):
         pass
 
     def _using_conditions(self, contrast_sld, underlayers=None):
+        # Ugly, may lead to bugs
         new_structure = self.structure
         new_structure.parameters[0].parameters[1][0].value = contrast_sld
         return new_structure
+
+    def underlayer_sld(self, sld):
+        structure = refnx.reflect.SLD(0, name='Air')
+        for component in self.structure[1:]:
+            name = component.name
+            sld = component.sld.real.value
+            thick, rough = component.thick.value, component.rough.value
+            layer = refnx.reflect.SLD(sld, name=name)(thick, rough)
+            structure |= layer
+        structure.name = self.structure.name
+        return structure
 
     def get_varying_parameters(self):
         """Get list of parameters that are varying
@@ -82,8 +94,8 @@ class BaseSample(VariableAngle):
         """
         if not hasattr(self, "model"):
             # This is kinda a temp. workaround, for the predefined cases
-            # where no model is defined (so it doesn't crash on the
-            # self.model.parameters).
+            # where no model is defined (so it doesn't crash on the lack
+            # of self.model.parameters).
             return self.params
         params = []
         for p in flatten(self.model.parameters):
@@ -93,6 +105,14 @@ class BaseSample(VariableAngle):
             if len(p._deps):
                 params.extend([_p for _p in p.dependencies() if _p.vary])
         return list(set(params))
+
+    def with_underlayer(self):
+        structure = self.structure.copy()
+        underlayer = refnx.reflect.SLD(4, name='underlayer')(102, 0)
+        underlayer.underlayer = True
+        structure.insert(-1, underlayer)
+        return structure
+
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""

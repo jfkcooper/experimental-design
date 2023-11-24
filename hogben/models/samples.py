@@ -18,6 +18,7 @@ import refl1d.probe
 import refl1d.experiment
 import refl1d.magnetism
 
+
 import bumps.parameter
 import bumps.fitproblem
 
@@ -29,6 +30,10 @@ from refnx.analysis import Parameter
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
+class UnderLayer(refnx.reflect.structure.Slab):
+    def __init__(self):
+        super().__init__(thick=50, sld=6, rough=0, name="underlayer")
+        self.underlayer = True
 
 class Sample(BaseSample):
     """Wrapper class for a standard refnx or Refl1D reflectometry sample.
