@@ -101,6 +101,13 @@ class TestSimulate:
             q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
         assert len(q_binned) == self.angle_times[0][1]
 
+    def test_run_experiment_polarised(self, refnx_model):
+        """Checks the output of _run_experiment gives the right outputs"""
+        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
+        for angle, points, time in self.angle_times:
+            q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
+        assert len(q_binned) == self.angle_times[0][1]
+
 def test_refnx_simulate_data(self):
     """
     Checks that simulated reflectivity data points and simulated neutron
