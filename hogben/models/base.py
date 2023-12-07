@@ -106,13 +106,6 @@ class BaseSample(VariableAngle):
                 params.extend([_p for _p in p.dependencies() if _p.vary])
         return list(set(params))
 
-    def with_underlayer(self):
-        structure = self.structure.copy()
-        underlayer = refnx.reflect.SLD(4, name='underlayer')(102, 0)
-        underlayer.underlayer = True
-        structure.insert(-1, underlayer)
-        return structure
-
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""

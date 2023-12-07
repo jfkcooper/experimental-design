@@ -279,7 +279,6 @@ class Fisher():
         if self.n == 0:
             return np.zeros((self.m, self.m))
         J = self._get_gradient_matrix()
-
         # Calculate the reflectance for each model for the given Q values.
         r = np.concatenate([reflectivity(q, model)
                             for q, model in list(zip(self.qs, self.models))])
@@ -346,9 +345,7 @@ class Fisher():
             y2 = np.concatenate([reflectivity(q, model)
                                  for q, model in list(zip(self.qs,
                                                           self.models))])
-
             parameter.value = old  # Reset the parameter.
-
             J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
         return J
 
