@@ -25,6 +25,7 @@ import bumps.fitproblem
 
 from hogben.simulate import simulate, refl1d_experiment, reflectivity
 from hogben.utils import Fisher, Sampler, save_plot
+
 from hogben.models.base import BaseSample
 from refnx.analysis import Parameter
 

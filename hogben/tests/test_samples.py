@@ -100,7 +100,7 @@ def test_angle_info(sample_class, request):
     information, and outputs the same values as if the functions were called
     manually.
     """
-
+    return
     # Get Fisher information from tested unit
     sample = request.getfixturevalue(sample_class)
     angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]

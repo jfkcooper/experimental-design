@@ -15,8 +15,7 @@ import refnx.analysis
 import bumps.parameter
 import bumps.fitproblem
 
-from hogben.simulate import reflectivity, simulate
-
+from hogben.simulate import SimulateReflectivity
 
 class Sampler:
     """Contains code for running nested sampling on refnx and Refl1D models.
@@ -232,7 +231,6 @@ class Fisher():
 
         xi = sample.get_varying_parameters()
         return cls(qs, xi, counts, models)
-
     @property
     def fisher_information(self) -> np.ndarray:
         """Calculate and return the Fisher information matrix.
