@@ -10,7 +10,7 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 
-from hogben.simulate import simulate
+#from hogben.simulate import simulate
 from hogben.utils import fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)

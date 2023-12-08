@@ -37,13 +37,13 @@ class SimulateReflectivity:
 
     def __init__(self,
                  sample_model: refnx.reflect.ReflectModel,
-                 angle_times: list[tuple],
+                 angle_times: list[tuple] = None,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
 
         self.sample_model = sample_model if isinstance(sample_model, list)\
                             else [sample_model]
-        self.angle_times = angle_times
+        self.angle_times = angle_times if angle_times else [(0.7, 100, 5)]
         self.inst_or_path = inst_or_path
         self.angle_scale = angle_scale
 

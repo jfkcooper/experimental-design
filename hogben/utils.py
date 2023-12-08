@@ -197,20 +197,19 @@ def fisher(qs: list[np.ndarray],
 
         # Calculate reflectance for each model for first part of gradient.
         x1 = parameter.value = old * (1 - step)
-        y1 = np.concatenate([reflectivity(q, model)
+        y1 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
                              for q, model in list(zip(qs, models))])
 
         # Calculate reflectance for each model for second part of gradient.
         x2 = parameter.value = old * (1 + step)
-        y2 = np.concatenate([reflectivity(q, model)
+        y2 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
                              for q, model in list(zip(qs, models))])
-
         parameter.value = old  # Reset the parameter.
 
         J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
 
     # Calculate the reflectance for each model for the given Q values.
-    r = np.concatenate([reflectivity(q, model)
+    r = np.concatenate([SimulateReflectivity(model).reflectivity(q)
                         for q, model in list(zip(qs, models))])
 
     # Calculate the Fisher information matrix using equations from the paper.

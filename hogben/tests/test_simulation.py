@@ -107,62 +107,60 @@ class TestSimulate:
         for angle, points, time in self.angle_times:
             q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
         assert len(q_binned) == self.angle_times[0][1]
-"""
-def test_refnx_simulate_data(self):
-    """
-    #Checks that simulated reflectivity data points and simulated neutron
-    #counts generated through `hogben.simulate` are always greater than
-    #zero (given a long count time).
-    """
-    angle_times = [(0.3, 100, 1000)]
-    _, simulated_datapoints = simulate(self.sample_1, angle_times,
-                                       self.scale, self.bkg, self.dq,
-                                       self.ref)
 
-    np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                 simulated_datapoints[:,1])  # reflectivity
-    np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                 simulated_datapoints[:, 3])  # counts
-
-@pytest.mark.parametrize('instrument',
-                         ('OFFSPEC',
-                          'POLREF',
-                          'SURF',
-                          'INTER'))
-def test_simulation_instruments(self, instrument):
-    """
-    #Tests that all of the instruments are able to simulate a model and
-    #counts data.
-    """
-    angle_times = [(0.3, 100, 1000)]
-    _, simulated_datapoints = simulate(self.sample_1, angle_times,
-                                       self.scale, self.bkg, self.dq,
-                                       inst_or_path=instrument)
-    # reflectivity
-    np.testing.assert_array_less(np.zeros(angle_times[0][1]),
-                                 simulated_datapoints[:, 1])
-    np.all(np.less_equal(np.zeros(angle_times[0][1]),
-                                 simulated_datapoints[:, 3]))  # counts
-
-@pytest.mark.parametrize('instrument',
-                         ('OFFSPEC',
-                         'POLREF'))
-def test_simulation_magnetic_instruments(self, instrument):
-    """
-    #Tests that all of the instruments are able to simulate a model and
-    #counts data.
-    """
-    angle_times = [(0.3, 100, 1000)]
-    _, simulated_datapoints = simulate_magnetic(self.sample_1, angle_times,
-                                       self.scale, self.bkg, self.dq,
-                                       inst_or_path=instrument)
-
-    for i in range(4):
-        # reflectivity
-        np.testing.assert_array_less(np.zeros(angle_times[0][1]),
-                                     simulated_datapoints[i][:, 1])
-        # counts
-        np.testing.assert_array_less(np.zeros(angle_times[0][1]),
-                                     simulated_datapoints[i][:, 3])
-
-"""
+# def test_refnx_simulate_data(self):
+#     """
+#     #Checks that simulated reflectivity data points and simulated neutron
+#     #counts generated through `hogben.simulate` are always greater than
+#     #zero (given a long count time).
+#     """
+#     angle_times = [(0.3, 100, 1000)]
+#     _, simulated_datapoints = simulate(self.sample_1, angle_times,
+#                                        self.scale, self.bkg, self.dq,
+#                                        self.ref)
+#
+#     np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+#                                  simulated_datapoints[:,1])  # reflectivity
+#     np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+#                                  simulated_datapoints[:, 3])  # counts
+#
+# @pytest.mark.parametrize('instrument',
+#                          ('OFFSPEC',
+#                           'POLREF',
+#                           'SURF',
+#                           'INTER'))
+# def test_simulation_instruments(self, instrument):
+#     """
+#     #Tests that all of the instruments are able to simulate a model and
+#     #counts data.
+#     """
+#     angle_times = [(0.3, 100, 1000)]
+#     _, simulated_datapoints = simulate(self.sample_1, angle_times,
+#                                        self.scale, self.bkg, self.dq,
+#                                        inst_or_path=instrument)
+#     # reflectivity
+#     np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+#                                  simulated_datapoints[:, 1])
+#     np.all(np.less_equal(np.zeros(angle_times[0][1]),
+#                                  simulated_datapoints[:, 3]))  # counts
+#
+# @pytest.mark.parametrize('instrument',
+#                          ('OFFSPEC',
+#                          'POLREF'))
+# def test_simulation_magnetic_instruments(self, instrument):
+#     """
+#     #Tests that all of the instruments are able to simulate a model and
+#     #counts data.
+#     """
+#     angle_times = [(0.3, 100, 1000)]
+#     _, simulated_datapoints = simulate_magnetic(self.sample_1, angle_times,
+#                                        self.scale, self.bkg, self.dq,
+#                                        inst_or_path=instrument)
+#
+#     for i in range(4):
+#         # reflectivity
+#         np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+#                                      simulated_datapoints[i][:, 1])
+#         # counts
+#         np.testing.assert_array_less(np.zeros(angle_times[0][1]),
+#                                      simulated_datapoints[i][:, 3])
