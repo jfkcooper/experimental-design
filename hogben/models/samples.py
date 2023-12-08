@@ -23,7 +23,6 @@ from refnx.reflect import SLD
 import bumps.parameter
 import bumps.fitproblem
 
-from hogben.simulate import simulate, refl1d_experiment, reflectivity
 from hogben.utils import Fisher, Sampler, save_plot
 
 from hogben.models.base import BaseSample
@@ -114,8 +113,8 @@ class Sample(BaseSample):
 
         if len(structures) == 0:
             structures = [self.structure]
-
         return structures
+
     @property
     def model(self):
         return refnx.reflect.ReflectModel(self.structure,

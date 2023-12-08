@@ -89,10 +89,11 @@ class SimulateReflectivity:
             form (q, r, dr, counts)
         """
         # Non-polarised case
-        simulation = []
+        simulation = ([], [], [], [])
         for angle, points, time in self.angle_times:
             simulated_angle = self._run_experiment(angle, points, time, polarised)
-            simulation.append(simulated_angle)
+            for i in range(4):
+                simulation[i].extend(simulated_angle[i])
         return simulation
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
@@ -108,8 +109,7 @@ class SimulateReflectivity:
         # If there are no data points, return an empty array.
         if len(q) == 0:
             return np.array([])
-
-        return self.sample_model[0](q)
+        return self.sample_model[0](np.array(q))
 
     def _run_experiment(self, angle: float, points: int, time: float,
                         polarised: bool=False) -> tuple:

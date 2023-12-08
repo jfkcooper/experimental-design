@@ -2,46 +2,18 @@
 
 import copy
 
-import bumps.parameter
 import numpy as np
 import pytest
 import refnx
-import refl1d.experiment
 
-from hogben.simulate import SimulateReflectivity as simulate
 from hogben.utils import Fisher
 
 from refnx.reflect import SLD as SLD_refnx
-from refl1d.material import SLD as SLD_refl1d
 from unittest.mock import Mock, patch
 
 
 QS = [np.array([0.1, 0.2, 0.4, 0.6, 0.8])]
 COUNTS = [np.ones(len(QS[0])) * 100]
-
-
-@pytest.fixture
-def refl1d_model():
-    """Define a bilayer sample, and return the associated refl1d model"""
-    # Define sample
-    air = SLD_refl1d(rho=0, name='Air')
-    layer1 = SLD_refl1d(rho=4, name='Layer 1')(thickness=60, interface=8)
-    layer2 = SLD_refl1d(rho=8, name='Layer 2')(thickness=150, interface=2)
-    substrate = SLD_refl1d(rho=2.047, name='Substrate')(thickness=0,
-                                                        interface=2)
-    layer1.thickness.pm(10)
-    layer2.thickness.pm(10)
-    layer1.interface.pm(1)
-    layer2.interface.pm(1)
-    sample = substrate | layer2 | layer1 | air
-
-    # Define model
-    angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
-    model, _ = simulate(sample, angle_times)
-    model.xi = [layer1.interface, layer2.interface, layer1.thickness,
-                layer2.thickness]
-    return model
-
 
 @pytest.fixture
 def refnx_model():
@@ -65,7 +37,7 @@ def refnx_model():
 @pytest.fixture
 def mock_refnx_model():
     """
-    Create a mock of the refl1d model with a given set of parameters and their
+    Create a mock of the refnx model with a given set of parameters and their
     bounds
     """
     # Parameters described as tuples: (value, lower bound, upper bound)
@@ -87,34 +59,6 @@ def mock_refnx_model():
     ]
     model = Mock(spec=refnx.reflect.ReflectModel, xi=parameters)
     print(model)
-    model.xi = parameters
-    return model
-
-
-@pytest.fixture
-def mock_refl1d_model():
-    """
-    Create a mock of the refl1d model with a given set of parameters and their
-    bounds
-    """
-    # Parameters described as tuples: (value, lower bound, upper bound)
-    parameter_values = [
-        (20, 15, 25),
-        (50, 45, 55),
-        (10, 7.5, 8.5),
-        (2, 1.5, 2.5),
-    ]
-
-    # Fill parameter values and bounds
-    parameters = [
-        Mock(
-            spec=bumps.parameter.Parameter,
-            value=value,
-            bounds=Mock(limits=[lb, ub]),
-        )
-        for value, lb, ub in parameter_values
-    ]
-    model = Mock(spec=refl1d.experiment.Experiment, xi=parameters)
     model.xi = parameters
     return model
 

@@ -196,7 +196,8 @@ class Fisher():
                     sample,
                     angle_times,
                     contrasts = None,
-                    underlayers = None):
+                    underlayers = None,
+                    instrument = None):
         """
         Get Fisher object using a sample.
         Seperate constructor for magnetic simulation maybe? Probably depends
@@ -205,29 +206,24 @@ class Fisher():
 
         qs, counts, models = [], [], []
         if contrasts is None:
-            model, data = simulate(
-                sample.structure, angle_times, scale=sample.scale,
-                bkg=sample.bkg,
-                dq=sample.dq
-            )
+            sim = SimulateReflectivity(sample.model, angle_times)
+            data = sim.simulate()
             qs.append(data[:, 0])
             counts.append(data[:, 3])
-            models.append(model)
+            models.append(sample.model)
         else:
             for contrast in contrasts:
                 contrast_point = (contrast + 0.56) / (6.35 + 0.56)
-                background_level = (2e-6 * contrast_point
+                sample.bkg = (2e-6 * contrast_point
                                     + 4e-6 * (1 - contrast_point)
                                     )
-                new_structure = sample._using_conditions(contrast, underlayers)
-                model, data = simulate(
-                    new_structure, angle_times, scale=sample.scale,
-                    bkg=background_level,
-                    dq=sample.dq
-                )
+                sample.structure = sample._using_conditions(contrast, underlayers)
+                sim = SimulateReflectivity(sample.model, angle_times)
+
+                data = sim.simulate()
                 qs.append(data[:, 0])
                 counts.append(data[:, 3])
-                models.append(model)
+                models.append(sample.model)
 
         xi = sample.get_varying_parameters()
         return cls(qs, xi, counts, models)
@@ -278,9 +274,8 @@ class Fisher():
             return np.zeros((self.m, self.m))
         J = self._get_gradient_matrix()
         # Calculate the reflectance for each model for the given Q values.
-        r = np.concatenate([reflectivity(q, model)
+        r = np.concatenate([SimulateReflectivity(model).reflectivity(q)
                             for q, model in list(zip(self.qs, self.models))])
-
         # Calculate the Fisher information matrix using equations from
         # the paper.
         M = np.diag(np.concatenate(self.counts) / r, k=0)
@@ -334,15 +329,13 @@ class Fisher():
 
             # Calculate reflectance for each model for first part of gradient.
             x1 = parameter.value = old * (1 - self.step)
-            y1 = np.concatenate([reflectivity(q, model)
-                                 for q, model in list(zip(self.qs,
-                                                          self.models))])
+            y1 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
+                                 for q, model in list(zip(self.qs, self.models))])
 
             # Calculate reflectance for each model for second part of gradient.
             x2 = parameter.value = old * (1 + self.step)
-            y2 = np.concatenate([reflectivity(q, model)
-                                 for q, model in list(zip(self.qs,
-                                                          self.models))])
+            y2 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
+                                 for q, model in list(zip(self.qs, self.models))])
             parameter.value = old  # Reset the parameter.
             J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
         return J

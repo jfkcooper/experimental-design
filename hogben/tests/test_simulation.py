@@ -33,7 +33,7 @@ def refnx_model(refnx_structure):
 
 
 class TestSimulate:
-    angle_times = [(0.3, 100, 1000)]  # (Angle, Points, Time)
+    angle_times = [(0.3, 100, 1000), (1.6, 100, 1000)]  # (Angle, Points, Time)
     instrument = 'OFFSPEC'
     def test_data_streaming(self, refnx_model):
         """Tests that without an input for the datafile, the correct one is picked up"""
