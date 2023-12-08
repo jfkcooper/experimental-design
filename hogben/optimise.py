@@ -13,8 +13,9 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
-from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher
+from hogben.simulate import SimulateReflectivity
+
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -294,9 +295,10 @@ class Optimiser:
         )
         return res[:num_underlayers], res[num_underlayers:], val
 
-    def _sld_func(self, x: list,
-                        sample,
-                        angle_times: type) -> float:
+    def _sld_func(self,
+                          x: list,
+                          sample,
+                          angle_times: type) -> float:
         """Defines the function for optimising an experiment's underlayers.
 
         Args:
@@ -319,14 +321,14 @@ class Optimiser:
                 if hasattr(layer, 'underlayer') and layer.underlayer:
                     layer.sld.real.value = sld
             #sample.structure = sample.underlayer_sld(sld_n)
+
             sim = SimulateReflectivity(sample.model, angle_times)
             data = sim.simulate()
-            qs.append(data[:, 0])
-            counts.append(data[:, 3])
+            qs.append(data[0])
+            counts.append(data[3])
             models.append(sample.model)
         xi = sample.get_varying_parameters()
         fisher = Fisher(qs, xi, counts, models)
-        print(-fisher.min_eigenval)
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
 
