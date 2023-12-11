@@ -37,7 +37,7 @@ class SimulateReflectivity:
 
     def __init__(self,
                  sample_model: refnx.reflect.ReflectModel,
-                 angle_times: list[tuple],
+                 angle_times: list[tuple] = None,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
 
@@ -92,7 +92,8 @@ class SimulateReflectivity:
         simulation = []
         for angle, points, time in self.angle_times:
             simulated_angle = self._run_experiment(angle, points, time, polarised)
-            simulation.append(simulated_angle)
+            for i, item in enumerate(simulated_angle):
+                simulation[i].extend(item)
         return simulation
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
@@ -138,7 +139,7 @@ class SimulateReflectivity:
         q_bin_edges = np.geomspace(q[-1], q[0], points + 1)
         flux_binned, _ = np.histogram(q, q_bin_edges, weights=scaled_flux)
         # Calculate the number of incident neutrons for each bin.
-        counts_incident = flux_binned * time
+        counts_incident = np.array(flux_binned * time)
 
         # Get the bin centres.
         q_binned = np.asarray(

@@ -39,12 +39,12 @@ class TestSimulate:
         """Tests that without an input for the datafile, the correct one is picked up"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
         simulated_datapoints = sim.simulate()
-        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints)  # counts
+        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints[3])  # counts
 
         # Check that the default instrument also works
         sim = SimulateReflectivity(refnx_model, self.angle_times)
         simulated_datapoints = sim.simulate()
-        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints)  # counts
+        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints[3])  # counts
 
     def test_incident_flux_data(self):
         """
@@ -55,6 +55,7 @@ class TestSimulate:
         for instrument in ['OFFSPEC', 'SURF', 'INTER', 'POLREF']:
             sim_no_pol = SimulateReflectivity(None, angle_times=self.angle_times,
                                               inst_or_path=instrument)
+
             assert len(sim_no_pol._incident_flux_data(polarised=False)) > 1
             assert np.sum(sim_no_pol._incident_flux_data(polarised=False)) > 10
 
@@ -62,6 +63,7 @@ class TestSimulate:
         for instrument in ['OFFSPEC', 'POLREF']:
             sim_pol = SimulateReflectivity(None, angle_times=self.angle_times,
                                               inst_or_path=instrument)
+
             assert len(sim_pol._incident_flux_data(polarised=True)) > 1
             assert np.sum(sim_pol._incident_flux_data(polarised=True)) > 10
 
@@ -69,21 +71,24 @@ class TestSimulate:
         with pytest.raises(FileNotFoundError):
             sim_wrong_path = SimulateReflectivity(None, angle_times=self.angle_times,
                                      inst_or_path='no_instrument_exists')
+
             sim_wrong_path._incident_flux_data()
 
         # Test that a blank instrument raises an error
         with pytest.raises(FileNotFoundError):
             sim_no_path = SimulateReflectivity(None, angle_times=self.angle_times,
                                                   inst_or_path='')
+
             sim_no_path._incident_flux_data()
 
         # Test that a non-polarised instrument can't be used for a polarised simulation
         with pytest.raises(FileNotFoundError):
             sim_not_in_pol = SimulateReflectivity(None, angle_times=self.angle_times,
                                                   inst_or_path='SURF')
+
             sim_not_in_pol._incident_flux_data(polarised=True)
 
-    def test_refnx_reflectivity_model(self, refnx_model):
+    def test_reflectivity(self, refnx_model):
         """
         Checks that a refnx model reflectivity generated through
         `hogben.reflectivity` is always greater than zero.
@@ -97,32 +102,34 @@ class TestSimulate:
     def test_run_experiment_unpolarised(self, refnx_model):
         """Checks the output of _run_experiment gives the right outputs"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
-        for angle, points, time in self.angle_times:
-            q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
-        assert len(q_binned) == self.angle_times[0][1]
+        angle, points, time = self.angle_times
+        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
+        assert len(q_binned, r_noisy, r_error, counts_incident) == self.angle_times[0][1]*np.ones(4)
 
     def test_run_experiment_polarised(self, refnx_model):
         """Checks the output of _run_experiment gives the right outputs"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
-        for angle, points, time in self.angle_times:
-            q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
+        angle, points, time = self.angle_times
+        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points,
+                                                                              time, polarised=True)
         assert len(q_binned) == self.angle_times[0][1]
-"""
-def test_refnx_simulate_data(self):
-    """
-    #Checks that simulated reflectivity data points and simulated neutron
-    #counts generated through `hogben.simulate` are always greater than
-    #zero (given a long count time).
-    """
-    angle_times = [(0.3, 100, 1000)]
-    _, simulated_datapoints = simulate(self.sample_1, angle_times,
-                                       self.scale, self.bkg, self.dq,
-                                       self.ref)
 
-    np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                 simulated_datapoints[:,1])  # reflectivity
-    np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                 simulated_datapoints[:, 3])  # counts
+    def test_simulate_multiple_angles(self):
+        """
+        Checks that simulated reflectivity data points and simulated neutron
+        counts generated through `hogben.simulate` are always greater than
+        zero (given a long count time).
+        """
+        angle_times = [(0.3, 100, 1000)]
+        _, simulated_datapoints = simulate(self.sample_1, angle_times,
+                                           self.scale, self.bkg, self.dq,
+                                           self.ref)
+
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:,1])  # reflectivity
+        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
+                                     simulated_datapoints[:, 3])  # counts
+"""
 
 @pytest.mark.parametrize('instrument',
                          ('OFFSPEC',
@@ -130,10 +137,10 @@ def test_refnx_simulate_data(self):
                           'SURF',
                           'INTER'))
 def test_simulation_instruments(self, instrument):
-    """
+
     #Tests that all of the instruments are able to simulate a model and
     #counts data.
-    """
+
     angle_times = [(0.3, 100, 1000)]
     _, simulated_datapoints = simulate(self.sample_1, angle_times,
                                        self.scale, self.bkg, self.dq,
@@ -148,10 +155,10 @@ def test_simulation_instruments(self, instrument):
                          ('OFFSPEC',
                          'POLREF'))
 def test_simulation_magnetic_instruments(self, instrument):
-    """
+
     #Tests that all of the instruments are able to simulate a model and
     #counts data.
-    """
+
     angle_times = [(0.3, 100, 1000)]
     _, simulated_datapoints = simulate_magnetic(self.sample_1, angle_times,
                                        self.scale, self.bkg, self.dq,
