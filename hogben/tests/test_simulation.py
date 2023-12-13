@@ -39,12 +39,11 @@ class TestSimulate:
         """Tests that without an input for the datafile, the correct one is picked up"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
         simulated_datapoints = sim.simulate()
-        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints[3])  # counts
-
+        assert np.all(np.zeros_like(simulated_datapoints) <= simulated_datapoints[3])  # Counts
         # Check that the default instrument also works
         sim = SimulateReflectivity(refnx_model, self.angle_times)
         simulated_datapoints = sim.simulate()
-        np.testing.assert_array_less(np.zeros_like(simulated_datapoints), simulated_datapoints[3])  # counts
+        assert np.all(np.zeros_like(simulated_datapoints) <= simulated_datapoints[3])  # Counts
 
     def test_incident_flux_data(self):
         """
