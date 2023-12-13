@@ -75,7 +75,7 @@ class SimulateReflectivity:
         return np.loadtxt(str(path), delimiter=',')
 
     def simulate(self, polarised: bool=False) -> \
-            list[tuple]:
+            tuple:
         """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
         specified in self.inst_or_path
@@ -89,9 +89,9 @@ class SimulateReflectivity:
             form (q, r, dr, counts)
         """
         # Non-polarised case
-        simulation = []
-        for angle, points, time in self.angle_times:
-            simulated_angle = self._run_experiment(angle, points, time, polarised)
+        simulation = [], [], [], []
+        for condition in self.angle_times:
+            simulated_angle = self._run_experiment(*condition, polarised)
             for i, item in enumerate(simulated_angle):
                 simulation[i].extend(item)
         return simulation
@@ -127,7 +127,7 @@ class SimulateReflectivity:
         Returns:
             tuple: simulated Q, R, dR data and incident neutron counts.
         """
-        wavelengths, flux, _ = self._incident_flux_data(polarised=polarised).T
+        wavelengths, flux = self._incident_flux_data(polarised=polarised).T
 
         # Scale flux by relative measurement angle squared (assuming both slits
         # scale linearly with angle, this should be correct)

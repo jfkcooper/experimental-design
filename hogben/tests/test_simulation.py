@@ -56,16 +56,16 @@ class TestSimulate:
             sim_no_pol = SimulateReflectivity(None, angle_times=self.angle_times,
                                               inst_or_path=instrument)
 
-            assert len(sim_no_pol._incident_flux_data(polarised=False)) > 1
-            assert np.sum(sim_no_pol._incident_flux_data(polarised=False)) > 10
+            assert sim_no_pol._incident_flux_data(polarised=False).shape[1] == 2
+            assert np.sum(sim_no_pol._incident_flux_data(polarised=False)[:, 1]) > 100
 
         # Test that polarised instruments work and have counts in
         for instrument in ['OFFSPEC', 'POLREF']:
             sim_pol = SimulateReflectivity(None, angle_times=self.angle_times,
                                               inst_or_path=instrument)
 
-            assert len(sim_pol._incident_flux_data(polarised=True)) > 1
-            assert np.sum(sim_pol._incident_flux_data(polarised=True)) > 10
+            assert sim_pol._incident_flux_data(polarised=True).shape[1] == 2
+            assert np.sum(sim_pol._incident_flux_data(polarised=True)[:, 1]) > 100
 
         # Test that a non-existing path raises an error
         with pytest.raises(FileNotFoundError):
@@ -93,83 +93,33 @@ class TestSimulate:
         Checks that a refnx model reflectivity generated through
         `hogben.reflectivity` is always greater than zero.
         """
-        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
+        sim = SimulateReflectivity(refnx_model)
         ideal_reflectivity = sim.reflectivity(np.linspace(0.001, 0.3, 200))
 
         np.testing.assert_array_less(np.zeros(len(ideal_reflectivity)),
                                      ideal_reflectivity)
-
-    def test_run_experiment_unpolarised(self, refnx_model):
-        """Checks the output of _run_experiment gives the right outputs"""
+    @pytest.mark.parametrize('polarised', (True, False))
+    def test_run_experiment(self, refnx_model, polarised):
+        """Checks the output of _run_experiment gives the right length of outputs"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
-        angle, points, time = self.angle_times
-        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points, time)
-        assert len(q_binned, r_noisy, r_error, counts_incident) == self.angle_times[0][1]*np.ones(4)
+        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(*self.angle_times[0], polarised=polarised)
+        for item in [q_binned, r_noisy, r_error, counts_incident]:
+            assert len(item) == self.angle_times[0][1]
 
-    def test_run_experiment_polarised(self, refnx_model):
-        """Checks the output of _run_experiment gives the right outputs"""
-        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
-        angle, points, time = self.angle_times
-        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(angle, points,
-                                                                              time, polarised=True)
-        assert len(q_binned) == self.angle_times[0][1]
+        np.testing.assert_array_less(np.zeros_like(q_binned), q_binned)
 
-    def test_simulate_multiple_angles(self):
+    @pytest.mark.parametrize('polarised', (True, False))
+    def test_simulate_multiple_angles(self, refnx_model, polarised):
         """
         Checks that simulated reflectivity data points and simulated neutron
         counts generated through `hogben.simulate` are always greater than
         zero (given a long count time).
         """
-        angle_times = [(0.3, 100, 1000)]
-        _, simulated_datapoints = simulate(self.sample_1, angle_times,
-                                           self.scale, self.bkg, self.dq,
-                                           self.ref)
+        angle_times = [(0.3, 100, 1000), (2.3, 150, 1000)]
 
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                     simulated_datapoints[:,1])  # reflectivity
-        np.testing.assert_array_less(np.zeros(len(simulated_datapoints)),
-                                     simulated_datapoints[:, 3])  # counts
-"""
+        sim = SimulateReflectivity(refnx_model, angle_times, self.instrument)
+        q_binned, r_noisy, r_error, counts_incident = sim.simulate(polarised=polarised)
+        for item in [q_binned, r_noisy, r_error, counts_incident]:
+            assert len(item) == sum(condition[1] for condition in angle_times)
 
-@pytest.mark.parametrize('instrument',
-                         ('OFFSPEC',
-                          'POLREF',
-                          'SURF',
-                          'INTER'))
-def test_simulation_instruments(self, instrument):
-
-    #Tests that all of the instruments are able to simulate a model and
-    #counts data.
-
-    angle_times = [(0.3, 100, 1000)]
-    _, simulated_datapoints = simulate(self.sample_1, angle_times,
-                                       self.scale, self.bkg, self.dq,
-                                       inst_or_path=instrument)
-    # reflectivity
-    np.testing.assert_array_less(np.zeros(angle_times[0][1]),
-                                 simulated_datapoints[:, 1])
-    np.all(np.less_equal(np.zeros(angle_times[0][1]),
-                                 simulated_datapoints[:, 3]))  # counts
-
-@pytest.mark.parametrize('instrument',
-                         ('OFFSPEC',
-                         'POLREF'))
-def test_simulation_magnetic_instruments(self, instrument):
-
-    #Tests that all of the instruments are able to simulate a model and
-    #counts data.
-
-    angle_times = [(0.3, 100, 1000)]
-    _, simulated_datapoints = simulate_magnetic(self.sample_1, angle_times,
-                                       self.scale, self.bkg, self.dq,
-                                       inst_or_path=instrument)
-
-    for i in range(4):
-        # reflectivity
-        np.testing.assert_array_less(np.zeros(angle_times[0][1]),
-                                     simulated_datapoints[i][:, 1])
-        # counts
-        np.testing.assert_array_less(np.zeros(angle_times[0][1]),
-                                     simulated_datapoints[i][:, 3])
-
-"""
+        np.testing.assert_array_less(np.zeros_like(q_binned), q_binned)
