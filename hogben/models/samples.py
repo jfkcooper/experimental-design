@@ -117,10 +117,7 @@ class Sample(BaseSample):
 
         """
         # Return the Fisher information matrix calculated from simulated data.
-        model = refnx.reflect.ReflectModel(self.structure,
-                                           scale=1,
-                                           dq=2,
-                                           bkg=5e-6)
+        model = refnx.reflect.ReflectModel(self.structure)
         sim = SimulateReflectivity(model, angle_times)
         data = sim.simulate()
         qs, counts, models = [data[0]], [data[3]], [model]
