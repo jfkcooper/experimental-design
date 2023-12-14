@@ -21,7 +21,7 @@ import refl1d.magnetism
 import bumps.parameter
 import bumps.fitproblem
 
-from hogben.simulate import simulate, refl1d_experiment, reflectivity
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
 from refnx.analysis import Parameter
@@ -117,8 +117,13 @@ class Sample(BaseSample):
 
         """
         # Return the Fisher information matrix calculated from simulated data.
-        model, data = simulate(self.structure, angle_times)
-        qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
+        model = refnx.reflect.ReflectModel(self.structure,
+                                           scale=1,
+                                           dq=2,
+                                           bkg=5e-6)
+        sim = SimulateReflectivity(model, angle_times)
+        data = sim.simulate()
+        qs, counts, models = [data[0]], [data[3]], [model]
         return fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path):
@@ -159,13 +164,6 @@ class Sample(BaseSample):
         if isinstance(self.structure, refnx.reflect.Structure):
             z, slds = self.structure.sld_profile()
 
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            q = np.geomspace(0.005, 0.3, 500)  # This is not used.
-            scale, bkg, dq = 1, 1e-6, 2  # These are not used.
-            experiment = refl1d_experiment(self.structure, q, scale, bkg, dq)
-            z, slds, _ = experiment.smooth_profile()
-        # Otherwise, the structure is invalid.
         else:
             raise RuntimeError('invalid structure given')
         return z, slds
@@ -229,15 +227,11 @@ class Sample(BaseSample):
             model = refnx.reflect.ReflectModel(self.structure, scale=scale,
                                                bkg=bkg, dq=dq)
 
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            model = refl1d_experiment(self.structure, q, scale, bkg, dq)
-
         # Otherwise, the structure is invalid.
         else:
             raise RuntimeError('invalid structure given')
 
-        r = reflectivity(q, model)
+        r = SimulateReflectivity(model).reflectivity(q)
         return q, r
 
     def nested_sampling(self,
@@ -255,12 +249,14 @@ class Sample(BaseSample):
 
         """
         # Simulate data for the sample.
-        model, data = simulate(self.structure, angle_times)
+        model = refnx.reflect.ReflectModel(self.structure)
+        sim = SimulateReflectivity(model, angle_times)
+        data = sim.simulate()
 
         # Determine if the structure was defined in refnx.
         if isinstance(self.structure, refnx.reflect.Structure):
             dataset = refnx.reflect.ReflectDataset(
-                [data[:, 0], data[:, 1], data[:, 2]]
+                [data[0], data[1], data[2]]
             )
             objective = refnx.anaylsis.Objective(model, dataset)
 

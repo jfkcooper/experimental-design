@@ -1,8 +1,6 @@
 """Methods used to simulate an experiment """
 
 import os.path
-from typing import Optional, Union
-from enum import Enum
 
 import importlib_resources
 import numpy as np
@@ -41,14 +39,13 @@ class SimulateReflectivity:
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
 
-        self.sample_model = sample_model if isinstance(sample_model, list)\
-                            else [sample_model]
+        self.sample_model = sample_model if isinstance(sample_model, list) \
+            else [sample_model]
         self.angle_times = angle_times
         self.inst_or_path = inst_or_path
         self.angle_scale = angle_scale
 
-
-    def _incident_flux_data(self, polarised: bool=False) -> np.ndarray:
+    def _incident_flux_data(self, polarised: bool = False) -> np.ndarray:
         """
         Returns data loaded from the filepath given by self.inst_or_path,
         or the data from the requested instrument
@@ -59,8 +56,8 @@ class SimulateReflectivity:
         # Check if the key isn't in the dictionary and check if it is a
         # a local filepath instead
 
-        inst_dict = self.pol_instr_dict if polarised is True\
-                    else self.non_pol_instr_dict
+        inst_dict = self.pol_instr_dict if polarised is True \
+            else self.non_pol_instr_dict
 
         if self.inst_or_path not in inst_dict:
             if os.path.isfile(self.inst_or_path):
@@ -70,12 +67,12 @@ class SimulateReflectivity:
                 raise FileNotFoundError(str(msg))
 
         path = importlib_resources.files('hogben.data.directbeams').joinpath(
-               inst_dict[self.inst_or_path])
+            inst_dict[self.inst_or_path])
 
         return np.loadtxt(str(path), delimiter=',')
 
-    def simulate(self, polarised: bool=False) -> \
-            tuple:
+    def simulate(self, polarised: bool = False) -> \
+            list:
         """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
         specified in self.inst_or_path
@@ -89,11 +86,12 @@ class SimulateReflectivity:
             form (q, r, dr, counts)
         """
         # Non-polarised case
-        simulation = [], [], [], []
+        simulation = [np.asarray([]), np.asarray([]),
+                      np.asarray([]), np.asarray([])]
         for condition in self.angle_times:
             simulated_angle = self._run_experiment(*condition, polarised)
             for i, item in enumerate(simulated_angle):
-                simulation[i].extend(item)
+                simulation[i] = np.append(simulation[i], item)
         return simulation
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
@@ -113,7 +111,7 @@ class SimulateReflectivity:
         return self.sample_model[0](q)
 
     def _run_experiment(self, angle: float, points: int, time: float,
-                        polarised: bool=False) -> tuple:
+                        polarised: bool = False) -> tuple:
         """Simulates a single angle measurement of a given 'model' on the
         instrument set in self.incident_flux_data
 
@@ -150,7 +148,7 @@ class SimulateReflectivity:
         # Get the measured reflected count for each bin.
         # r_model accounts for background.
         counts_reflected = np.random.poisson(r_model * counts_incident).astype(
-                                             float)
+            float)
 
         # Convert from count space to reflectivity space.
         # Point has zero reflectivity if there is no flux.

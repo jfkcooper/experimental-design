@@ -10,7 +10,7 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 
-from hogben.simulate import simulate
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
@@ -146,16 +146,19 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         qs, counts, models = [], [], []
         for contrast in contrasts:
             # Simulate data for the contrast.
-            sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
             background_level = (2e-6 * contrast_point
                                 + 4e-6 * (1 - contrast_point)
                                 )
-            model, data = simulate(
-                sample, angle_times, scale=1, bkg=background_level, dq=2
-            )
-            qs.append(data[:, 0])
-            counts.append(data[:, 3])
+            sample = self._using_conditions(contrast, underlayers)
+            model = refnx.reflect.ReflectModel(sample,
+                                               scale=1,
+                                               dq=2,
+                                               bkg=background_level)
+            sim = SimulateReflectivity(model, angle_times)
+            data = sim.simulate()
+            qs.append(data[0])
+            counts.append(data[3])
             models.append(model)
 
         # Exclude certain parameters if underlayers are being used.
@@ -286,11 +289,15 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             background_level = 2e-6 * contrast_point + 4e-6 * (
                 1 - contrast_point
             )
-            model, data = simulate(
-                sample, angle_times, scale=1, bkg=background_level, dq=2
-            )
+            model = refnx.reflect.ReflectModel(sample,
+                                               scale=1,
+                                               dq=2,
+                                               bkg=background_level)
+            sim = SimulateReflectivity(model, angle_times)
+            data = sim.simulate()
+
             dataset = refnx.dataset.ReflectDataset(
-                [data[:, 0], data[:, 1], data[:, 2]]
+                [data[0], data[1], data[2]]
             )
             objectives.append(refnx.analysis.Objective(model, dataset))
 
