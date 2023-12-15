@@ -98,7 +98,6 @@ class SimulateReflectivity:
         simulation = [data[mask] for data in simulation]  # Filter zeroes
         sort_indices = simulation[0].argsort()
         simulation = [data[sort_indices] for data in simulation]  # Sort by q
-
         return simulation
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
