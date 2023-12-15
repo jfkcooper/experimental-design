@@ -82,7 +82,7 @@ class SimulateReflectivity:
             select the correct instrument direct beam file
 
         Returns:
-            tuple: simulated data for the given model in the
+            list: simulated data for the given model in the
             form (q, r, dr, counts)
         """
         # Non-polarised case
@@ -92,6 +92,12 @@ class SimulateReflectivity:
             simulated_angle = self._run_experiment(*condition, polarised)
             for i, item in enumerate(simulated_angle):
                 simulation[i] = np.append(simulation[i], item)
+
+        mask = simulation[1] != 0
+        simulation = [data[mask] for data in simulation]  # Filter zeroes
+        sort_indices = simulation[0].argsort()
+        simulation = [data[sort_indices] for data in simulation]  # Sort by q
+
         return simulation
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
