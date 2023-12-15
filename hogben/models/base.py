@@ -11,7 +11,7 @@ import refnx.reflect
 import refnx.analysis
 
 from hogben.simulate import SimulateReflectivity
-from hogben.utils import fisher, Sampler, save_plot
+from hogben.utils import Fisher, Sampler, save_plot, flatten
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -69,6 +69,42 @@ class BaseSample(VariableAngle):
     def nested_sampling(self):
         """Runs nested sampling on measured or simulated data of the sample."""
         pass
+
+    def _using_conditions(self, contrast_sld, underlayers=None):
+        # Ugly, may lead to bugs
+        new_structure = self.structure
+        new_structure.parameters[0].parameters[1][0].value = contrast_sld
+        return new_structure
+
+    def underlayer_sld(self, sld):
+        structure = refnx.reflect.SLD(0, name='Air')
+        for component in self.structure[1:]:
+            name = component.name
+            sld = component.sld.real.value
+            thick, rough = component.thick.value, component.rough.value
+            layer = refnx.reflect.SLD(sld, name=name)(thick, rough)
+            structure |= layer
+        structure.name = self.structure.name
+        return structure
+
+    def get_varying_parameters(self):
+        """Get list of parameters that are varying
+        Current implementation won't win any beauty prices, but works as
+        temporary solution. Will clean this a bit...
+        """
+        if not hasattr(self, "model"):
+            # This is kinda a temp. workaround, for the predefined cases
+            # where no model is defined (so it doesn't crash on the lack
+            # of self.model.parameters).
+            return self.params
+        params = []
+        for p in flatten(self.model.parameters):
+            if p.vary:
+                params.append(p)
+                continue
+            if len(p._deps):
+                params.extend([_p for _p in p.dependencies() if _p.vary])
+        return list(set(params))
 
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
@@ -130,7 +166,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, underlayers)
 
     def __conditions_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for the lipid sample
+        """Calculates the Fisher information object for the lipid sample
            with given conditions.
 
         Args:
@@ -139,11 +175,12 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             underlayers (list): thickness and SLD of each underlayer to add.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information matrix object
 
         """
         # Iterate over each contrast to simulate.
         qs, counts, models = [], [], []
+
         for contrast in contrasts:
             # Simulate data for the contrast.
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
@@ -163,9 +200,9 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Exclude certain parameters if underlayers are being used.
         if underlayers is None:
-            return fisher(qs, self.params, counts, models)
+            return Fisher(qs, self.params, counts, models)
         else:
-            return fisher(qs, self.underlayer_params, counts, models)
+            return Fisher(qs, self.underlayer_params, counts, models)
 
     @abstractmethod
     def _using_conditions(self):

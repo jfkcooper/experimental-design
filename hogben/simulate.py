@@ -42,6 +42,7 @@ class SimulateReflectivity:
         self.sample_model = sample_model if isinstance(sample_model, list) \
             else [sample_model]
         self.angle_times = angle_times
+
         self.inst_or_path = inst_or_path
         self.angle_scale = angle_scale
 
@@ -113,8 +114,7 @@ class SimulateReflectivity:
         # If there are no data points, return an empty array.
         if len(q) == 0:
             return np.array([])
-
-        return self.sample_model[0](q)
+        return self.sample_model[0](np.array(q))
 
     def _run_experiment(self, angle: float, points: int, time: float,
                         polarised: bool = False) -> tuple:

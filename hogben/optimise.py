@@ -2,6 +2,7 @@
 reflectometry experiment"""
 
 import numpy as np
+import copy
 from typing import Optional
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
@@ -12,6 +13,8 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
+from hogben.utils import Fisher
+from hogben.simulate import SimulateReflectivity
 
 
 class Optimiser:
@@ -60,9 +63,6 @@ class Optimiser:
         """
         # Check that the measurement angle of the sample can be varied.
         assert isinstance(self.sample, VariableAngle)
-
-        # Set contrasts to empty list if not provided
-        contrasts = [] if contrasts is None else contrasts
 
         # Define bounds on each condition to optimise (angles and time splits).
         bounds = [angle_bounds] * num_angles + [(0, 1)] * num_angles
@@ -188,9 +188,8 @@ class Optimiser:
 
         # Define bounds on each condition to optimise
         # (underlayer thicknesses and SLDs).
-        bounds = [thick_bounds] * num_underlayers + [
-            sld_bounds
-        ] * num_underlayers
+        bounds = [thick_bounds] * num_underlayers \
+                 + [sld_bounds] * num_underlayers
 
         # Arguments for the optimisation function.
         args = [num_underlayers, angle_times, contrasts]
@@ -200,6 +199,171 @@ class Optimiser:
             self._underlayers_func, bounds, [], args, workers, verbose
         )
         return res[:num_underlayers], res[num_underlayers:], val
+
+    def optimise_underlayer_experiment(
+        self,
+        sample,
+        conditions,
+        workers=-1,
+        verbose=True,
+    ) -> tuple:
+        """Finds the optimal underlayer thicknesses and SLDs of a sample.
+
+        Args:
+            num_underlayers (int): number of underlayers to optimise.
+            angle_times (list): points and times for each angle to simulate.
+            contrasts (list): contrasts to simulate.
+            thick_bounds (tuple): underlayer thicknesses to consider.
+            sld_bounds (tuple): underlayer SLDs to consider.
+            workers (int): number of CPU cores to use when optimising.
+            verbose (bool): whether to display progress or not.
+
+        Returns:
+            tuple: optimised underlayer thicknesses and SLD, and the
+                   corresponding optimisation function value.
+
+        """
+        # Check that the underlayers of the sample can be varied.
+        #angle_times = experiment.angle_times
+        conditions = {} if conditions is None else conditions
+        angle_times = conditions.get("angle_times", None)
+        thick_bounds = conditions.get("thick_bounds", None)
+        sld_bounds = conditions.get("sld_bounds", None)
+        num_underlayers = sample.num_underlayers
+        bounds = [thick_bounds] * num_underlayers + [sld_bounds] * num_underlayers
+
+        # Arguments for the optimisation function.
+        args = [sample, angle_times]
+
+        # Optimise underlayer thicknesses and SLDs, and return the results.
+        res, val = Optimiser.__optimise(
+            self._underlayers_func2, bounds, [], args, workers, verbose
+        )
+        return res[:num_underlayers], res[num_underlayers:], val
+
+
+    def optimise_sld(
+        self,
+        sample,
+        conditions,
+        workers=-1,
+        verbose=True,
+    ) -> tuple:
+        """Finds the optimal underlayer thicknesses and SLDs of a sample.
+
+        Args:
+            num_underlayers (int): number of underlayers to optimise.
+            angle_times (list): points and times for each angle to simulate.
+            contrasts (list): contrasts to simulate.
+            thick_bounds (tuple): underlayer thicknesses to consider.
+            sld_bounds (tuple): underlayer SLDs to consider.
+            workers (int): number of CPU cores to use when optimising.
+            verbose (bool): whether to display progress or not.
+
+        Returns:
+            tuple: optimised underlayer thicknesses and SLD, and the
+                   corresponding optimisation function value.
+
+        """
+        # Check that the underlayers of the sample can be varied.
+        #angle_times = experiment.angle_times
+        conditions = {} if conditions is None else conditions
+        angle_times = conditions.get("angle_times", None)
+        nsld_bounds = conditions.get("nsld_bounds", None)
+        msld_bounds = conditions.get("msld_bounds", None)
+        num_underlayers = sample.num_underlayers
+        bounds = [nsld_bounds] * num_underlayers + [msld_bounds] * \
+                 num_underlayers
+
+        def _non_decreasing(x):
+            """
+            Sets the constraint for the contrasts to be in non-decreasing
+            order
+            """
+            return int(np.all(np.diff(x[:0]) >= 0))
+
+        # Set both constrains as equality constraints
+        constraints = [
+            NonlinearConstraint(_non_decreasing, 1, 1),
+        ]
+        # Arguments for the optimisation function.
+        args = [sample, angle_times]
+
+        # Optimise underlayer thicknesses and SLDs, and return the results.
+        res, val = Optimiser.__optimise(
+            self._sld_func, bounds, [], args, workers, verbose
+        )
+        return res[:num_underlayers], res[num_underlayers:], val
+
+    def _sld_func(self,
+                          x: list,
+                          sample,
+                          angle_times: type) -> float:
+        """Defines the function for optimising an experiment's underlayers.
+
+        Args:
+            x (list): underlayer thicknesses and SLDs to calculate with.
+            num_underlayers (int): number of underlayers being optimised.
+            angle_times (type): points and times for each angle.
+            contrasts (list): contrasts of the experiment, if applicable.
+
+        Returns:
+            float: negative of minimum eigenvalue using given conditions.
+
+        """
+        # Extract the underlayer thicknesses and SLDs from the given `x` list.
+        sld_n, sld_m = x[0], x[1]
+        sld_range = [sld_n + sld_m, sld_n - sld_m]
+
+        qs, counts, models = [], [], []
+        for sld in sld_range:
+            for layer in sample.structure:
+                if hasattr(layer, 'underlayer') and layer.underlayer:
+                    layer.sld.real.value = sld
+            #sample.structure = sample.underlayer_sld(sld_n)
+
+            sim = SimulateReflectivity(sample.model, angle_times)
+            data = sim.simulate()
+            qs.append(data[0])
+            counts.append(data[3])
+            models.append(sample.model)
+        xi = sample.get_varying_parameters()
+        fisher = Fisher(qs, xi, counts, models)
+        # Return negative of the minimum eigenvalue as algorithm is minimising.
+        return -fisher.min_eigenval
+
+    def _underlayers_func2(self,
+                          x: list,
+                          sample,
+                          angle_times: type) -> float:
+        """Defines the function for optimising an experiment's underlayers.
+
+        Args:
+            x (list): underlayer thicknesses and SLDs to calculate with.
+-            angle_times (type): points and times for each angle.
+            contrasts (list): contrasts of the experiment, if applicable.
+
+        Returns:
+            float: negative of minimum eigenvalue using given conditions.
+
+        """
+        num_underlayers = sample.num_underlayers
+        # Calculate the Fisher information matrix using the conditions.
+        underlayer_conditions = [
+            (x[i], x[num_underlayers + i]) for i in range(num_underlayers)
+        ]
+
+        i = 0
+        for layer in sample.structure:
+            if hasattr(layer, 'underlayer') and layer.underlayer:
+                layer.thick.value = underlayer_conditions[i][0]
+                layer.sld.real.value = underlayer_conditions[i][1]
+                i += 1
+
+        fisher = Fisher.from_sample(sample, angle_times)
+
+        # Return negative of the minimum eigenvalue as algorithm is minimising.
+        return -(fisher.min_eigenval)
 
     def _angle_times_func(self,
                           x: list,
@@ -226,12 +390,10 @@ class Optimiser:
             (x[i], points, total_time * x[num_angles + i])
             for i in range(num_angles)
         ]
-
         # Calculate the Fisher information matrix.
-        g = self.sample.angle_info(angle_times, contrasts)
-
+        fisher = Fisher.from_sample(self.sample, angle_times, contrasts)
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     def _contrasts_func(self,
                         x: list,
@@ -250,23 +412,24 @@ class Optimiser:
             float: negative of minimum eigenvalue using given conditions.
 
         """
-        # Define the initial Fisher information matrix.
-        m = len(self.sample.params)
-        g = np.zeros((m, m))
+        # Define the initial angle times.
+        angle_times = []
 
         # Iterate over each contrast.
         for i in range(num_contrasts):
             # Calculate proportion of the total counting time for each angle.
-            angle_times = [
-                (angle, points, total_time * x[num_contrasts + i] * split)
-                for angle, points, split in angle_splits
-            ]
+            angle_times_new = \
+                [(angle, points, total_time * x[num_contrasts + i] * split) for
+                 angle, points, split in angle_splits]
+            angle_times.append(angle_times_new)
 
-            # Add to the initial Fisher information matrix.
-            g += self.sample.contrast_info(angle_times, [x[i]])
+        # Calculate the Fisher Information Matrix for the total information.
+        fisher = Fisher.from_sample(self.sample, angle_times[0],
+                                    x[:num_contrasts])
+        #fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     def _underlayers_func(self,
                           x: list,
@@ -290,11 +453,17 @@ class Optimiser:
             (x[i], x[num_underlayers + i]) for i in range(num_underlayers)
         ]
 
+        # Make sure the angle times is set for each contrast
+        angle_times = [angle_times for _ in contrasts]
+
         # Calculate the Fisher information matrix using the conditions.
-        g = self.sample.underlayer_info(angle_times, contrasts, underlayers)
+        fisher = self.sample.underlayer_info(angle_times, contrasts,
+                                             underlayers)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
+
+
 
     @staticmethod
     def __optimise(func: callable,

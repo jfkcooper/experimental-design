@@ -1,5 +1,5 @@
 """Contains the classes for different types of lipid bilayers"""
-
+import copy
 import os
 
 import matplotlib.pyplot as plt
@@ -13,11 +13,12 @@ import refnx.analysis
 import periodictable as pt
 
 from hogben.models.parsing import parse_formula
-from hogben.models.base import BaseLipid
+from hogben.models.base import BaseLipid, BaseSample
+from hogben.simulate import simulate
+from hogben.utils import Fisher
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
-
 
 def neutron_scattering_length(formula: str):
     """
@@ -346,6 +347,7 @@ class BilayerDMPC(BaseLipid):
         self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
         self.distances = np.linspace(-20, 95, 500)
         self.scales = [0.677763, 0.645217, 0.667776]
+        self.scale = 1
         self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
 
@@ -500,7 +502,6 @@ class BilayerDMPC(BaseLipid):
             si_DMPC_D2O_structure,
             si_DMPC_H2O_structure,
         ]
-
         # Iterate over each measured structure.
         self.objectives = []
         for i, structure in enumerate(self.structures):
@@ -549,7 +550,6 @@ class BilayerDMPC(BaseLipid):
         tg = refnx.reflect.Slab(
             tg_thick, self.tg_sld, self.bilayer_rough, vfsolv=self.bilayer_solv
         )
-
         # Add underlayers if specified.
         if underlayers is None:
             sio2 = refnx.reflect.Slab(

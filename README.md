@@ -30,9 +30,10 @@ Or with BibTeX as:
 ```
 
 ## Contact
-Jos Cooper - jos.cooper@stfc.ac.uk \
+Jos Cooper - jos.cooper@ess.eu \
+Sjoerd Stendahl - sjoerd.stendahl@physics.uu.se \
 James Durant - james.durant@warwick.ac.uk \
-Lucas Wilkins - lucas@lucaswilkins.com
+Lucas Wilkins - lucas.wilkins@stfc.ac.uk
 
 ## Acknowledgements
 We thank Luke Clifton for his assistance and expertise in fitting the lipid monolayer and lipid bilayer data sets.

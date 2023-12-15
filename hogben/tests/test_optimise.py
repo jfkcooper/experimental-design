@@ -128,8 +128,7 @@ def test_underlayers_func():
     num_underlayers = 2
     contrasts = [-0.56, 6.36]
 
-    angle_times = [(0.7, 100, 10000),
-                   (2.3, 100, 10000)]
+    angle_times = [(0.7, 100, 10000), (2.3, 100, 10000)]
     result = optimiser._underlayers_func(thickness_SLD, num_underlayers,
                                          angle_times, contrasts)
 
