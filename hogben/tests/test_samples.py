@@ -6,39 +6,24 @@ import numpy as np
 import pytest
 import matplotlib
 import refnx.reflect
-import refl1d.experiment
 import hogben.models.samples as samples
 
 from hogben.models.samples import Sample
-from hogben.simulate import simulate
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import fisher
-from refnx.reflect import SLD as SLD_refnx
-from refl1d.material import SLD as SLD_refl1d
+from refnx.reflect import SLD, ReflectModel
 from unittest.mock import Mock, patch
 
 
 @pytest.fixture
 def refnx_sample():
     """Defines a structure describing a simple sample."""
-    air = SLD_refnx(0, name='Air')
-    layer1 = SLD_refnx(4, name='Layer 1')(thick=60, rough=8)
-    layer2 = SLD_refnx(8, name='Layer 2')(thick=150, rough=2)
-    substrate = SLD_refnx(2.047, name='Substrate')(thick=0, rough=2)
+    air = SLD(0, name='Air')
+    layer1 = SLD(4, name='Layer 1')(thick=60, rough=8)
+    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
     structure = air | layer1 | layer2 | substrate
     return Sample(structure)
-
-
-@pytest.fixture
-def refl1d_sample():
-    """Define a bilayer sample, and return the associated refl1d model"""
-    air = SLD_refl1d(rho=0, name='Air')
-    layer1 = SLD_refl1d(rho=4, name='Layer 1')(thickness=60, interface=8)
-    layer2 = SLD_refl1d(rho=8, name='Layer 2')(thickness=150, interface=2)
-    substrate = SLD_refl1d(rho=2.047, name='Substrate')(thickness=0,
-                                                        interface=2)
-    structure = substrate | layer2 | layer1 | air
-    return Sample(structure)
-
 
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
@@ -57,44 +42,7 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=40)
 
-
-def compare_sample_structure(refl1d: refl1d.model.Stack,
-                             refnx: refnx.reflect.Structure) -> None:
-    """
-    Compare the structural parameters of a refnx and refl1d model, and check
-    if the values are equal. This function is as a helper function to
-    validate that a converted refl1d/refnx sample still has the same
-    structural parameters and values as it had before conversion.
-    Args:
-        refl1d: The refl1d structure to be compared
-        refnx: The refnx structure to be compared
-
-    Returns:
-        bool: Boolean describing whether the two models have the same values
-    """
-    refl1d_params = {}
-    refnx_params = {}
-
-    # Check structure in reversed order, so it matches with refl1d
-    for component in list(reversed(refnx.structure))[1:]:
-        refnx_params[component.name] = {
-            'sld': component.sld.real.value,
-            'isld': component.sld.imag.value,
-            'thick': component.thick.value,
-            'rough': component.rough.value
-        }
-    for component in refl1d.structure[1:]:
-        refl1d_params[component.name] = {
-            'sld': component.material.rho.value,
-            'isld': component.material.irho.value,
-            'thick': component.thickness.value,
-            'rough': component.interface.value
-        }
-    return refnx_params == refl1d_params
-
-
-@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
-def test_angle_info(sample_class, request):
+def test_angle_info(refnx_sample):
     """
     Tests whether the angle_info function correctly calculates the Fisher
     information, and outputs the same values as if the functions were called
@@ -102,14 +50,14 @@ def test_angle_info(sample_class, request):
     """
 
     # Get Fisher information from tested unit
-    sample = request.getfixturevalue(sample_class)
     angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
-    angle_info = sample.angle_info(angle_times)
+    angle_info = refnx_sample.angle_info(angle_times)
 
     # Get Fisher information directly
-    model, data = simulate(sample.structure, angle_times)
-    qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
-    g = fisher(qs, sample.params, counts, models)
+    model = ReflectModel(refnx_sample)
+    data = SimulateReflectivity.simulate(model, angle_times)
+    qs, counts, models = data[0], data[3], [model]
+    g = fisher(qs, refnx_sample.params, counts, models)
 
     np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
@@ -215,62 +163,6 @@ def test_reflectivity_profile_length(sample_class, request):
     q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert len(q) == len(r)
     assert len(q) > 0  # Make sure array is not empty
-
-
-def test_to_refl1d_instance(refnx_sample):
-    """
-    Tests whether a conversion from refnx to a refl1d structure correctly
-    results in a structure of the refl1d instance.
-    """
-    refnx_sample.to_refl1d()
-    assert isinstance(refnx_sample.structure, refl1d.model.Stack)
-
-
-def test_to_refnx_instance(refl1d_sample):
-    """
-    Tests whether a conversion from refl1d to a refnx structure correctly
-    results in a structure of the refnx instance.
-    """
-    refl1d_sample.to_refnx()
-    assert isinstance(refl1d_sample.structure, refnx.reflect.Structure)
-
-
-def test_to_refl1d_values(refnx_sample):
-    """
-    Tests whether the strucutral parameters are correctly carried over when
-    converting from a refnx sample to a refl1d sample.
-    """
-    refl1d_sample = copy.deepcopy(refnx_sample)
-    refl1d_sample.to_refl1d()
-    assert compare_sample_structure(refl1d_sample, refnx_sample)
-
-
-def test_to_refnx_values(refl1d_sample):
-    """
-    Tests whether the structural parameters are correctly carried over when
-    converting from a refl1d sample to a refnx sample.
-    """
-    refnx_sample = copy.deepcopy(refl1d_sample)
-    refnx_sample.to_refnx()
-    assert compare_sample_structure(refl1d_sample, refnx_sample)
-
-
-@pytest.mark.parametrize('sample', [samples.simple_sample(),
-                                    samples.many_param_sample(),
-                                    samples.thin_layer_sample_1(),
-                                    samples.thin_layer_sample_2(),
-                                    samples.similar_sld_sample_1(),
-                                    samples.similar_sld_sample_2(),
-
-                                    ]
-                         )
-def test_predefined_samples(sample):
-    """
-    Tests whether the predefined samples provide a valid structure that
-    succesfully can be converted to a refl1d structure.
-    """
-    sample.to_refl1d()
-    assert isinstance(sample.structure, refl1d.model.Stack)
 
 
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)

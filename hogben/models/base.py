@@ -9,8 +9,9 @@ import matplotlib.pyplot as plt
 import refnx.dataset
 import refnx.reflect
 import refnx.analysis
+from refnx.reflect import ReflectModel
 
-from hogben.simulate import simulate
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
@@ -149,13 +150,13 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
             background_level = (2e-6 * contrast_point
-                                + 4e-6 * (1 - contrast_point)
-                                )
-            model, data = simulate(
-                sample, angle_times, scale=1, bkg=background_level, dq=2
-            )
-            qs.append(data[:, 0])
-            counts.append(data[:, 3])
+                                + 4e-6 * (1 - contrast_point))
+            model = ReflectModel(sample)
+            model.bkg = background_level
+            model.dq = 2
+            data = SimulateReflectivity(model, angle_times).simulate()
+            qs.append(data[0])
+            counts.append(data[3])
             models.append(model)
 
         # Exclude certain parameters if underlayers are being used.
@@ -284,13 +285,15 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
             background_level = 2e-6 * contrast_point + 4e-6 * (
-                1 - contrast_point
-            )
-            model, data = simulate(
-                sample, angle_times, scale=1, bkg=background_level, dq=2
-            )
+                1 - contrast_point)
+
+            model = ReflectModel(sample)
+            model.bkg = background_level
+            model.dq = 2
+            data = SimulateReflectivity(model, angle_times).simulate()
+
             dataset = refnx.dataset.ReflectDataset(
-                [data[:, 0], data[:, 1], data[:, 2]]
+                [data[0], data[1], data[2]]
             )
             objectives.append(refnx.analysis.Objective(model, dataset))
 

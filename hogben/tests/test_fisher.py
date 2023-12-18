@@ -8,7 +8,7 @@ import pytest
 import refnx
 import refl1d.experiment
 
-from hogben.simulate import simulate
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import fisher
 from refnx.reflect import SLD as SLD_refnx
 from refl1d.material import SLD as SLD_refl1d
@@ -17,29 +17,6 @@ from unittest.mock import Mock, patch
 
 QS = [np.array([0.1, 0.2, 0.4, 0.6, 0.8])]
 COUNTS = [np.ones(len(QS[0])) * 100]
-
-
-@pytest.fixture
-def refl1d_model():
-    """Define a bilayer sample, and return the associated refl1d model"""
-    # Define sample
-    air = SLD_refl1d(rho=0, name='Air')
-    layer1 = SLD_refl1d(rho=4, name='Layer 1')(thickness=60, interface=8)
-    layer2 = SLD_refl1d(rho=8, name='Layer 2')(thickness=150, interface=2)
-    substrate = SLD_refl1d(rho=2.047, name='Substrate')(thickness=0,
-                                                        interface=2)
-    layer1.thickness.pm(10)
-    layer2.thickness.pm(10)
-    layer1.interface.pm(1)
-    layer2.interface.pm(1)
-    sample = substrate | layer2 | layer1 | air
-
-    # Define model
-    angle_times = [(0.7, 100, 5), (2.0, 100, 20)]  # (Angle, Points, Time)
-    model, _ = simulate(sample, angle_times)
-    model.xi = [layer1.interface, layer2.interface, layer1.thickness,
-                layer2.thickness]
-    return model
 
 
 @pytest.fixture
@@ -64,7 +41,7 @@ def refnx_model():
 @pytest.fixture
 def mock_refnx_model():
     """
-    Create a mock of the refl1d model with a given set of parameters and their
+    Create a mock of the refnx model with a given set of parameters and their
     bounds
     """
     # Parameters described as tuples: (value, lower bound, upper bound)
@@ -87,35 +64,6 @@ def mock_refnx_model():
     model = Mock(spec=refnx.reflect.ReflectModel, xi=parameters)
     model.xi = parameters
     return model
-
-
-@pytest.fixture
-def mock_refl1d_model():
-    """
-    Create a mock of the refl1d model with a given set of parameters and their
-    bounds
-    """
-    # Parameters described as tuples: (value, lower bound, upper bound)
-    parameter_values = [
-        (20, 15, 25),
-        (50, 45, 55),
-        (10, 7.5, 8.5),
-        (2, 1.5, 2.5),
-    ]
-
-    # Fill parameter values and bounds
-    parameters = [
-        Mock(
-            spec=bumps.parameter.Parameter,
-            value=value,
-            bounds=Mock(limits=[lb, ub]),
-        )
-        for value, lb, ub in parameter_values
-    ]
-    model = Mock(spec=refl1d.experiment.Experiment, xi=parameters)
-    model.xi = parameters
-    return model
-
 
 def generate_reflectivity_data():
     """
@@ -142,22 +90,6 @@ def test_fisher_workflow_refnx(refnx_model):
         [-7.91886209e-07, -3.18583142e-07, 1.03142100e-07, 1.99470835e-07],
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
-
-
-def test_fisher_workflow_refl1d(refl1d_model):
-    """
-    Runs the entire fisher workflow for the refl1d model, and checks that the
-    corresponding results are consistent with the expected values
-    """
-    g = fisher(QS, refl1d_model.xi, COUNTS, [refl1d_model])
-    expected_fisher = [
-        [4.58294661e-06, 2.07712766e-06, -4.23068571e-07, -6.80596824e-07],
-        [2.07712766e-06, 9.76175381e-07, -1.84017555e-07, -2.83513452e-07],
-        [-4.23068571e-07, -1.84017555e-07, 4.51142562e-08, 8.21397190e-08],
-        [-6.80596824e-07, -2.83513452e-07, 8.21397190e-08, 1.62625881e-07],
-    ]
-    np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
-
 
 @patch('hogben.utils.reflectivity')
 @pytest.mark.parametrize(

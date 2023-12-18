@@ -5,9 +5,6 @@ import pytest
 import numpy as np
 from refnx.reflect import SLD, ReflectModel
 
-from refl1d.material import SLD as refl1dSLD
-
-from unittest import mock
 from hogben.simulate import SimulateReflectivity
 
 
@@ -101,7 +98,8 @@ class TestSimulate:
     def test_run_experiment(self, refnx_model, polarised):
         """Checks the output of _run_experiment gives the right length of outputs"""
         sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
-        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(*self.angle_times[0], polarised=polarised)
+        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(*self.angle_times[0],
+                                                                          polarised=polarised)
         for item in [q_binned, r_noisy, r_error, counts_incident]:
             assert len(item) == self.angle_times[0][1]
 

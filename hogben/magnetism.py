@@ -9,7 +9,7 @@ import numpy as np
 from scipy.optimize import differential_evolution
 
 from hogben.models.magnetic import SampleYIG
-from hogben.simulate import simulate_magnetic, reflectivity
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
