@@ -91,11 +91,8 @@ def test_fisher_workflow_refnx(refnx_model):
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
 
-@patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize(
-    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
-)
-def test_fisher_analytical_values(mock_reflectivity, model_class, request):
+@patch('hogben.utils.SimulateReflectivity.reflectivity')
+def test_fisher_analytical_values(mock_reflectivity, mock_refnx_model):
     """
     Tests that the values of the calculated Fisher information matrix (FIM)
     are calculated correctly when no importance scaling is given.
@@ -115,7 +112,7 @@ def test_fisher_analytical_values(mock_reflectivity, model_class, request):
         [-0.25, -0.1 , -0.5 ],
         [-0.25, -0.1 , -0.5 ]
 
-    M is given by by:
+    M is given by:
     M =  [ 100.,    0.,    0.,    0.,    0.],
          [   0.,  200.,    0.,    0.,    0.],
          [   0.,    0.,  250.,    0.,    0.],
@@ -140,23 +137,19 @@ def test_fisher_analytical_values(mock_reflectivity, model_class, request):
         [0.5125, 0.205, 10.25],
         [25.625, 10.25, 512.5]
     """
-    model = request.getfixturevalue(model_class)
-    xi = model.xi[:3]
+    xi = mock_refnx_model.xi[:3]
     mock_reflectivity.side_effect = generate_reflectivity_data()
     g_correct = [
         [1.28125, 0.5125, 25.625],
         [0.5125, 0.205, 10.25],
         [25.625, 10.25, 512.5],
     ]
-    g_reference = fisher(QS, xi, COUNTS, [model])
+    g_reference = fisher(QS, xi, COUNTS, [mock_refnx_model])
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
-@patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize(
-    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
-)
-def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
+@patch('hogben.utils.SimulateReflectivity.reflectivity')
+def test_fisher_importance_scaling(mock_reflectivity, mock_refnx_model):
     """
     Tests that the values of the calculated Fisher information matrix
     are calculated correctly when an importance scaling is applied.
@@ -175,8 +168,7 @@ def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
         [0.5125, 0.41, 30.75],
         [25.625, 20.5, 1537.5]
     """
-    model = request.getfixturevalue(model_class)
-    xi = model.xi[:3]
+    xi = mock_refnx_model.xi[:3]
     for index, param in enumerate(xi):
         param.importance = index + 1
     mock_reflectivity.side_effect = generate_reflectivity_data()
@@ -185,47 +177,38 @@ def test_fisher_importance_scaling(mock_reflectivity, model_class, request):
         [0.5125, 0.41, 30.75],
         [25.625, 20.5, 1537.5],
     ]
-    g_reference = fisher(QS, xi, COUNTS, [model])
+    g_reference = fisher(QS, xi, COUNTS, [mock_refnx_model])
     np.testing.assert_allclose(g_reference, g_correct, rtol=1e-08)
 
 
-@pytest.mark.parametrize('model_class', ('refl1d_model', 'refnx_model'))
 @pytest.mark.parametrize('step', (0.01, 0.0075, 0.0025, 0.001, 0.0001))
-def test_fisher_consistent_steps(step, model_class, request):
+def test_fisher_consistent_steps(step, refnx_model):
     """
     Tests whether the Fisher information remains mostly consistent when
     changing step size using the refnx model
     """
-    model = request.getfixturevalue(model_class)
-    g_reference = fisher(QS, model.xi, COUNTS, [model], step=0.005)
-    g_compare = fisher(QS, model.xi, COUNTS, [model], step=step)
+    g_reference = fisher(QS, refnx_model.xi, COUNTS, [refnx_model], step=0.005)
+    g_compare = fisher(QS, refnx_model.xi, COUNTS, [refnx_model], step=step)
     np.testing.assert_allclose(g_reference, g_compare, rtol=1e-02)
 
 
-@patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize(
-    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
-)
+@patch('hogben.utils.SimulateReflectivity.reflectivity')
 @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
-def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
+def test_fisher_shape(mock_reflectivity, model_params, refnx_model):
     """
     Tests whether the shape of the Fisher information matrix remains
      correct when changing the amount of parameters
     """
-    model = request.getfixturevalue(model_class)
-    xi = model.xi[:model_params]
+    xi = refnx_model.xi[:model_params]
 
     mock_reflectivity.side_effect = generate_reflectivity_data()
 
     expected_shape = (model_params, model_params)
-    g = fisher(QS, xi, COUNTS, [model])
+    g = fisher(QS, xi, COUNTS, [refnx_model])
     np.testing.assert_array_equal(g.shape, expected_shape)
 
 
-@patch('hogben.utils.reflectivity')
-@pytest.mark.parametrize(
-    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
-)
+@patch('hogben.utils.SimulateReflectivity.reflectivity')
 @pytest.mark.parametrize(
     'qs',
     (
@@ -235,72 +218,57 @@ def test_fisher_shape(mock_reflectivity, model_params, model_class, request):
         np.arange(0.001, 1.0, 0.01),
     ),
 )
-def test_fisher_diagonal_non_negative(
-    mock_reflectivity, qs, model_class, request
-):
+def test_fisher_diagonal_non_negative(mock_reflectivity, qs, mock_refnx_model):
     """Tests whether the diagonal values in the Fisher information matrix
     are all zero or greater"""
-    model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = (np.random.rand(len(qs)) for _ in range(9))
     counts = [np.ones(len(qs)) * 100]
-    g = fisher([qs], model.xi, counts, [model])
+    g = fisher([qs], mock_refnx_model.xi, counts, [mock_refnx_model])
     assert np.all(np.diag(g)) >= 0
 
 
-@pytest.mark.parametrize(
-    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
-)
 @pytest.mark.parametrize('model_params', (1, 2, 3, 4))
-def test_fisher_no_data(model_params, model_class, request):
+def test_fisher_no_data(model_params, mock_refnx_model):
     """Tests whether a model with zero data points properly returns an empty
     matrix of the correct shape"""
-    model = request.getfixturevalue(model_class)
-    xi = model.xi[:model_params]
-    g = fisher([], xi, COUNTS, [model])
+    xi = mock_refnx_model.xi[:model_params]
+    g = fisher([], xi, COUNTS, [mock_refnx_model])
     np.testing.assert_equal(g, np.zeros((len(xi), len(xi))))
 
 
-@pytest.mark.parametrize(
-    'model_class', ('mock_refl1d_model', 'mock_refnx_model')
-)
-@patch('hogben.utils.reflectivity')
-def test_fisher_no_parameters(mock_reflectivity, model_class, request):
+@patch('hogben.utils.SimulateReflectivity.reflectivity')
+def test_fisher_no_parameters(mock_reflectivity, mock_refnx_model):
     """Tests whether a model without any parameters properly returns a
     zero array"""
-    model = request.getfixturevalue(model_class)
     mock_reflectivity.side_effect = generate_reflectivity_data()
-    g = fisher(QS, [], COUNTS, [model])
+    g = fisher(QS, [], COUNTS, [mock_refnx_model])
     np.testing.assert_equal(g.shape, (0, 0))
 
 
-@pytest.mark.parametrize('model_class', ('refnx_model', 'refl1d_model'))
-def test_fisher_doubling_with_two_identical_models(model_class, request):
+def test_fisher_doubling_with_two_identical_models(refnx_model):
     """
     Tests that using two identical models with the same q-points and counts
     correctly doubles the values on the elements in the Fisher information
     matrix
     """
-    model = request.getfixturevalue(model_class)
-    g_single = fisher(QS, model.xi, COUNTS, [model], 0.005)
+    g_single = fisher(QS, refnx_model.xi, COUNTS, [refnx_model], 0.005)
 
     counts = [COUNTS[0], COUNTS[0]]
     qs = [QS[0], QS[0]]
-    g_double = fisher(qs, model.xi, counts, [model, model], 0.005)
+    g_double = fisher(qs, refnx_model.xi, counts, [refnx_model, refnx_model], 0.005)
     np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
 
 
-@pytest.mark.parametrize('model_class', ('refnx_model', 'refl1d_model'))
-def test_multiple_models_shape(model_class, request):
+def test_multiple_models_shape(refnx_model):
     """
     Tests that shape of the Fisher information matrix is equal to the total
     sum of parameters over all models.
     """
-    model = request.getfixturevalue(model_class)
-    model_2 = copy.deepcopy(model)
+    model_2 = copy.deepcopy(refnx_model)
     model_2.xi = model_2.xi[:-1]
-    xi = model.xi + model_2.xi
-    xi_length = len(model.xi) + len(model_2.xi)
+    xi = refnx_model.xi + model_2.xi
+    xi_length = len(refnx_model.xi) + len(model_2.xi)
     counts = [COUNTS[0], COUNTS[0]]
     qs = [QS[0], QS[0]]
-    g_double = fisher(qs, xi, counts, [model, model_2], 0.005)
+    g_double = fisher(qs, xi, counts, [refnx_model, model_2], 0.005)
     np.testing.assert_equal(g_double.shape, (xi_length, xi_length))

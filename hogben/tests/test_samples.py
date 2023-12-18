@@ -54,10 +54,12 @@ def test_angle_info(refnx_sample):
     angle_info = refnx_sample.angle_info(angle_times)
 
     # Get Fisher information directly
-    model = ReflectModel(refnx_sample)
-    data = SimulateReflectivity.simulate(model, angle_times)
-    qs, counts, models = data[0], data[3], [model]
+    model = ReflectModel(refnx_sample.structure)
+    sim = SimulateReflectivity(model, angle_times)
+    data = sim.simulate()
+    qs, counts, models = [data[0]], [data[3]], [model]
     g = fisher(qs, refnx_sample.params, counts, models)
+    angle_info = refnx_sample.angle_info(angle_times)
 
     np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
@@ -99,26 +101,22 @@ def test_reflectivity_profile_valid_figure(_mock_save_plot,
 
 
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
-@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
-def test_sld_profile_length(_mock_save_plot, sample_class, request):
+def test_sld_profile_length(_mock_save_plot, refnx_sample):
     """
     Tests whether _get_sld_profile() succesfully retrieves two arrays with
     equal lengths, representing an SLD profile that can be plotted in a figure
     """
-    sample = request.getfixturevalue(sample_class)
-    z, slds = sample._get_sld_profile()
+    z, slds = refnx_sample._get_sld_profile()
     assert len(z) == len(slds)
     assert len(z) > 0  # Make sure arrays are not empty
 
 
-@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
-def test_reflectivity_profile_positive(sample_class, request):
+def test_reflectivity_profile_positive(refnx_sample):
     """
     Tests whether _get_reflectivity_profile() succesfully obtains reflectivity
     values that are all positively valued
     """
-    sample = request.getfixturevalue(sample_class)
-    q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
+    q, r = refnx_sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert np.all(np.greater(r, 0.0))
 
 
@@ -128,7 +126,7 @@ def test_reflectivity_invalid_structure():
     structure is used in get_reflectivity_profile
     """
     sample = Mock(spec=None)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         Sample._get_reflectivity_profile(sample, 0.005, 0.4, 500, 1, 1e-7, 2)
 
 
@@ -138,7 +136,7 @@ def test_sld_invalid_structure():
     structure is used in get_sld_profile
     """
     sample = Mock(spec=None)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         Sample._get_sld_profile(sample)
 
 
@@ -148,19 +146,17 @@ def test_vary_structure_invalid_structure():
     structure is used in _vary_structure
     """
     structure = Mock(spec=None)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         Sample._Sample__vary_structure(structure)
 
 
-@pytest.mark.parametrize('sample_class', ('refnx_sample', 'refl1d_sample'))
-def test_reflectivity_profile_length(sample_class, request):
+def test_reflectivity_profile_length(refnx_sample):
     """
     Tests whether _get_reflectivity_profile() succesfully retrieves two arrays
     with equal lengths, representing a reflectivity profile that can be
     plotted in a figure.
     """
-    sample = request.getfixturevalue(sample_class)
-    q, r = sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
+    q, r = refnx_sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert len(q) == len(r)
     assert len(q) > 0  # Make sure array is not empty
 

@@ -13,12 +13,11 @@ import refnx.reflect
 class SimulateReflectivity:
     """
     A class for simulating experimental reflectivity data from a refnx model.
-    It takes a single model or list of models for polarised simulations, and
-    can simulate a list of experimental conditions, e.g. different angles for
-    different times.
+    It takes a single model, and can simulate a list of experimental
+    conditions, e.g. different angles for different times.
 
     Attributes:
-        sample_model: A refnx model or list of models (if magnetic)
+        sample_model: A refnx model
         angle_times: a list of tuples of experimental conditions to simulate,
                     in the order (angle, # of points, time)
         inst_or_path: either the name of an instrument already in HOGBEN, or
@@ -74,7 +73,7 @@ class SimulateReflectivity:
         return np.loadtxt(str(path), delimiter=',')
 
     def simulate(self, polarised: bool=False) -> \
-            list:
+            list[np.ndarray]:
         """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
         specified in self.inst_or_path
@@ -119,7 +118,7 @@ class SimulateReflectivity:
         return self.sample_model(q)
 
     def _run_experiment(self, angle: float, points: int, time: float,
-                        polarised: bool=False) -> tuple:
+                        polarised: bool = False) -> tuple:
         """Simulates a single angle measurement of a given 'model' on the
         instrument set in self.incident_flux_data
 

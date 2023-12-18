@@ -91,8 +91,8 @@ class Sample(BaseSample):
         """
         # Return the Fisher information matrix calculated from simulated data.
         model = refnx.reflect.ReflectModel(self.structure)
-        data = SimulateReflectivity(self.structure, angle_times)
-        qs, counts, models = data[0], data[3], [model]
+        data = SimulateReflectivity(model, angle_times).simulate()
+        qs, counts, models = [data[0]], [data[3]], [model]
         return fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path):
