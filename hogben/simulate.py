@@ -41,8 +41,7 @@ class SimulateReflectivity:
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
 
-        self.sample_model = sample_model if isinstance(sample_model, list)\
-                            else [sample_model]
+        self.sample_model = sample_model
         self.angle_times = angle_times
         self.inst_or_path = inst_or_path
         self.angle_scale = angle_scale
@@ -75,7 +74,7 @@ class SimulateReflectivity:
         return np.loadtxt(str(path), delimiter=',')
 
     def simulate(self, polarised: bool=False) -> \
-            tuple:
+            list:
         """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
         specified in self.inst_or_path
@@ -85,15 +84,22 @@ class SimulateReflectivity:
             select the correct instrument direct beam file
 
         Returns:
-            tuple: simulated data for the given model in the
-            form (q, r, dr, counts)
+            list: simulated data for the given model in the
+            form [q, r, dr, counts]
         """
         # Non-polarised case
-        simulation = [], [], [], []
+        simulation = [np.empty(0,), np.empty(0,), np.empty(0,), np.empty(0,)]
         for condition in self.angle_times:
             simulated_angle = self._run_experiment(*condition, polarised)
             for i, item in enumerate(simulated_angle):
-                simulation[i].extend(item)
+                simulation[i] = np.append(simulation[i], item)
+
+        # Mask out zeros and order points so nested sampling will work
+        mask = simulation[1] != 0
+        simulation = [data[mask] for data in simulation]  # Filter zeroes
+        sort_indices = simulation[0].argsort()
+        simulation = [data[sort_indices] for data in simulation]  # Sort by q
+
         return simulation
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
@@ -110,7 +116,7 @@ class SimulateReflectivity:
         if len(q) == 0:
             return np.array([])
 
-        return self.sample_model[0](q)
+        return self.sample_model(q)
 
     def _run_experiment(self, angle: float, points: int, time: float,
                         polarised: bool=False) -> tuple:
