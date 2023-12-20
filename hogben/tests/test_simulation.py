@@ -8,9 +8,9 @@ from refnx.reflect import SLD, ReflectModel
 from hogben.simulate import SimulateReflectivity
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def refnx_structure():
-    """Defines a structure describing a simple sample."""
+    """Defines a refnx structure describing a simple sample."""
     air = SLD(0, name='Air')
     layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
     layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
@@ -20,8 +20,9 @@ def refnx_structure():
     return sample_1
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def refnx_model(refnx_structure):
+    """A refnx model for use in testing"""
     model = ReflectModel(refnx_structure)
     model.bkg = 1e-6
     model.dq = 2
@@ -30,6 +31,7 @@ def refnx_model(refnx_structure):
 
 
 class TestSimulate:
+    """A class to test the SimulateReflectivity methods"""
     angle_times = [(0.3, 100, 1000)]  # (Angle, Points, Time)
     instrument = 'OFFSPEC'
 

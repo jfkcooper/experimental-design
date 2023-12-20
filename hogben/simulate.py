@@ -37,6 +37,20 @@ class SimulateReflectivity:
                  angle_times: list[tuple] = None,
                  inst_or_path: str = 'OFFSPEC',
                  angle_scale: float = 0.3):
+        """
+        Initialises the SimulateReflectivity method
+        Args:
+            sample_model: a refnx model of a sample
+            angle_times: list of tuples of the form (angle, #of points
+                         to simulate, length of time to simulate)
+            inst_or_path: A full path to your direct beam file, or
+                          the name of the hogben instrument you want
+                          to use
+            angle_scale: The angle at which the direct beam file was
+                         was taken, and therefore how it should be
+                         scaled to other angles. All hogben files
+                         are pre-scaled to 0.3 degrees.
+        """
 
         self.sample_model = sample_model
         self.angle_times = angle_times
@@ -61,7 +75,7 @@ class SimulateReflectivity:
             if os.path.isfile(self.inst_or_path):
                 return np.loadtxt(self.inst_or_path, delimiter=',')
             else:
-                msg = "Please provide an instrument name or a local filepath"
+                msg = 'Please provide an instrument name or a local filepath'
                 raise FileNotFoundError(str(msg))
 
         path = importlib_resources.files('hogben.data.directbeams').joinpath(

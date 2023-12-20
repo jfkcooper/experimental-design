@@ -393,7 +393,7 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
 
 if __name__ == '__main__':
-    print("Magnetism as it was coded currently does not work in this version")
+    print('Magnetism as it was coded currently does not work in this version')
     """save_path = '../results'
 
     # Save the SLD and reflectivity profiles of the YIG sample.
