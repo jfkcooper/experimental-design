@@ -32,54 +32,75 @@ def refnx_model(refnx_structure):
 class TestSimulate:
     angle_times = [(0.3, 100, 1000)]  # (Angle, Points, Time)
     instrument = 'OFFSPEC'
+
     def test_data_streaming(self, refnx_model):
-        """Tests that without an input for the datafile, the correct one is picked up"""
-        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
+        """
+        Tests that without an input for the datafile,
+        the correct one is picked up
+        """
+        sim = SimulateReflectivity(refnx_model,
+                                   self.angle_times,
+                                   self.instrument)
         simulated_datapoints = sim.simulate()
-        assert np.all(np.zeros_like(simulated_datapoints) <= simulated_datapoints[3])  # Counts
+        zeros = np.zeros_like(simulated_datapoints)
+        assert np.all(zeros <= simulated_datapoints[3])  # Counts
+
         # Check that the default instrument also works
-        sim = SimulateReflectivity(refnx_model, self.angle_times)
+        sim = SimulateReflectivity(refnx_model,
+                                   self.angle_times)
         simulated_datapoints = sim.simulate()
-        assert np.all(np.zeros_like(simulated_datapoints) <= simulated_datapoints[3])  # Counts
+        zeros = np.zeros_like(simulated_datapoints)
+        assert np.all(zeros <= simulated_datapoints[3])  # Counts
 
     def test_incident_flux_data(self):
         """
-        Tests that the `_incident_flux_data` function correctly returns count data
-        when instruments are loaded, and raises errors when given an incorrect path
+        Tests that the `_incident_flux_data` function correctly returns
+        count data when instruments are loaded, and raises errors when
+        given an incorrect path
         """
         # Test that non-polarised instruments work and have counts in
         for instrument in ['OFFSPEC', 'SURF', 'INTER', 'POLREF']:
-            sim_no_pol = SimulateReflectivity(None, angle_times=self.angle_times,
+            sim_no_pol = SimulateReflectivity(None,
+                                              angle_times=self.angle_times,
                                               inst_or_path=instrument)
 
-            assert sim_no_pol._incident_flux_data(polarised=False).shape[1] == 2
-            assert np.sum(sim_no_pol._incident_flux_data(polarised=False)[:, 1]) > 100
+            assert (sim_no_pol._incident_flux_data(polarised=False).shape[1]
+                    == 2)
+            counts = sim_no_pol._incident_flux_data(polarised=False)[:, 1]
+            assert (np.sum(counts) > 100)
 
         # Test that polarised instruments work and have counts in
         for instrument in ['OFFSPEC', 'POLREF']:
-            sim_pol = SimulateReflectivity(None, angle_times=self.angle_times,
-                                              inst_or_path=instrument)
+            sim_pol = SimulateReflectivity(None,
+                                           angle_times=self.angle_times,
+                                           inst_or_path=instrument)
 
-            assert sim_pol._incident_flux_data(polarised=True).shape[1] == 2
-            assert np.sum(sim_pol._incident_flux_data(polarised=True)[:, 1]) > 100
+            assert (sim_pol._incident_flux_data(polarised=True).shape[1]
+                    == 2)
+            assert (np.sum(sim_pol._incident_flux_data(polarised=True)[:, 1])
+                    > 100)
 
         # Test that a non-existing path raises an error
         with pytest.raises(FileNotFoundError):
-            sim_wrong_path = SimulateReflectivity(None, angle_times=self.angle_times,
-                                     inst_or_path='no_instrument_exists')
+            sim_wrong_path = SimulateReflectivity(None,
+                                                  angle_times=self.angle_times,
+                                                  inst_or_path='doesnt_exist')
 
             sim_wrong_path._incident_flux_data()
 
         # Test that a blank instrument raises an error
         with pytest.raises(FileNotFoundError):
-            sim_no_path = SimulateReflectivity(None, angle_times=self.angle_times,
-                                                  inst_or_path='')
+            sim_no_path = SimulateReflectivity(None,
+                                               angle_times=self.angle_times,
+                                               inst_or_path='')
 
             sim_no_path._incident_flux_data()
 
-        # Test that a non-polarised instrument can't be used for a polarised simulation
+        # Test that a valid non-polarised instrument can't be used
+        # for a polarised simulation
         with pytest.raises(FileNotFoundError):
-            sim_not_in_pol = SimulateReflectivity(None, angle_times=self.angle_times,
+            sim_not_in_pol = SimulateReflectivity(None,
+                                                  angle_times=self.angle_times,
                                                   inst_or_path='SURF')
 
             sim_not_in_pol._incident_flux_data(polarised=True)
@@ -94,12 +115,20 @@ class TestSimulate:
 
         np.testing.assert_array_less(np.zeros(len(ideal_reflectivity)),
                                      ideal_reflectivity)
+
     @pytest.mark.parametrize('polarised', (True, False))
     def test_run_experiment(self, refnx_model, polarised):
-        """Checks the output of _run_experiment gives the right length of outputs"""
-        sim = SimulateReflectivity(refnx_model, self.angle_times, self.instrument)
-        q_binned, r_noisy, r_error, counts_incident = sim._run_experiment(*self.angle_times[0],
-                                                                          polarised=polarised)
+        """
+        Checks the output of _run_experiment gives the right
+        length of outputs
+        """
+        sim = SimulateReflectivity(refnx_model,
+                                   self.angle_times,
+                                   self.instrument)
+
+        q_binned, r_noisy, r_error, counts_incident = (
+            sim._run_experiment(*self.angle_times[0], polarised=polarised))
+
         for item in [q_binned, r_noisy, r_error, counts_incident]:
             assert len(item) == self.angle_times[0][1]
 
@@ -115,7 +144,9 @@ class TestSimulate:
         angle_times = [(0.3, 100, 1000), (2.3, 150, 1000)]
 
         sim = SimulateReflectivity(refnx_model, angle_times, self.instrument)
-        q_binned, r_noisy, r_error, counts_incident = sim.simulate(polarised=polarised)
+        q_binned, r_noisy, r_error, counts_incident = (
+            sim.simulate(polarised=polarised))
+
         for item in [q_binned, r_noisy, r_error, counts_incident]:
             assert len(item) == sum(condition[1] for condition in angle_times)
 

@@ -1,11 +1,9 @@
-import copy
 import os
 import tempfile
 
 import numpy as np
 import pytest
 import matplotlib
-import refnx.reflect
 import hogben.models.samples as samples
 
 from hogben.models.samples import Sample
@@ -25,6 +23,7 @@ def refnx_sample():
     structure = air | layer1 | layer2 | substrate
     return Sample(structure)
 
+
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
                    filename: str) -> None:
@@ -41,6 +40,7 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
         os.makedirs(save_path)
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=40)
+
 
 def test_angle_info(refnx_sample):
     """

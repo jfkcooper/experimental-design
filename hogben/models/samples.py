@@ -37,7 +37,7 @@ class Sample(BaseSample):
         parameters
 
         Args:
-            structure: Sample structure defined in the refnx or refl1d model
+            structure: Sample structure defined in the refnx model
         """
         self.structure = structure
         self.name = structure.name
@@ -48,8 +48,7 @@ class Sample(BaseSample):
         """Varies the SLD and thickness of each layer of a given `structure`.
 
         Args:
-            structure (refnx.reflect.Structure or
-                       refl1d.model.Stack): structure to vary.
+            structure (refnx.reflect.Structure): structure to vary.
             bound_size (float): size of bounds to place on varying parameters.
 
         Returns:
@@ -190,8 +189,6 @@ class Sample(BaseSample):
         # Determine if the structure was defined in refnx.
         model = refnx.reflect.ReflectModel(self.structure, scale=scale,
                                            bkg=bkg, dq=dq)
-
-
         r = SimulateReflectivity(model).reflectivity(q)
         return q, r
 

@@ -2,16 +2,12 @@
 
 import copy
 
-import bumps.parameter
 import numpy as np
 import pytest
 import refnx
-import refl1d.experiment
 
-from hogben.simulate import SimulateReflectivity
 from hogben.utils import fisher
-from refnx.reflect import SLD as SLD_refnx
-from refl1d.material import SLD as SLD_refl1d
+from refnx.reflect import SLD
 from unittest.mock import Mock, patch
 
 
@@ -23,10 +19,10 @@ COUNTS = [np.ones(len(QS[0])) * 100]
 def refnx_model():
     """Define a bilayer sample, and return the associated refnx model"""
     # Define sample
-    air = SLD_refnx(0, name='Air')
-    layer1 = SLD_refnx(4, name='Layer 1')(thick=60, rough=8)
-    layer2 = SLD_refnx(8, name='Layer 2')(thick=150, rough=2)
-    substrate = SLD_refnx(2.047, name='Substrate')(thick=0, rough=2)
+    air = SLD(0, name='Air')
+    layer1 = SLD(4, name='Layer 1')(thick=60, rough=8)
+    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
     layer1.thick.bounds = (50, 70)
     layer2.thick.bounds = (140, 160)
     layer1.rough.bounds = (7, 9)
@@ -65,6 +61,7 @@ def mock_refnx_model():
     model.xi = parameters
     return model
 
+
 def generate_reflectivity_data():
     """
     Generates predefined reflectivity.The reflectivity values are yielded
@@ -90,6 +87,7 @@ def test_fisher_workflow_refnx(refnx_model):
         [-7.91886209e-07, -3.18583142e-07, 1.03142100e-07, 1.99470835e-07],
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
+
 
 @patch('hogben.utils.SimulateReflectivity.reflectivity')
 def test_fisher_analytical_values(mock_reflectivity, mock_refnx_model):
@@ -255,7 +253,8 @@ def test_fisher_doubling_with_two_identical_models(refnx_model):
 
     counts = [COUNTS[0], COUNTS[0]]
     qs = [QS[0], QS[0]]
-    g_double = fisher(qs, refnx_model.xi, counts, [refnx_model, refnx_model], 0.005)
+    g_double = fisher(qs, refnx_model.xi, counts,
+                      [refnx_model, refnx_model], 0.005)
     np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
 
 

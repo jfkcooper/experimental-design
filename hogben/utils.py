@@ -2,14 +2,12 @@
 information, and save plots"""
 
 import os
-from typing import Union
 
 import numpy as np
 
 from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
-
 
 import refnx.reflect
 import refnx.analysis
@@ -18,7 +16,7 @@ from hogben.simulate import SimulateReflectivity
 
 
 class Sampler:
-    """Contains code for running nested sampling on refnx and Refl1D models.
+    """Contains code for running nested sampling on refnx models.
 
     Attributes:
         objective (refnx.analysis.Objective): objective to sample.
@@ -38,7 +36,6 @@ class Sampler:
         """
         self.objective = objective
 
-
         # Use log-likelihood and prior transform methods of refnx objective
         self.params = objective.varying_parameters()
         logl = objective.logl
@@ -48,7 +45,6 @@ class Sampler:
         self.sampler_static = NestedSampler(logl, prior_transform, self.ndim)
         self.sampler_dynamic = DynamicNestedSampler(logl, prior_transform,
                                                     self.ndim)
-
 
     def sample(self, verbose=True, dynamic=False):
         """Samples an Objective/FitProblem using nested sampling.

@@ -9,7 +9,6 @@ import numpy as np
 from scipy.optimize import differential_evolution
 
 from hogben.models.magnetic import SampleYIG
-from hogben.simulate import SimulateReflectivity
 from hogben.utils import save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
@@ -228,22 +227,21 @@ def _calc_log_ratios(pt_thick, times, angle_splits, save_path):
             # Get the ratio for 100 simulated data sets using the time.
             for _ in range(100):
                 # Define the number of points and times for each angle.
-                angle_times = [
-                    (angle, points, split * total_time)
-                    for angle, points, split in angle_splits
-                ]
+                """angle_times = [(angle, points, split * total_time)
+                    for angle, points, split in angle_splits]"""
 
                 # Simulate data for the YIG sample with a 1 uB/atom magnetic
                 # moment in the Pt layer.
                 sample = SampleYIG()
                 sample.pt_mag.value = 0.01638
 
-                structure = sample.using_conditions(pt_thick=pt_thick)
-                models, datasets = simulate_magnetic(structure, angle_times,
+                # structure = sample.using_conditions(pt_thick=pt_thick)
+                models = []
+                """simulate_magnetic(structure, angle_times,
                                                      scale=1, bkg=5e-7, dq=2,
                                                      pp=True, pm=False,
                                                      mp=False, mm=True)
-
+                """
                 # Calculate the log-likelihood of a model containing the
                 # Pt layer magnetic moment.
                 logl_1 = _logl(models)
@@ -281,7 +279,7 @@ def _logl(models):
         q.append(probe.Q)
         r.append(probe.R)
         dr.append(probe.dR)
-        r_model.append(reflectivity(probe.Q, model))
+        r_model.append([])  # reflectivity(probe.Q, model))
 
     # Combine the data from each spin state.
     q = np.concatenate(q)
