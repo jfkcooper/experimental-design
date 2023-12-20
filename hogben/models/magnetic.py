@@ -16,7 +16,6 @@ import bumps.parameter
 import bumps.fitproblem
 
 from hogben.models.base import BaseSample, VariableUnderlayer
-from hogben.simulate import simulate_magnetic
 from hogben.utils import fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
@@ -238,11 +237,13 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         """
         # Simulate the polarised experiment.
-        models, datasets = simulate_magnetic(self.structure, angle_times,
+        models, datasets = [], []
+
+        """simulate_magnetic(self.structure, angle_times,
                                              scale=1, bkg=5e-7, dq=2,
                                              pp=True, pm=False,
                                              mp=False, mm=True)
-
+        """
         # Calculate the Fisher information matrix.
         qs = [data[:, 0] for data in datasets]
         counts = [data[:, 3] for data in datasets]
@@ -262,14 +263,15 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
         """
         # Create a structure with the given YIG and Pt thicknesses.
-        structure = self.using_conditions(yig_thick, pt_thick)
+        # structure = self.using_conditions(yig_thick, pt_thick)
 
         # Simulate a polarised measurement of the structure.
-        models, datasets = simulate_magnetic(structure, angle_times,
+        models, datasets = [], []
+        """simulate_magnetic(structure, angle_times,
                                              scale=1, bkg=5e-7, dq=2,
                                              pp=True, pm=False,
                                              mp=False, mm=True)
-
+        """
         # Calculate the Fisher information matrix.
         qs = [data[:, 0] for data in datasets]
         counts = [data[:, 3] for data in datasets]
@@ -391,7 +393,8 @@ class SampleYIG(BaseSample, VariableUnderlayer):
 
 
 if __name__ == '__main__':
-    save_path = '../results'
+    print('Magnetism as it was coded currently does not work in this version')
+    """save_path = '../results'
 
     # Save the SLD and reflectivity profiles of the YIG sample.
     yig_sample = SampleYIG()
@@ -399,4 +402,4 @@ if __name__ == '__main__':
     yig_sample.reflectivity_profile(save_path)
 
     # Close the plots.
-    plt.close('all')
+    plt.close('all')"""
