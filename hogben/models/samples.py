@@ -12,30 +12,20 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 
-import refl1d.material
-import refl1d.model
-import refl1d.probe
-import refl1d.experiment
-import refl1d.magnetism
-
-import bumps.parameter
-import bumps.fitproblem
-
-from hogben.simulate import simulate, refl1d_experiment, reflectivity
+from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
-from refnx.analysis import Parameter
+from refnx.analysis import Objective
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
 
 class Sample(BaseSample):
-    """Wrapper class for a standard refnx or Refl1D reflectometry sample.
+    """Wrapper class for a standard refnx reflectometry sample.
 
     Attributes:
-        structure (refnx.reflect.Structure or
-                   refl1d.model.Stack): refnx or Refl1D sample.
+        structure (refnx.reflect.Structure: refnx sample.
         name (str): name of the sample.
         params (list): varying parameters of sample.
 
@@ -47,7 +37,7 @@ class Sample(BaseSample):
         parameters
 
         Args:
-            structure: Sample structure defined in the refnx or refl1d model
+            structure: Sample structure defined in the refnx model
         """
         self.structure = structure
         self.name = structure.name
@@ -58,8 +48,7 @@ class Sample(BaseSample):
         """Varies the SLD and thickness of each layer of a given `structure`.
 
         Args:
-            structure (refnx.reflect.Structure or
-                       refl1d.model.Stack): structure to vary.
+            structure (refnx.reflect.Structure): structure to vary.
             bound_size (float): size of bounds to place on varying parameters.
 
         Returns:
@@ -67,41 +56,24 @@ class Sample(BaseSample):
 
         """
         params = []
-        # The structure was defined in refnx.
-        if isinstance(structure, refnx.reflect.Structure):
-            # Vary the SLD and thickness of each component (layer).
-            for component in structure[1:-1]:
-                sld = component.sld.real
-                sld_bounds = (
-                    sld.value * (1 - bound_size),
-                    sld.value * (1 + bound_size),
-                )
-                sld.setp(vary=True, bounds=sld_bounds)
-                params.append(sld)
 
-                thick = component.thick
-                thick_bounds = (
-                    thick.value * (1 - bound_size),
-                    thick.value * (1 + bound_size),
-                )
-                thick.setp(vary=True, bounds=thick_bounds)
-                params.append(thick)
+        # Vary the SLD and thickness of each component (layer).
+        for component in structure[1:-1]:
+            sld = component.sld.real
+            sld_bounds = (
+                sld.value * (1 - bound_size),
+                sld.value * (1 + bound_size),
+            )
+            sld.setp(vary=True, bounds=sld_bounds)
+            params.append(sld)
 
-        # The structure was defined in Refl1D.
-        elif isinstance(structure, refl1d.model.Stack):
-            # Vary the SLD and thickness of each component (layer).
-            for component in structure[1:-1]:
-                sld = component.material.rho
-                sld.pmp(bound_size * 100)
-                params.append(sld)
-
-                thick = component.thickness
-                thick.pmp(bound_size * 100)
-                params.append(thick)
-
-        # Otherwise, the structure is invalid.
-        else:
-            raise RuntimeError('invalid structure given')
+            thick = component.thick
+            thick_bounds = (
+                thick.value * (1 - bound_size),
+                thick.value * (1 + bound_size),
+            )
+            thick.setp(vary=True, bounds=thick_bounds)
+            params.append(thick)
 
         return params
 
@@ -117,9 +89,11 @@ class Sample(BaseSample):
 
         """
         # Return the Fisher information matrix calculated from simulated data.
-        model, data = simulate(self.structure, angle_times)
-        qs, counts, models = [data[:, 0]], [data[:, 3]], [model]
+        model = refnx.reflect.ReflectModel(self.structure)
+        data = SimulateReflectivity(model, angle_times).simulate()
+        qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
+
 
     def sld_profile(self, save_path):
         """Plots the SLD profile of the sample.
@@ -156,30 +130,19 @@ class Sample(BaseSample):
             numpy.ndarray: depth
             numpy.ndarray: SLD values
         """
-        if isinstance(self.structure, refnx.reflect.Structure):
-            z, slds = self.structure.sld_profile()
+        z, slds = self.structure.sld_profile()
 
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            q = np.geomspace(0.005, 0.3, 500)  # This is not used.
-            scale, bkg, dq = 1, 1e-6, 2  # These are not used.
-            experiment = refl1d_experiment(self.structure, q, scale, bkg, dq)
-            z, slds, _ = experiment.smooth_profile()
-        # Otherwise, the structure is invalid.
-        else:
-            raise RuntimeError('invalid structure given')
         return z, slds
 
-    def reflectivity_profile(
-        self,
-        save_path: str,
-        q_min: float = 0.005,
-        q_max: float = 0.4,
-        points: int = 500,
-        scale: float = 1,
-        bkg: float = 1e-7,
-        dq: float = 2,
-    ) -> None:
+    def reflectivity_profile(self,
+                             save_path: str,
+                             q_min: float = 0.005,
+                             q_max: float = 0.4,
+                             points: int = 500,
+                             scale: float = 1,
+                             bkg: float = 1e-7,
+                             dq: float = 2,
+                             ) -> None:
         """Plots the reflectivity profile of the sample.
 
         Args:
@@ -225,19 +188,9 @@ class Sample(BaseSample):
         q = np.geomspace(q_min, q_max, points)
 
         # Determine if the structure was defined in refnx.
-        if isinstance(self.structure, refnx.reflect.Structure):
-            model = refnx.reflect.ReflectModel(self.structure, scale=scale,
-                                               bkg=bkg, dq=dq)
-
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            model = refl1d_experiment(self.structure, q, scale, bkg, dq)
-
-        # Otherwise, the structure is invalid.
-        else:
-            raise RuntimeError('invalid structure given')
-
-        r = reflectivity(q, model)
+        model = refnx.reflect.ReflectModel(self.structure, scale=scale,
+                                           bkg=bkg, dq=dq)
+        r = SimulateReflectivity(model).reflectivity(q)
         return q, r
 
     def nested_sampling(self,
@@ -255,22 +208,10 @@ class Sample(BaseSample):
 
         """
         # Simulate data for the sample.
-        model, data = simulate(self.structure, angle_times)
+        model = refnx.reflect.ReflectModel(self.structure)
+        data = SimulateReflectivity(model, angle_times).simulate()
 
-        # Determine if the structure was defined in refnx.
-        if isinstance(self.structure, refnx.reflect.Structure):
-            dataset = refnx.reflect.ReflectDataset(
-                [data[:, 0], data[:, 1], data[:, 2]]
-            )
-            objective = refnx.anaylsis.Objective(model, dataset)
-
-        # Determine if the structure was defined in Refl1D.
-        elif isinstance(self.structure, refl1d.model.Stack):
-            objective = bumps.fitproblem.FitProblem(model)
-
-        # Otherwise, the structure is invalid.
-        else:
-            raise RuntimeError('invalid structure given')
+        objective = Objective(model, data)
 
         # Sample the objective using nested sampling.
         sampler = Sampler(objective)
@@ -279,51 +220,6 @@ class Sample(BaseSample):
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, filename + '_nested_sampling')
-
-    def to_refl1d(self):
-        """Converts the refnx structure to an equivalent Refl1D structure."""
-        # Check that the current structure is defined in refnx.
-        assert isinstance(self.structure, refnx.reflect.Structure)
-
-        # Iterate over each component.
-        structure = refl1d.material.SLD(rho=0, name='Air')
-        for component in self.structure[1:]:
-            name = component.name
-            sld, sld_imag = component.sld.real.value, component.sld.imag.value
-            thick, rough = component.thick.value, component.rough.value
-
-            # Add the component in the opposite direction to the refnx
-            # definition.
-            layer = refl1d.material.SLD(rho=sld, irho=sld_imag, name=name)(
-                thick, rough)
-            structure = layer | structure
-
-        # Update the current structure to use the new version.
-        structure.name = self.structure.name
-        self.structure = structure
-
-    def to_refnx(self):
-        """Converts a Refl1D structure to an equivalent refnx structure."""
-        # Check that the current structure is defined in Refl1D.
-        assert isinstance(self.structure, refl1d.model.Stack)
-
-        # Iterate over each component.
-        structure = refnx.reflect.SLD(0, name='Air')
-        for component in list(reversed(self.structure))[1:]:
-            name = component.name
-            sld, sld_imag = \
-                Parameter(component.material.rho.value), \
-                Parameter(component.material.irho.value)
-            thick, rough = component.thickness.value, component.interface.value
-
-            # Add the component in the opposite direction to the Refl1D
-            # definition.
-            structure |= refnx.reflect.SLD([sld, sld_imag], name=name)(
-                thick, rough)
-
-        # Update the current structure to use the new version.
-        structure.name = self.structure.name
-        self.structure = structure
 
 
 def simple_sample():

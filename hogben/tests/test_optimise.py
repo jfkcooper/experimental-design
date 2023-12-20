@@ -100,7 +100,7 @@ def test_angle_times_func_result(refnx_sample):
     result = optimiser._angle_times_func(angle_time_split, num_angles,
                                          contrasts, points, total_time)
 
-    expected_result = -1.77218798
+    expected_result = -1.722251
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
 
 

@@ -3,25 +3,25 @@ from typing import Union
 
 import numpy as np
 
+from collections.abc import Iterable
+
 from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot
 from dynesty import utils as dyfunc
 
-import refl1d.experiment
 import refnx.reflect
 import refnx.analysis
 import bumps.parameter
 import bumps.fitproblem
 
-from hogben.simulate import reflectivity
+from hogben.simulate import SimulateReflectivity
 
 
 class Sampler:
-    """Contains code for running nested sampling on refnx and Refl1D models.
+    """Contains code for running nested sampling on refnx models.
 
     Attributes:
-        objective (refnx.analysis.Objective or
-                   bumps.fitproblem.FitProblem): objective to sample.
+        objective (refnx.analysis.Objective): objective to sample.
         params (list): varying model parameters.
         ndim (int): number of varying model parameters.
         sampler_static (dynesty.NestedSampler): static nested sampler.
@@ -30,56 +30,23 @@ class Sampler:
     """
 
     def __init__(self, objective):
+        """
+        Initialise the sample given an objective to the sample
+
+        Args:
+            objective: objective to the sample
+        """
         self.objective = objective
 
-        # Determine if the objective is from refnx or Refl1D.
-        if isinstance(objective, refnx.analysis.BaseObjective):
-            # Use log-likelihood and prior transform methods of refnx objective
-            self.params = objective.varying_parameters()
-            logl = objective.logl
-            prior_transform = objective.prior_transform
-
-        elif isinstance(objective, bumps.fitproblem.BaseFitProblem):
-            # Use this class' custom log-likelihood and prior transform methods
-            self.params = self.objective._parameters
-            logl = self.logl_refl1d
-            prior_transform = self.prior_transform_refl1d
-
-        # Otherwise the given objective must be invalid.
-        else:
-            raise RuntimeError('invalid objective/fitproblem given')
+        # Use log-likelihood and prior transform methods of refnx objective
+        self.params = objective.varying_parameters()
+        logl = objective.logl
+        prior_transform = objective.prior_transform
 
         self.ndim = len(self.params)
         self.sampler_static = NestedSampler(logl, prior_transform, self.ndim)
         self.sampler_dynamic = DynamicNestedSampler(logl, prior_transform,
                                                     self.ndim)
-
-    def logl_refl1d(self, x):
-        """Calculates the log-likelihood of given parameter values `x`
-           for a Refl1D FitProblem.
-
-        Args:
-            x (numpy.ndarray): parameter values to calculate likelihood of.
-
-        Returns:
-            float: log-likelihood of parameter values `x`.
-
-        """
-        self.objective.setp(x)  # Set the parameter values.
-        return -self.objective.model_nllf()  # Calculate the log-likelihood.
-
-    def prior_transform_refl1d(self, u):
-        """Calculates the prior transform for a Refl1D FitProblem.
-
-        Args:
-            u (numpy.ndarray): values in interval [0,1] to be transformed.
-
-        Returns:
-            numpy.ndarray: `u` transformed to parameter space of interest.
-
-        """
-        return np.asarray([param.bounds.put01(u[i])
-                           for i, param in enumerate(self.params)])
 
     def sample(self, verbose=True, dynamic=False):
         """Samples an Objective/FitProblem using nested sampling.
@@ -236,16 +203,13 @@ class Fisher():
         if self.n == 0:
             return np.zeros((self.m, self.m))
         J = self._get_gradient_matrix()
-
         # Calculate the reflectance for each model for the given Q values.
-        r = np.concatenate([reflectivity(q, model)
+        r = np.concatenate([SimulateReflectivity(model).reflectivity(q)
                             for q, model in list(zip(self.qs, self.models))])
-
         # Calculate the Fisher information matrix using equations from
         # the paper.
         M = np.diag(np.concatenate(self.counts) / r, k=0)
         g = np.dot(np.dot(J.T, M), J)
-
         # Perform unit scaling if there's at least one parameter
         if len(self.xi) >= 1:
             g = self._scale_units(g)  # Scale by unit bounds
@@ -294,23 +258,19 @@ class Fisher():
 
             # Calculate reflectance for each model for first part of gradient.
             x1 = parameter.value = old * (1 - self.step)
-            y1 = np.concatenate([reflectivity(q, model)
-                                 for q, model in list(zip(self.qs,
-                                                          self.models))])
+            y1 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
+                                 for q, model in list(zip(self.qs, self.models))])
 
             # Calculate reflectance for each model for second part of gradient.
             x2 = parameter.value = old * (1 + self.step)
-            y2 = np.concatenate([reflectivity(q, model)
-                                 for q, model in list(zip(self.qs,
-                                                          self.models))])
-
+            y2 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
+                                 for q, model in list(zip(self.qs, self.models))])
             parameter.value = old  # Reset the parameter.
-
             J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
         return J
 
     def _get_bounds(self) -> tuple[np.ndarray, np.ndarray]:
-        """Get the bounds from the refnx or refl1d model.
+        """Get the bounds from the refnx.
 
         Returns:
             tuple: The lower and upper bounds of the parameters.
@@ -343,3 +303,14 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
+
+def flatten(seq):
+    for el in seq:
+        try:
+            iter(el)
+            if isinstance(el, (str, bytes)):
+                raise TypeError
+            yield from flatten(el)
+        except TypeError:
+            yield el
+
