@@ -119,6 +119,7 @@ def test_contrasts_func_result():
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
 
 
+
 def test_underlayers_func():
     """Checks that the _underlayers_func method gives the correct result"""
     thickness_SLD = [50, 20, -5, 10]  # [thickness, thickness, SLD, SLD]

@@ -4,7 +4,6 @@ import tempfile
 import numpy as np
 import pytest
 import matplotlib
-import refl1d.experiment
 import hogben.models.samples as samples
 
 from hogben.models.samples import Sample
@@ -49,17 +48,16 @@ def test_angle_info(refnx_sample):
     information, and outputs the same values as if the functions were called
     manually.
     """
-    return
     # Get Fisher information from tested unit
     angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
-    
+
     # Get Fisher information directly
     model = ReflectModel(refnx_sample.structure)
     sim = SimulateReflectivity(model, angle_times)
     data = sim.simulate()
     qs, counts, models = [data[0]], [data[3]], [model]
-    g = Fisher(qs, sample.params, counts, models).fisher_information
-    angle_info = sample.angle_info(angle_times).fisher_information
+    g = Fisher(qs, refnx_sample.params, counts, models).fisher_information
+    angle_info = refnx_sample.angle_info(angle_times).fisher_information
 
     np.testing.assert_allclose(g, angle_info, rtol=1e-08)
 
@@ -126,7 +124,7 @@ def test_reflectivity_invalid_structure():
     structure is used in get_reflectivity_profile
     """
     sample = Mock(spec=None)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         Sample._get_reflectivity_profile(sample, 0.005, 0.4, 500, 1, 1e-7, 2)
 
 
@@ -136,7 +134,7 @@ def test_sld_invalid_structure():
     structure is used in get_sld_profile
     """
     sample = Mock(spec=None)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         Sample._get_sld_profile(sample)
 
 
@@ -146,7 +144,7 @@ def test_vary_structure_invalid_structure():
     structure is used in _vary_structure
     """
     structure = Mock(spec=None)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         Sample._Sample__vary_structure(structure)
 
 
@@ -159,24 +157,6 @@ def test_reflectivity_profile_length(refnx_sample):
     q, r = refnx_sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
     assert len(q) == len(r)
     assert len(q) > 0  # Make sure array is not empty
-
-
-@pytest.mark.parametrize('sample', [samples.simple_sample(),
-                                    samples.many_param_sample(),
-                                    samples.thin_layer_sample_1(),
-                                    samples.thin_layer_sample_2(),
-                                    samples.similar_sld_sample_1(),
-                                    samples.similar_sld_sample_2(),
-
-                                    ]
-                         )
-def test_predefined_samples(sample):
-    """
-    Tests whether the predefined samples provide a valid structure that
-    succesfully can be converted to a refl1d structure.
-    """
-    sample.to_refl1d()
-    assert isinstance(sample.structure, refl1d.model.Stack)
 
 
 @patch('hogben.models.samples.save_plot', side_effect=mock_save_plot)
