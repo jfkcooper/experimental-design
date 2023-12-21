@@ -71,6 +71,25 @@ class BaseSample(VariableAngle):
         """Runs nested sampling on measured or simulated data of the sample."""
         pass
 
+    def get_varying_parameters(self):
+        """Get list of parameters that are varying
+        Current implementation won't win any beauty prices, but works as
+        temporary solution. Will clean this a bit...
+        """
+        if not hasattr(self, "model"):
+            # This is kinda a temp. workaround, for the predefined cases
+            # where no model is defined (so it doesn't crash on the lack
+            # of self.model.parameters).
+            return self.params
+        params = []
+        for p in flatten(self.model.parameters):
+            if p.vary:
+                params.append(p)
+                continue
+            if len(p._deps):
+                params.extend([_p for _p in p.dependencies() if _p.vary])
+        return list(set(params))
+
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""

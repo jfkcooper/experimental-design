@@ -157,6 +157,44 @@ class Fisher():
         self.models = models
         self.step = step
 
+    @classmethod
+    def from_sample(cls,
+                    sample,
+                    angle_times,
+                    contrasts = None,
+                    underlayers = None,
+                    instrument = None):
+        """
+        Get Fisher object using a sample.
+        Seperate constructor for magnetic simulation maybe? Probably depends
+        on new simulate function either way.
+        """
+
+        qs, counts, models = [], [], []
+        if contrasts is None:
+            model = refnx.reflect.ReflectModel(sample)
+            sim = SimulateReflectivity(sample, angle_times)
+            data = sim.simulate()
+            qs.append(data[0])
+            counts.append(data[3])
+            models.append(model)
+        else:
+            for contrast in contrasts:
+                sample = sample._using_conditions(contrast, underlayers)
+                contrast_point = (contrast + 0.56) / (6.35 + 0.56)
+                background_level = (2e-6 * contrast_point
+                                    + 4e-6 * (1 - contrast_point))
+                model = refnx.reflect.ReflectModel(sample)
+                model.bkg = background_level
+                model.dq = 2
+                data = SimulateReflectivity(model, angle_times).simulate()
+                qs.append(data[0])
+                counts.append(data[3])
+                models.append(model)
+
+        xi = sample.get_varying_parameters()
+        return cls(qs, xi, counts, models)
+
     @property
     def fisher_information(self) -> np.ndarray:
         """Calculate and return the Fisher information matrix.

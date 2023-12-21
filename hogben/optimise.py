@@ -12,7 +12,7 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
-
+from hogben.utils import Fisher
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -235,7 +235,11 @@ class Optimiser:
         return -fisher.min_eigenval
 
 
-    def _contrasts_func(self, x, num_contrasts, angle_splits, total_time):
+    def _contrasts_func(self,
+                        x: list,
+                        num_contrasts: int,
+                        angle_splits: type,
+                        total_time: float) -> float:
         """Defines the function for optimising an experiment's contrasts.
 
         Args:
@@ -248,20 +252,21 @@ class Optimiser:
             float: negative of minimum eigenvalue using given conditions.
 
         """
-        # Define the initial Fisher information matrix.
+        # Define the initial angle times.
         angle_times = []
 
         # Iterate over each contrast.
         for i in range(num_contrasts):
             # Calculate proportion of the total counting time for each angle.
-            angle_times_new = [
-                (angle, points, total_time * x[num_contrasts + i] * split)
-                for angle, points, split in angle_splits
-            ]
+            angle_times_new = \
+                [(angle, points, total_time * x[num_contrasts + 0] * split) for
+                 angle, points, split in angle_splits]
             angle_times.extend(angle_times_new)
 
         # Calculate the Fisher Information Matrix for the total information.
-        fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
+        fisher = Fisher.from_sample(self.sample, angle_times,
+                                    x[:num_contrasts])
+        #fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
