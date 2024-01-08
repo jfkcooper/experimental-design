@@ -11,8 +11,6 @@ from dynesty import utils as dyfunc
 
 import refnx.reflect
 import refnx.analysis
-import bumps.parameter
-import bumps.fitproblem
 
 from hogben.simulate import SimulateReflectivity
 
@@ -113,7 +111,7 @@ class Sampler:
 class Fisher():
     """Calculates the Fisher information matrix for multiple `models`
     containing parameters `xi`. The model describes the experiment,
-    including the sample, and is defined using `refnx` or `refl1d`. The
+    including the sample, and is defined using `refnx`. The
     lower and upper bounds of each parameter in the model are transformed
     into a standardized range from 0 to 1, which is used to calculate the
     Fisher information matrix. Each parameter in the Fisher information
@@ -121,8 +119,8 @@ class Fisher():
     the importance parameter is set to 1 for all parameters, and can be set
     by changing the `importance` attribute of the parameter when setting up
     the model. For example the relative importance of the thickness in
-    "layer1" can be set to 2 using `layer1.thickness.importance = 2` or
-    `layer1.thick.importance = 2` in `refnx` and `refl1d` respectively.
+    "layer1" can be set to 2 using `layer1.thickness.importance = 2` in
+     `refnx`.
 
     Attributes:
         qs: The Q points for each model.
@@ -136,11 +134,9 @@ class Fisher():
 
     def __init__(self,
                  qs: list[np.ndarray],
-                 xi: list[Union['refnx.analysis.Parameter',
-                                'bumps.parameter.Parameter']],
+                 xi: list[refnx.analysis.Parameter],
                  counts: list[int],
-                 models: list[Union['refnx.reflect.ReflectModel',
-                                    'refl1d.experiment.Experiment']],
+                 models: list[refnx.reflect.ReflectModel],
                  step: float = 0.005):
         """Initialize the Fisher matrix class.
 
@@ -156,44 +152,6 @@ class Fisher():
         self.counts = counts
         self.models = models
         self.step = step
-
-    @classmethod
-    def from_sample(cls,
-                    sample,
-                    angle_times,
-                    contrasts = None,
-                    underlayers = None,
-                    instrument = None):
-        """
-        Get Fisher object using a sample.
-        Seperate constructor for magnetic simulation maybe? Probably depends
-        on new simulate function either way.
-        """
-
-        qs, counts, models = [], [], []
-        if contrasts is None:
-            model = refnx.reflect.ReflectModel(sample)
-            sim = SimulateReflectivity(sample, angle_times)
-            data = sim.simulate()
-            qs.append(data[0])
-            counts.append(data[3])
-            models.append(model)
-        else:
-            for contrast, angle_time in zip(contrasts, angle_times):
-                structure = sample._using_conditions(contrast, underlayers)
-                contrast_point = (contrast + 0.56) / (6.35 + 0.56)
-                background_level = (2e-6 * contrast_point
-                                    + 4e-6 * (1 - contrast_point))
-                model = refnx.reflect.ReflectModel(structure)
-                model.bkg = background_level
-                model.dq = 2
-                data = SimulateReflectivity(model, angle_time).simulate()
-                qs.append(data[0])
-                counts.append(data[3])
-                models.append(model)
-
-        xi = sample.get_varying_parameters()
-        return cls(qs, xi, counts, models)
 
     @property
     def fisher_information(self) -> np.ndarray:
@@ -308,7 +266,7 @@ class Fisher():
         return J
 
     def _get_bounds(self) -> tuple[np.ndarray, np.ndarray]:
-        """Get the bounds from the refnx.
+        """Get the bounds from the refnx parameters.
 
         Returns:
             tuple: The lower and upper bounds of the parameters.
@@ -316,11 +274,6 @@ class Fisher():
         if isinstance(self.xi[0], refnx.analysis.Parameter):
             lb = np.array([param.bounds.lb for param in self.xi])
             ub = np.array([param.bounds.ub for param in self.xi])
-
-        elif isinstance(self.xi[0], bumps.parameter.Parameter):
-            lb = np.array([param.bounds.limits[0] for param in self.xi])
-            ub = np.array([param.bounds.limits[1] for param in self.xi])
-        # Otherwise, the sample must be invalid.
         else:
             raise RuntimeError('Invalid sample given')
         return lb, ub
