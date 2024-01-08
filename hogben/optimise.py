@@ -266,7 +266,6 @@ class Optimiser:
         # Calculate the Fisher Information Matrix for the total information.
         fisher = Fisher.from_sample(self.sample, angle_times,
                                     x[:num_contrasts])
-        #fisher = self.sample.contrast_info(angle_times, x[:num_contrasts])
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval

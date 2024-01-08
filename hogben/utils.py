@@ -180,11 +180,11 @@ class Fisher():
             models.append(model)
         else:
             for contrast in contrasts:
-                sample = sample._using_conditions(contrast, underlayers)
+                structure = sample._using_conditions(contrast, underlayers)
                 contrast_point = (contrast + 0.56) / (6.35 + 0.56)
                 background_level = (2e-6 * contrast_point
                                     + 4e-6 * (1 - contrast_point))
-                model = refnx.reflect.ReflectModel(sample)
+                model = refnx.reflect.ReflectModel(structure)
                 model.bkg = background_level
                 model.dq = 2
                 data = SimulateReflectivity(model, angle_times).simulate()
