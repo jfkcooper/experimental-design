@@ -12,7 +12,6 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
-from hogben.utils import Fisher
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -294,8 +293,9 @@ class Optimiser:
         ]
 
         # Calculate the Fisher information using the conditions.
-        fisher = self.sample.underlayer_info(angle_times, contrasts,
-            underlayers)
+        fisher = self.sample.underlayer_info(angle_times,
+                                             contrasts,
+                                             underlayers)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval

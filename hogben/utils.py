@@ -255,12 +255,16 @@ class Fisher():
             # Calculate reflectance for each model for first part of gradient.
             x1 = parameter.value = old * (1 - self.step)
             y1 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
-                                 for q, model in list(zip(self.qs, self.models))])
+                                 for q, model in list(zip(self.qs,
+                                                          self.models))]
+                                )
 
             # Calculate reflectance for each model for second part of gradient.
             x2 = parameter.value = old * (1 + self.step)
             y2 = np.concatenate([SimulateReflectivity(model).reflectivity(q)
-                                 for q, model in list(zip(self.qs, self.models))])
+                                 for q, model in list(zip(self.qs,
+                                                          self.models))]
+                                )
             parameter.value = old  # Reset the parameter.
             J[:, i] = (y2 - y1) / (x2 - x1)  # Calculate the gradient.
         return J
@@ -294,14 +298,3 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
-
-def flatten(seq):
-    for el in seq:
-        try:
-            iter(el)
-            if isinstance(el, (str, bytes)):
-                raise TypeError
-            yield from flatten(el)
-        except TypeError:
-            yield el
-
