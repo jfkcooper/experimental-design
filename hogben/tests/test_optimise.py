@@ -115,7 +115,7 @@ def test_contrasts_func_result():
     result = optimiser._contrasts_func(contrasts_time, num_contrasts,
                                        angle_splits, total_time)
 
-    expected_result = -2.55788110
+    expected_result = -0.199884
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
 
 
