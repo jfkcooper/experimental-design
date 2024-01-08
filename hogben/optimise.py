@@ -259,7 +259,7 @@ class Optimiser:
         for i in range(num_contrasts):
             # Calculate proportion of the total counting time for each angle.
             angle_times_new = \
-                [(angle, points, total_time * x[num_contrasts + 0] * split) for
+                [(angle, points, total_time * x[num_contrasts + i] * split) for
                  angle, points, split in angle_splits]
             angle_times.extend(angle_times_new)
 
