@@ -264,8 +264,8 @@ class Optimiser:
             ]
 
             # Add to the initial Fisher information matrix.
-            g += self.sample.contrast_info(
-                    angle_times, [x[i]]).fisher_information
+            g += self.sample.contrast_info(angle_times,
+                                           [x[i]]).fisher_information
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]

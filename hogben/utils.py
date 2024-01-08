@@ -1,9 +1,6 @@
 import os
-from typing import Union
 
 import numpy as np
-
-from collections.abc import Iterable
 
 from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty import plotting as dyplot

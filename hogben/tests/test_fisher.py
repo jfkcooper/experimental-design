@@ -246,6 +246,7 @@ def test_fisher_no_parameters(mock_reflectivity, mock_model):
     g = Fisher(QS, [], COUNTS, [model]).fisher_information
     np.testing.assert_equal(g.shape, (0, 0))
 
+
 def test_fisher_doubling_with_two_identical_models(model):
     """
     Tests that using two identical models with the same q-points and counts
@@ -259,6 +260,7 @@ def test_fisher_doubling_with_two_identical_models(model):
     g_double = Fisher(qs, model.xi, counts, [model, model],
                       0.005).fisher_information
     np.testing.assert_allclose(g_double, g_single * 2, rtol=1e-08)
+
 
 def test_multiple_models_shape(model):
     """
@@ -274,4 +276,3 @@ def test_multiple_models_shape(model):
     g_double = Fisher(qs, xi, counts, [model, model_2],
                       0.005).fisher_information
     np.testing.assert_equal(g_double.shape, (xi_length, xi_length))
-
