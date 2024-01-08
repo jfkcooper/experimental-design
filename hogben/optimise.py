@@ -261,7 +261,7 @@ class Optimiser:
             angle_times_new = \
                 [(angle, points, total_time * x[num_contrasts + i] * split) for
                  angle, points, split in angle_splits]
-            angle_times.extend(angle_times_new)
+            angle_times.append(angle_times_new)
 
         # Calculate the Fisher Information Matrix for the total information.
         fisher = Fisher.from_sample(self.sample, angle_times,

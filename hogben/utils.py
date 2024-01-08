@@ -179,7 +179,7 @@ class Fisher():
             counts.append(data[3])
             models.append(model)
         else:
-            for contrast in contrasts:
+            for contrast, angle_time in zip(contrasts, angle_times):
                 structure = sample._using_conditions(contrast, underlayers)
                 contrast_point = (contrast + 0.56) / (6.35 + 0.56)
                 background_level = (2e-6 * contrast_point
@@ -187,7 +187,7 @@ class Fisher():
                 model = refnx.reflect.ReflectModel(structure)
                 model.bkg = background_level
                 model.dq = 2
-                data = SimulateReflectivity(model, angle_times).simulate()
+                data = SimulateReflectivity(model, angle_time).simulate()
                 qs.append(data[0])
                 counts.append(data[3])
                 models.append(model)

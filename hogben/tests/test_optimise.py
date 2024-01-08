@@ -106,7 +106,7 @@ def test_angle_times_func_result(refnx_sample):
 
 def test_contrasts_func_result():
     """Checks that the _contrasts_func method gives the correct result"""
-    contrasts_time = [0.3, 9.3, 0.8, 0.2]  # [SLD, SLD, time, time]
+    contrasts_time = [0.3, 9.3, 0.8, 8.2]  # [SLD, SLD, time, time]
     num_contrasts = 2
     angle_splits = [(0.7, 100, 0.6), (2.3, 100, 0.4)]
     total_time = 100000
