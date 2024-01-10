@@ -16,10 +16,44 @@ from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
 from refnx.analysis import Objective
+from refnx.reflect import SLD
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
+
+class UnderLayer(refnx.reflect.structure.Slab):
+    def __init__(self, sld=6, thick=50, rough=0, name="underlayer"):
+        super().__init__(sld=sld, thick=thick, rough=rough, name=name)
+        self.underlayer = True
+
+class MagneticLayer(refnx.reflect.structure.Slab):
+    def __init__(self,
+                 nSLD: float = 0,
+                 mSLD: float = 0,
+                 thick: float = 0,
+                 rough: float = 0,
+                 underlayer: bool = False,
+                 name: str ="magnetic_layer"):
+        self.nSLD = nSLD
+        self.mSLD = mSLD
+        self.rough = rough
+        self.underlayer = underlayer
+        self.name = name
+        super().__init__(thick=thick, sld=self.nSLD, rough=self.rough,
+                         name=self.name)
+
+    @property
+    def spin_up(self):
+        SLD_value = self.nSLD + self.mSLD
+        return SLD(SLD_value, name='spin_up')(thick=self.thick,
+                                              rough=self.rough)
+
+    @property
+    def spin_down(self):
+        SLD_value = self.nSLD - self.mSLD
+        return SLD(SLD_value, name='spin_down')(thick=self.thick,
+                                                rough=self.rough)
 
 class Sample(BaseSample):
     """Wrapper class for a standard refnx reflectometry sample.
@@ -31,7 +65,7 @@ class Sample(BaseSample):
 
     """
 
-    def __init__(self, structure):
+    def __init__(self, structure, **settings):
         """
         Initializes a sample given a structure, and sets the sample name and
         parameters
@@ -41,7 +75,24 @@ class Sample(BaseSample):
         """
         self.structure = structure
         self.name = structure.name
+        self.scale = settings.get('scale', 1)
+        self.bkg = settings.get('bkg', 5e-6)
+        self.dq = settings.get('dq', 0.02)
         self.params = Sample.__vary_structure(structure)
+
+    @property
+    def model(self):
+        return refnx.reflect.ReflectModel(self.structure,
+                                          scale=self.scale,
+                                          bkg=self.bkg, dq=self.dq)
+
+    @property
+    def num_underlayers(self):
+        num_underlayers = 0
+        for layer in self.structure:
+            if hasattr(layer, 'underlayer'):
+                num_underlayers += 1 if layer.underlayer else 0
+        return num_underlayers
 
     @staticmethod
     def __vary_structure(structure, bound_size=0.2):
@@ -76,6 +127,22 @@ class Sample(BaseSample):
             params.append(thick)
 
         return params
+
+    def get_spin_structures(self):
+        """
+        Get a list of the sample structures with the
+        corresponding SLD values for each spin direction.
+        """
+        structures = []
+        spin_up_structure = self.structure.copy()
+        spin_down_structure = self.structure.copy()
+        for i, layer in enumerate(self.structure):
+            if isinstance(layer, MagneticLayer):
+                spin_up_structure[i] = layer.spin_up
+                spin_down_structure[i] = layer.spin_down
+        structures.extend([spin_up_structure, spin_down_structure])
+
+        return structures
 
     def angle_info(self, angle_times, contrasts=None):
         """Calculates the Fisher information matrix for a sample measured
