@@ -21,12 +21,6 @@ from refnx.reflect import SLD
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
-
-class UnderLayer(refnx.reflect.structure.Slab):
-    def __init__(self, sld=6, thick=50, rough=0, name="underlayer"):
-        super().__init__(sld=sld, thick=thick, rough=rough, name=name)
-        self.underlayer = True
-
 class MagneticLayer(refnx.reflect.structure.Slab):
     def __init__(self,
                  nSLD: float = 0,
