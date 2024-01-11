@@ -251,9 +251,10 @@ class Optimiser:
             float: negative of minimum eigenvalue using given conditions.
 
         """
-        # Define the initial Fisher information matrix.
+        # Define the initial Fisher information matrix g, starting as an empty
+        # matrix of zeroes.
         m = len(self.sample.params)
-        g = np.zeros((m, m))
+        g = np.zeros((m, m)) # Fisher information matrix
 
         # Iterate over each contrast.
         for i in range(num_contrasts):
@@ -263,7 +264,7 @@ class Optimiser:
                 for angle, points, split in angle_splits
             ]
 
-            # Add to the initial Fisher information matrix.
+            # Add data from current contrast to Fisher information matrix
             g += self.sample.contrast_info(angle_times,
                                            [x[i]]).fisher_information
 
