@@ -254,7 +254,7 @@ class Optimiser:
         # Define the initial Fisher information matrix g, starting as an empty
         # matrix of zeroes.
         m = len(self.sample.params)
-        g = np.zeros((m, m)) # Fisher information matrix
+        g = np.zeros((m, m))  # Fisher information matrix
 
         # Iterate over each contrast.
         for i in range(num_contrasts):
