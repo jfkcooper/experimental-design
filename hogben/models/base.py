@@ -12,7 +12,7 @@ import refnx.analysis
 from refnx.reflect import ReflectModel
 
 from hogben.simulate import SimulateReflectivity
-from hogben.utils import fisher, Sampler, save_plot
+from hogben.utils import Fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -131,7 +131,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         return self.__conditions_info(angle_times, contrasts, underlayers)
 
     def __conditions_info(self, angle_times, contrasts, underlayers):
-        """Calculates the Fisher information matrix for the lipid sample
+        """Calculates the Fisher information object for the lipid sample
            with given conditions.
 
         Args:
@@ -140,11 +140,12 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             underlayers (list): thickness and SLD of each underlayer to add.
 
         Returns:
-            numpy.ndarray: Fisher information matrix.
+            Fisher: Fisher information matrix object
 
         """
         # Iterate over each contrast to simulate.
         qs, counts, models = [], [], []
+
         for contrast in contrasts:
             # Simulate data for the contrast.
             sample = self._using_conditions(contrast, underlayers)
@@ -161,9 +162,9 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         # Exclude certain parameters if underlayers are being used.
         if underlayers is None:
-            return fisher(qs, self.params, counts, models)
+            return Fisher(qs, self.params, counts, models)
         else:
-            return fisher(qs, self.underlayer_params, counts, models)
+            return Fisher(qs, self.underlayer_params, counts, models)
 
     @abstractmethod
     def _using_conditions(self):

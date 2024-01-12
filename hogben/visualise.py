@@ -56,9 +56,6 @@ def angle_choice(
     # Set contrasts to empty list if not provided
     contrasts = [] if contrasts is None else contrasts
 
-    # Calculate the information from the measurements taken so far.
-    g_init = sample.angle_info(initial_angle_times, contrasts)
-
     # Iterate over each angle to consider.
     min_eigs = []
     for i, angle_new in enumerate(angle_range):
@@ -66,12 +63,13 @@ def angle_choice(
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(angle_range)))
 
-        # Get the information from the new angle.
-        new_angle_times = [(angle_new, points_new, time_new)]
-        g_new = sample.angle_info(new_angle_times, contrasts)
-
-        # Combine the new information with the existing information.
-        min_eigs.append(np.linalg.eigvalsh(g_init + g_new)[0])
+        # Get the information for the new angle.
+        new_angle_times = \
+            (initial_angle_times + [(angle_new, points_new, time_new)])
+        # Calculate the total Fisher information at the new angle together
+        # with the initial angle
+        fisher_new = sample.angle_info(new_angle_times, contrasts)
+        min_eigs.append(fisher_new.min_eigenval)
 
     # Plot measurement angle versus minimum eigenvalue.
     fig = plt.figure()
@@ -142,15 +140,17 @@ def angle_choice_with_time(
 
         # Get the information from the initial angle at the current time.
         angle_times_init = [(initial_angle, points, time_range[i])]
-        g_init = sample.angle_info(angle_times_init, contrasts)
 
         # Iterate over each angle to consider.
         min_eigs = []
         for new_angle in angle_range:
             # Combine the information from the first and second angles.
-            angle_times_new = [(new_angle, points, new_time)]
-            g_new = sample.angle_info(angle_times_new, contrasts)
-            min_eigs.append(np.linalg.eigvalsh(g_init + g_new)[0])
+            angle_times_new = \
+                angle_times_init + [(new_angle, points, new_time)]
+            # Calculate the total Fisher information using the first and
+            # second angle together
+            fisher_new = sample.angle_info(angle_times_new, contrasts)
+            min_eigs.append(fisher_new.min_eigenval)
 
         # Update the data of the line.
         ax.set_ylim(min(min_eigs), max(min_eigs))
@@ -199,9 +199,6 @@ def contrast_choice_single(sample: BaseLipid,
     # Check that the contrast can be varied for the sample.
     assert isinstance(sample, VariableContrast)
 
-    # Calculate the information from the measurements taken so far.
-    g_init = sample.angle_info(angle_times, initial_contrasts)
-
     # Iterate over each contrast to consider.
     min_eigs = []
     for i, new_contrast in enumerate(contrast_range):
@@ -209,9 +206,11 @@ def contrast_choice_single(sample: BaseLipid,
         if i % 100 == 0:
             print('>>> {0}/{1}'.format(i, len(contrast_range)))
 
-        # Get the information from the new contrast and combine with initial.
-        g_new = sample.contrast_info(angle_times, [new_contrast])
-        min_eigs.append(np.linalg.eigvalsh(g_init + g_new)[0])
+        # Get the information from the new contrast, and calculate the total
+        # Fisher information for the initial and new contrast together.
+        new_contrast = initial_contrasts + [new_contrast]
+        fisher_new = sample.contrast_info(angle_times, new_contrast)
+        min_eigs.append(fisher_new.min_eigenval)
 
     # Plot contrast SLD versus minimum eigenvalue.
     fig = plt.figure()
@@ -257,8 +256,8 @@ def contrast_choice_double(sample, contrast_range, angle_times, save_path):
             print('>>> {0}/{1}'.format(i, len(contrasts)))
 
         # Calculate the minimum eigenvalue of the Fisher information matrix.
-        g = sample.contrast_info(angle_times, contrast_pair)
-        min_eigs.append(np.linalg.eigvalsh(g)[0])
+        fisher = sample.contrast_info(angle_times, contrast_pair)
+        min_eigs.append(fisher.min_eigenval)
 
     # Duplicate the data so that the plot is not half-empty (or half-full?).
     # This is valid since the choice of contrast is commutative.
@@ -343,8 +342,9 @@ def underlayer_choice(
         # Iterate over each underlayer SLD to investigate.
         for sld in sld_range:
             # Calculate the minimum eigenvalue.
-            g = sample.underlayer_info(angle_times, contrasts, [(thick, sld)])
-            min_eigs.append(np.linalg.eigvalsh(g)[0])
+            fisher = \
+                sample.underlayer_info(angle_times, contrasts, [(thick, sld)])
+            min_eigs.append(fisher.min_eigenval)
             x.append(thick)
             y.append(sld)
 

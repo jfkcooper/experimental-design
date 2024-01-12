@@ -282,7 +282,6 @@ def _logl(models):
         r_model.append([])  # reflectivity(probe.Q, model))
 
     # Combine the data from each spin state.
-    q = np.concatenate(q)
     r = np.concatenate(r)
     dr = np.concatenate(dr)
     r_model = np.concatenate(r_model)

@@ -13,7 +13,6 @@ from hogben.models.base import (
     VariableUnderlayer,
 )
 
-
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
 
@@ -157,6 +156,7 @@ class Optimiser:
         )
         return res[:num_contrasts], res[num_contrasts:], val
 
+
     def optimise_underlayers(
         self,
         num_underlayers,
@@ -228,10 +228,11 @@ class Optimiser:
         ]
 
         # Calculate the Fisher information matrix.
-        g = self.sample.angle_info(angle_times, contrasts)
+        fisher = self.sample.angle_info(angle_times, contrasts)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
+
 
     def _contrasts_func(self,
                         x: list,
@@ -250,9 +251,10 @@ class Optimiser:
             float: negative of minimum eigenvalue using given conditions.
 
         """
-        # Define the initial Fisher information matrix.
+        # Define the initial Fisher information matrix g, starting as an empty
+        # matrix of zeroes.
         m = len(self.sample.params)
-        g = np.zeros((m, m))
+        g = np.zeros((m, m))  # Fisher information matrix
 
         # Iterate over each contrast.
         for i in range(num_contrasts):
@@ -262,8 +264,9 @@ class Optimiser:
                 for angle, points, split in angle_splits
             ]
 
-            # Add to the initial Fisher information matrix.
-            g += self.sample.contrast_info(angle_times, [x[i]])
+            # Add data from current contrast to Fisher information matrix
+            g += self.sample.contrast_info(angle_times,
+                                           [x[i]]).fisher_information
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -np.linalg.eigvalsh(g)[0]
@@ -290,11 +293,13 @@ class Optimiser:
             (x[i], x[num_underlayers + i]) for i in range(num_underlayers)
         ]
 
-        # Calculate the Fisher information matrix using the conditions.
-        g = self.sample.underlayer_info(angle_times, contrasts, underlayers)
+        # Calculate the Fisher information using the conditions.
+        fisher = self.sample.underlayer_info(angle_times,
+                                             contrasts,
+                                             underlayers)
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
-        return -np.linalg.eigvalsh(g)[0]
+        return -fisher.min_eigenval
 
     @staticmethod
     def __optimise(func: callable,

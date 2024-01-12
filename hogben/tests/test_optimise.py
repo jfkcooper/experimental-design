@@ -119,6 +119,7 @@ def test_contrasts_func_result():
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
 
 
+
 def test_underlayers_func():
     """Checks that the _underlayers_func method gives the correct result"""
     thickness_SLD = [50, 20, -5, 10]  # [thickness, thickness, SLD, SLD]
@@ -128,8 +129,7 @@ def test_underlayers_func():
     num_underlayers = 2
     contrasts = [-0.56, 6.36]
 
-    angle_times = [(0.7, 100, 10000),
-                   (2.3, 100, 10000)]
+    angle_times = [(0.7, 100, 10000), (2.3, 100, 10000)]
     result = optimiser._underlayers_func(thickness_SLD, num_underlayers,
                                          angle_times, contrasts)
 
