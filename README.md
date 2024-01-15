@@ -30,7 +30,7 @@ Or with BibTeX as:
 ```
 
 ## Contact
-Jos Cooper - jos.cooper@ess.eu \
+Jos Cooper - joshaniel.cooper@ess.eu \
 Sjoerd Stendahl - sjoerd.stendahl@physics.uu.se \
 James Durant - james.durant@warwick.ac.uk \
 Lucas Wilkins - lucas.wilkins@stfc.ac.uk
