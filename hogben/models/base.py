@@ -12,7 +12,7 @@ import refnx.analysis
 from refnx.reflect import ReflectModel
 
 from hogben.simulate import SimulateReflectivity
-from hogben.utils import Fisher, Sampler, save_plot
+from hogben.utils import Fisher, Sampler, save_plot, flatten
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -70,6 +70,46 @@ class BaseSample(VariableAngle):
     def nested_sampling(self):
         """Runs nested sampling on measured or simulated data of the sample."""
         pass
+
+    def get_optimization_parameters(self):
+        """Get list of parameters that are varying
+        Current implementation won't win any beauty prices, but works as
+        temporary solution. Will clean this a bit...
+        """
+        #if not hasattr(self, "model"):
+            # This is kinda a temp. workaround, for the predefined cases
+            # where no model is defined (so it doesn't crash on the lack
+            # of self.model.parameters).
+         #   return self.params
+        params = []
+        for model in self.get_models():
+            for p in flatten(model.parameters):
+                if hasattr(p, "optimize") and p.optimize:
+                    params.append(p)
+                    continue
+                if len(p._deps):
+                    params.extend([_p for _p in p.dependencies() if hasattr(_p, "optimize") and _p.optimize])
+        return list(set(params))
+
+    def get_varying_parameters(self):
+        """Get list of parameters that are varying
+        Current implementation won't win any beauty prices, but works as
+        temporary solution. Will clean this a bit...
+        """
+        #if not hasattr(self, "model"):
+            # This is kinda a temp. workaround, for the predefined cases
+            # where no model is defined (so it doesn't crash on the lack
+            # of self.model.parameters).
+         #   return self.params
+        params = []
+        for model in self.get_models():
+            for p in flatten(model.parameters):
+                if p.vary:
+                    params.append(p)
+                    continue
+                if len(p._deps):
+                    params.extend([_p for _p in p.dependencies() if _p.vary])
+        return list(set(params))
 
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
