@@ -168,7 +168,6 @@ class Fisher():
             data = sim.simulate()
             qs.append(data[0])
             counts.append(data[3])
-
         xi = sample.get_varying_parameters()
         return cls(qs, xi, counts, models)
 
@@ -328,3 +327,12 @@ def flatten(seq):
         except TypeError:
             yield el
 
+
+def sig_fig_round(number, digits):
+    """Round a number to the specified number of significant digits."""
+    try:
+        # Convert to scientific notation, and get power
+        power = "{:e}".format(float(number)).split("e")[1]
+    except IndexError:
+        return None
+    return round(float(number), -(int(power) - digits + 1))

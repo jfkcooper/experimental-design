@@ -69,10 +69,11 @@ def test_sld_profile_valid_figure(_mock_save_plot,
     """
     Tests whether the sld_profile function succesfully outputs a figure
     """
-    mock_sld_profile.return_value = ([0, 10, 60, 110, 160, 210],
-                                     [4, 9, -2, 9, -2, 9])
+    mock_sld_profile.return_value = [([0, 10, 60, 110, 160, 210],
+                                     [4, 9, -2, 9, -2, 9])]
 
     # Use temporary directory, so it doesn't leave any files after testing
+    structures = refnx_sample.structures
     with tempfile.TemporaryDirectory() as temp_dir:
         refnx_sample.sld_profile(temp_dir)
         img_test = os.path.join(temp_dir, refnx_sample.name, 'sld_profile.png')
@@ -88,8 +89,8 @@ def test_reflectivity_profile_valid_figure(_mock_save_plot,
     Tests whether the reflectivity_profile function succesfully outputs a
     figure
     """
-    _mock_reflectivity_profile.return_value = ([0, 0.05, 0.1, 0.15, 0.2],
-                                               [1, 0.9, 0.8, 0.75, 0.8])
+    _mock_reflectivity_profile.return_value = [([0, 0.05, 0.1, 0.15, 0.2],
+                                               [1, 0.9, 0.8, 0.75, 0.8])]
     # Use temporary directory, so it doesn't leave any files after testing
     with tempfile.TemporaryDirectory() as temp_dir:
         refnx_sample.reflectivity_profile(temp_dir)
@@ -104,7 +105,7 @@ def test_sld_profile_length(_mock_save_plot, refnx_sample):
     Tests whether _get_sld_profile() succesfully retrieves two arrays with
     equal lengths, representing an SLD profile that can be plotted in a figure
     """
-    z, slds = refnx_sample._get_sld_profile()
+    z, slds = refnx_sample._get_sld_profile()[0]
     assert len(z) == len(slds)
     assert len(z) > 0  # Make sure arrays are not empty
 
@@ -114,7 +115,8 @@ def test_reflectivity_profile_positive(refnx_sample):
     Tests whether _get_reflectivity_profile() succesfully obtains reflectivity
     values that are all positively valued
     """
-    q, r = refnx_sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
+    q, r = refnx_sample._get_reflectivity_profile(
+        0.005, 0.4, 500, 1, 1e-7, 2)[0]
     assert np.all(np.greater(r, 0.0))
 
 
@@ -125,7 +127,8 @@ def test_reflectivity_invalid_structure():
     """
     sample = Mock(spec=None)
     with pytest.raises(TypeError):
-        Sample._get_reflectivity_profile(sample, 0.005, 0.4, 500, 1, 1e-7, 2)
+        Sample._get_reflectivity_profile(
+            sample, 0.005, 0.4, 500, 1, 1e-7, 2)
 
 
 def test_sld_invalid_structure():
@@ -144,8 +147,8 @@ def test_vary_structure_invalid_structure():
     structure is used in _vary_structure
     """
     structure = Mock(spec=None)
-    with pytest.raises(TypeError):
-        Sample._Sample__vary_structure(structure)
+    with pytest.raises(RuntimeError):
+        Sample._vary_structure(structure)
 
 
 def test_reflectivity_profile_length(refnx_sample):
@@ -154,7 +157,8 @@ def test_reflectivity_profile_length(refnx_sample):
     with equal lengths, representing a reflectivity profile that can be
     plotted in a figure.
     """
-    q, r = refnx_sample._get_reflectivity_profile(0.005, 0.4, 500, 1, 1e-7, 2)
+    q, r = refnx_sample._get_reflectivity_profile(
+        0.005, 0.4, 500, 1, 1e-7, 2)[0]
     assert len(q) == len(r)
     assert len(q) > 0  # Make sure array is not empty
 

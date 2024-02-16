@@ -1,7 +1,7 @@
 """
 Contains class and methods related to the Sample class.
 """
-
+import copy
 import os
 from typing import Optional
 from abc import ABC, abstractmethod
@@ -14,7 +14,8 @@ import refnx.reflect
 import refnx.analysis
 
 from hogben.simulate import SimulateReflectivity
-from hogben.utils import Fisher, Sampler, save_plot
+from hogben.utils import Fisher, Sampler, save_plot, sig_fig_round
+from hogben.optimise import Optimiser
 from hogben.models.base import BaseSample
 from refnx.analysis import Objective
 from refnx.reflect import SLD
@@ -24,7 +25,7 @@ plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
 
 
-class MagneticLayer(ABC):
+class MagneticLayer(ABC, refnx.reflect.structure.Slab):
     """Abstract class representing whether the measurement angle of a sample
        can be varied."""
 
@@ -44,7 +45,7 @@ class MagneticLayer(ABC):
         over a number of angles."""
         pass
 
-class MagneticLayerSLD(MagneticLayer, refnx.reflect.structure.Slab):
+class MagneticLayerSLD(MagneticLayer):
     def __init__(self,
                  SLDn = 1,
                  SLDm = 0,
@@ -90,15 +91,57 @@ class Sample(BaseSample):
         Args:
             structure: Sample structure defined in the refnx or refl1d model
         """
+        # Might rename to self.base_structure or something
         self.structure = structure
         self.name = structure.name
         self.scale = settings.get('scale', 1)
         self.bkg = settings.get('bkg', 5e-6)
         self.dq = settings.get('dq', 0.02)
-      #  self.params = Sample.__vary_structure(structure)
 
-    @staticmethod
-    def __vary_structure(structure, bound_size=0.2):
+    @property
+    def underlayers_indices(self):
+        underlayers = []
+        for index, component in enumerate(self.structure):
+            if hasattr(component, "underlayer") and component.underlayer:
+                underlayers.append(index)
+        return underlayers
+
+    @property
+    def params(self):
+        return self.get_varying_parameters()
+
+    def optimise_parameters(self, angle_times):
+        # TODO: This assumes that there's an underlayer, and not more than one
+        # The comparison with unpolarised is thus not valid in other cases.
+        # Also add option to check with unpolarised
+
+        optimiser = Optimiser(self)
+        res, val = optimiser.optimise_parameters(angle_times, verbose=False)
+        print("The parameters with the highest information could be found at:")
+        for param, value in zip(self.get_optimization_parameters(), res):
+            print(f"{param.name}: {sig_fig_round(value, 3)}")
+            param.value = value
+
+        for param, value in zip(self.get_optimization_parameters(), res):
+            self.scan_parameter(param, angle_times)
+
+        fisher = Fisher.from_sample(self, angle_times).min_eigenval
+        sample_no_ul = copy.deepcopy(self)._remove_underlayers()
+        angle_times_no_ul = []
+        for condition in angle_times:
+            angle, points, time = condition
+            angle_times_no_ul.append((angle, points, time * 4))
+        fisher_no_ul = Fisher.from_sample(sample_no_ul, angle_times_no_ul).min_eigenval
+        print(f"Fisher, polarised experiment with underlayer: {sig_fig_round(fisher, 3)}")
+        print(f"Fisher, unpolarised experiment without underlayer: {sig_fig_round(fisher_no_ul, 3)},")
+        ratio = sig_fig_round((fisher / fisher_no_ul) * 100, 3)
+        print(f"Improvement by using magnetic reference layer: {ratio - 100}% \n")
+        print("----------------------")
+        self.sld_profile()
+        self.reflectivity_profile()
+
+
+    def _vary_structure(self, bound_size=0.2):
         """Varies the SLD and thickness of each layer of a given `structure`.
 
         Args:
@@ -109,35 +152,32 @@ class Sample(BaseSample):
             list: varying parameters of sample.
 
         """
+        structure = self.structure
         params = []
+        # The structure was defined in refnx.
+        if isinstance(structure, refnx.reflect.Structure):
+            # Vary the SLD and thickness of each coprimponent (layer).
+            for component in structure[1:-1]:
+                sld = component.sld.real
+                sld_bounds = (
+                    sld.value * (1 - bound_size),
+                    sld.value * (1 + bound_size),
+                )
+                sld.setp(vary=True, bounds=sld_bounds)
+                params.append(sld)
 
-        # Vary the SLD and thickness of each component (layer).
-        for component in structure[1:-1]:
-            sld = component.sld.real
-            sld_bounds = (
-                sld.value * (1 - bound_size),
-                sld.value * (1 + bound_size),
-            )
-            sld.setp(vary=True, bounds=sld_bounds)
-            params.append(sld)
+                thick = component.thick
+                thick_bounds = (
+                    thick.value * (1 - bound_size),
+                    thick.value * (1 + bound_size),
+                )
+                thick.setp(vary=True, bounds=thick_bounds)
+                params.append(thick)
 
-            thick = component.thick
-            thick_bounds = (
-                thick.value * (1 - bound_size),
-                thick.value * (1 + bound_size),
-            )
-            thick.setp(vary=True, bounds=thick_bounds)
-            params.append(thick)
+        else:
+            raise RuntimeError('invalid structure given')
 
         return params
-
-    @property
-    def underlayers_indices(self):
-        underlayers = []
-        for index, component in enumerate(self.structure):
-            if hasattr(component, "underlayer") and component.underlayer:
-                underlayers.append(index)
-        return underlayers
 
     def _remove_underlayers(self):
         delete_index = self.underlayers_indices
@@ -148,20 +188,22 @@ class Sample(BaseSample):
 
     @property
     def structures(self):
-        return self.get_structures(polarised = False)
+        return self.get_structures(
+
+        )
 
     @property
     def models(self):
         return self.get_models()
 
-    def get_structures(self, polarised = True):
+    def get_structures(self):
         """
         Get a list of the possible sample structures.
         """
         spin_structures = []
         magnetic = False
         for i, layer in enumerate(self.structure):
-            if isinstance(layer, MagneticLayerSLD) and polarised:
+            if isinstance(layer, MagneticLayerSLD):
                 magnetic = True
                 up_structure = self.structure.copy()
                 down_structure = self.structure.copy()
@@ -203,33 +245,45 @@ class Sample(BaseSample):
         qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
 
-
-    def sld_profile(self, save_path):
+    def sld_profile(self, save_path=None, single=True):
         """Plots the SLD profile of the sample.
 
         Args:
             save_path (str): path to directory to save SLD profile to.
+            single (bool): whether to plot all profiles on a single plot or
+            separate ones.
 
         """
-        # Determine if the structure was defined in refnx.
+        # Create a figure and axes based on the 'single' parameter
+        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        for i, (z, slds) in enumerate(self._get_sld_profile()):
+            # Create a new subplot for each profile if not 'single'
+            if self.underlayers_indices:
+                label = \
+                    self.structures[i][self.underlayers_indices[0]].name
+            else:
+                label = f"SLD profile {i}"
 
-        z, slds = self._get_sld_profile()
+            # Create a new subplot for each profile if not 'single'
+            if not single:
+                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
+                ax.set_title(f"SLD Profile {label}")
+                fig.subplots_adjust(hspace=0.5)
+            ax.plot(z, slds, label=label)
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-        # Plot the SLD profile.
-        ax.plot(z, slds, color='black', label=self.name)
-
-        x_label = '$\mathregular{Distance\ (\AA)}$'
-        y_label = '$\mathregular{SLD\ (10^{-6} \AA^{-2})}$'
-
-        ax.set_xlabel(x_label, fontsize=11, weight='bold')
-        ax.set_ylabel(y_label, fontsize=11, weight='bold')
+            ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11,
+                          weight='bold')
+            ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$',
+                          fontsize=11, weight='bold')
+            # Add a legend if 'single'
+            if single:
+                ax.set_title("SLD Profile")
+                ax.legend()
 
         # Save the plot.
-        save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'sld_profile')
+        if save_path:
+            save_path = os.path.join(save_path, self.name)
+            save_plot(fig, save_path, 'sld_profile')
 
     def _get_sld_profile(self):
         """
@@ -239,18 +293,17 @@ class Sample(BaseSample):
             numpy.ndarray: depth
             numpy.ndarray: SLD values
         """
-        z, slds = self.structure.sld_profile()
-
-        return z, slds
+        return [structure.sld_profile() for structure in self.structures]
 
     def reflectivity_profile(self,
-                             save_path: str,
+                             save_path: str = None,
                              q_min: float = 0.005,
                              q_max: float = 0.4,
                              points: int = 500,
                              scale: float = 1,
                              bkg: float = 1e-7,
                              dq: float = 2,
+                             single = True,
                              ) -> None:
         """Plots the reflectivity profile of the sample.
 
@@ -264,25 +317,43 @@ class Sample(BaseSample):
             dq (float): instrument resolution.
 
         """
-        # Calculate the model reflectivity.
-        q, r = self._get_reflectivity_profile(q_min, q_max, points, scale,
+        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
                                               bkg, dq)
+        for i, (q, r) in enumerate(profiles):
+            if self.underlayers_indices:
+                label = \
+                    self.structures[i][self.underlayers_indices[0]].name
+            else:
+                label = f"Reflectivity profile {i}"
 
-        # Plot Q versus model reflectivity.
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(q, r, color='black')
+            # Create a new subplot for each profile if not 'single'
+            if not single:
+                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
+                ax.set_title(f"Reflectivity profile {label}")
+                fig.subplots_adjust(hspace=0.5)
 
-        x_label = '$\mathregular{Q\ (Å^{-1})}$'
-        y_label = 'Reflectivity (arb.)'
+            # Plot Q versus model reflectivity.
+            ax.plot(q, r, label=label)
 
-        ax.set_xlabel(x_label, fontsize=11, weight='bold')
-        ax.set_ylabel(y_label, fontsize=11, weight='bold')
-        ax.set_yscale('log')
+            x_label = '$\mathregular{Q\ (Å^{-1})}$'
+            y_label = 'Reflectivity (arb.)'
 
-        # Save the plot.
-        save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'reflectivity_profile')
+            ax.set_xlabel(x_label, fontsize=11, weight='bold')
+            ax.set_ylabel(y_label, fontsize=11, weight='bold')
+            ax.set_yscale('log')
+
+            # Add a legend if 'single'
+            if single:
+                ax.set_title(f"Reflectivity profile")
+                ax.legend()
+
+
+        if save_path:
+            # Save the plot.
+            save_path = os.path.join(save_path, self.name)
+            save_plot(fig, save_path, 'reflectivity_profile')
+
 
     def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
         """
@@ -293,14 +364,33 @@ class Sample(BaseSample):
             numpy.ndarray: q values at each reflectivity point
             numpy.ndarray: model reflectivity values
         """
-        # Geometriaclly-space Q points over the specified range.
-        q = np.geomspace(q_min, q_max, points)
+        profiles = []
+        for structure in self.structures:
+            # Geometriaclly-space Q points over the specified range.
+            q = np.geomspace(q_min, q_max, points)
 
-        # Determine if the structure was defined in refnx.
-        model = refnx.reflect.ReflectModel(self.structure, scale=scale,
-                                           bkg=bkg, dq=dq)
-        r = SimulateReflectivity(model).reflectivity(q)
-        return q, r
+            # Determine if the structure was defined in refnx.
+            model = refnx.reflect.ReflectModel(structure, scale=scale,
+                                               bkg=bkg, dq=dq)
+            r = SimulateReflectivity(model).reflectivity(q)
+            profiles.append((q, r))
+        return profiles
+
+    def scan_parameter(self, param, angle_times):
+        lb, ub = param.bounds.lb, param.bounds.ub
+        old_value = param.value
+        param_range = np.linspace(lb, ub, 150)
+        eigenvals = []
+        fig, ax = plt.subplots()
+        for value in param_range:
+            param.value = value
+            eigenvals.append(Fisher.from_sample(self, angle_times).min_eigenval)
+        ax.plot(param_range, eigenvals)
+        ax.set_title(param.name)
+        ax.set_ylabel("Minimum eigenvalue")
+        ax.set_xlabel("Parameter value")
+
+        param.value = old_value
 
     def nested_sampling(self,
                         angle_times: list,

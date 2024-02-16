@@ -95,7 +95,7 @@ def test_angle_times_func_result(refnx_sample):
     contrasts = [3, 14, -2]
     points = 100
     total_time = 10000
-
+    refnx_sample._vary_structure()
     optimiser = Optimiser(refnx_sample)
     result = optimiser._angle_times_func(angle_time_split, num_angles,
                                          contrasts, points, total_time)
