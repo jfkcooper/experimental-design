@@ -1,11 +1,12 @@
 """Module containing the Optimiser class used to optimise a neutron
 reflectometry experiment"""
 
+import copy
 import numpy as np
 from typing import Optional
 
 from scipy.optimize import differential_evolution, NonlinearConstraint
-from hogben.utils import Fisher
+from hogben.utils import Fisher, sig_fig_round
 
 from hogben.models.base import (
     BaseSample,
@@ -13,6 +14,42 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
+
+
+def optimise_parameters(sample, angle_times):
+    # TODO: This assumes that there's an underlayer, and not more than one
+    # The comparison with unpolarised is thus not valid in other cases.
+    # Also add option to check with unpolarised
+    from hogben.optimise import Optimiser
+
+    optimiser = Optimiser(sample)
+    res, val = optimiser.optimise_parameters(angle_times, verbose=False)
+    print("The parameters with the highest information could be found at:")
+    for param, value in zip(sample.get_optimization_parameters(), res):
+        print(f"{param.name}: {sig_fig_round(value, 3)}")
+        param.value = value
+
+    for param, value in zip(sample.get_optimization_parameters(), res):
+        sample.scan_parameter(param, angle_times)
+
+    fisher = Fisher.from_sample(sample, angle_times).min_eigenval
+    sample_no_ul = copy.deepcopy(sample)._remove_underlayers()
+    angle_times_no_ul = []
+    for condition in angle_times:
+        angle, points, time = condition
+        angle_times_no_ul.append((angle, points, time * 4))
+    fisher_no_ul = Fisher.from_sample(sample_no_ul,
+                                      angle_times_no_ul).min_eigenval
+    print(
+        f"Fisher, polarised experiment with underlayer: {sig_fig_round(fisher, 3)}")
+    print(
+        f"Fisher, unpolarised experiment without underlayer: {sig_fig_round(fisher_no_ul, 3)},")
+    ratio = sig_fig_round((fisher / fisher_no_ul) * 100, 3)
+    print(f"Improvement by using magnetic reference layer: {ratio - 100}% \n")
+    print("----------------------")
+    sample.sld_profile()
+    sample.reflectivity_profile()
+    return sample
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
