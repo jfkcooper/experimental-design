@@ -94,7 +94,8 @@ class Sample(BaseSample):
         # Might rename to self.base_structure or something
         if isinstance(structure, refnx.reflect.Structure):
             structure = [structure]
-        self.structure = structure
+        self.structure = structure[0]
+        self.base_structures = structure
         self.name = structure[0].name
         self.scale = settings.get('scale', 1)
         self.bkg = settings.get('bkg', 5e-6)
@@ -103,7 +104,7 @@ class Sample(BaseSample):
     @property
     def underlayers_indices(self):
         underlayer_list = []
-        for structure in self.structure:
+        for structure in self.base_structures:
             underlayers = []
             for index, layer in enumerate(structure):
                 if hasattr(layer, "underlayer") and layer.underlayer:
@@ -116,7 +117,7 @@ class Sample(BaseSample):
         return self.get_varying_parameters()
 
     def _vary_structure(self, bound_size=0.2):
-        """Varies the SLD and thickness of each layer of a given `structure`.
+        """Varies the SLD and thickness of each layer in the sample structures.
 
         Args:
             structure (refnx.reflect.Structure): structure to vary.
@@ -126,37 +127,37 @@ class Sample(BaseSample):
             list: varying parameters of sample.
 
         """
-        structure = self.structure[0]
-        params = []
-        # The structure was defined in refnx.
-        if isinstance(structure, refnx.reflect.Structure):
-            # Vary the SLD and thickness of each coprimponent (layer).
-            for component in structure[1:-1]:
-                sld = component.sld.real
-                sld_bounds = (
-                    sld.value * (1 - bound_size),
-                    sld.value * (1 + bound_size),
-                )
-                sld.setp(vary=True, bounds=sld_bounds)
-                params.append(sld)
+        for structure in self.base_structures:
+            params = []
+            # The structure was defined in refnx.
+            if isinstance(structure, refnx.reflect.Structure):
+                # Vary the SLD and thickness of each coprimponent (layer).
+                for component in structure[1:-1]:
+                    sld = component.sld.real
+                    sld_bounds = (
+                        sld.value * (1 - bound_size),
+                        sld.value * (1 + bound_size),
+                    )
+                    sld.setp(vary=True, bounds=sld_bounds)
+                    params.append(sld)
 
-                thick = component.thick
-                thick_bounds = (
-                    thick.value * (1 - bound_size),
-                    thick.value * (1 + bound_size),
-                )
-                thick.setp(vary=True, bounds=thick_bounds)
-                params.append(thick)
+                    thick = component.thick
+                    thick_bounds = (
+                        thick.value * (1 - bound_size),
+                        thick.value * (1 + bound_size),
+                    )
+                    thick.setp(vary=True, bounds=thick_bounds)
+                    params.append(thick)
 
-        else:
-            raise RuntimeError('invalid structure given')
+            else:
+                raise RuntimeError('invalid structure given')
 
-        return params
+            return params
 
     def _remove_underlayers(self):
         delete_index = self.underlayers_indices
         delete_index.reverse()
-        for structure, indices in zip(self.structure, delete_index):
+        for structure, indices in zip(self.base_structures, delete_index):
             for index in indices:
                 del structure[index]
         return self
@@ -177,7 +178,7 @@ class Sample(BaseSample):
         """
         spin_structures = []
         magnetic = False
-        for structure in self.structure:
+        for structure in self.base_structures:
             for i, layer in enumerate(structure):
                 if isinstance(layer, MagneticLayerSLD):
                     magnetic = True
@@ -188,11 +189,11 @@ class Sample(BaseSample):
                     spin_structures.extend([up_structure, down_structure])
         if magnetic:
             return spin_structures
-        return self.structure
+        return self.base_structures
 
     @property
     def model(self):
-        return refnx.reflect.ReflectModel(self.structure[0],
+        return refnx.reflect.ReflectModel(self.structure,
                                           scale=self.scale,
                                           bkg=self.bkg, dq=self.dq)
 
@@ -202,7 +203,7 @@ class Sample(BaseSample):
                                        scale=self.scale,
                                        bkg=self.bkg,
                                        dq=self.dq)
-            for structure in self.structures]
+            for structure in self.base_structures]
 
     def angle_info(self, angle_times, contrasts=None):
         """Calculates the Fisher information matrix for a sample measured
@@ -216,7 +217,7 @@ class Sample(BaseSample):
 
         """
         # Return the Fisher information matrix calculated from simulated data.
-        model = refnx.reflect.ReflectModel(self.structure[0])
+        model = refnx.reflect.ReflectModel(self.structure)
         data = SimulateReflectivity(model, angle_times).simulate()
         qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
@@ -383,7 +384,7 @@ class Sample(BaseSample):
 
         """
         # Simulate data for the sample.
-        model = refnx.reflect.ReflectModel(self.structure[0])
+        model = refnx.reflect.ReflectModel(self.structure)
         data = SimulateReflectivity(model, angle_times).simulate()
 
         objective = Objective(model, data)

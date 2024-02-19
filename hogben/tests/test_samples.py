@@ -141,14 +141,14 @@ def test_sld_invalid_structure():
         Sample._get_sld_profile(sample)
 
 
-def test_vary_structure_invalid_structure():
+def test_vary_structure_invalid_structure(refnx_sample):
     """
     Test whether a RunTimeError is correctly given when an invalid sample
     structure is used in _vary_structure
     """
-    structure = Mock(spec=None)
+    refnx_sample.base_structures = [Mock(spec=None)]
     with pytest.raises(RuntimeError):
-        Sample._vary_structure(structure)
+        Sample._vary_structure(refnx_sample)
 
 
 def test_reflectivity_profile_length(refnx_sample):
