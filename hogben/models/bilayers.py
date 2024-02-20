@@ -627,8 +627,19 @@ class BilayerDPPC(BaseLipid):
 
         self.labels = ['dDPPC-RaLPS-D2O', 'dDPPC-RaLPS-SMW', 'dDPPC-RaLPS-H2O']
         self.distances = np.linspace(-30, 110, 500)
-
-        self.contrast_slds = [6.14, 2.07, -0.56]
+        self.sld1 = refnx.analysis.Parameter(
+            -0.56, 'Contrast 1', (-0.56, 6.14)
+        )
+        self.sld2 = refnx.analysis.Parameter(
+            2.07, 'Contrast 2', (-0.56, 6.14)
+        )
+        self.sld3 = refnx.analysis.Parameter(
+            6.14, 'Contrast 3', (-0.56, 6.14)
+        )
+        self.sld1.optimize = False
+        self.sld2.optimize = False
+        self.sld3.optimize = False
+        self.contrast_slds = [self.sld1, self.sld3]
         self.scale = 0.8
         self.bkgs = [4.6e-6, 8.6e-6, 8.7e-6]
         self.dq = 4
@@ -647,8 +658,9 @@ class BilayerDPPC(BaseLipid):
             5.5, 'Si/SiO2 Roughness', (3, 8)
         )
         self.sio2_thick = refnx.analysis.Parameter(
-            13.4, 'SiO2 Thickness', (10, 30)
+            13.4, 'SiO2 Thickness', (10, 300)
         )
+        self.sio2_thick.optimize = False
         self.sio2_rough = refnx.analysis.Parameter(
             3.2, 'SiO2/Bilayer Roughness', (2, 5)
         )
@@ -682,12 +694,19 @@ class BilayerDPPC(BaseLipid):
         self.asym_value = refnx.analysis.Parameter(
             0.95, 'Asymmetry Value', (0, 1)
         )
+        self.ul_thick = refnx.analysis.Parameter(125, 'Underlayer Thickness', (0, 250))
+        self.ul_nsld = refnx.analysis.Parameter(4, 'Underlayer Nuclear SLD', (1.5, 7))
+        self.ul_msld = refnx.analysis.Parameter(2.7, 'Underlayer Magnetic SLD', (0, 6))
+        self.ul_thick.optimize = True
+        self.ul_nsld.optimize = True
+        self.ul_msld.optimize = True
+
 
         self.params = [
-            self.si_rough,
-            self.sio2_thick,
-            self.sio2_rough,
-            self.sio2_solv,
+     #       self.si_rough,
+     #       self.sio2_thick,
+      #      self.sio2_rough,
+       #     self.sio2_solv,
             self.inner_hg_thick,
             self.inner_hg_solv,
             self.bilayer_rough,
@@ -799,8 +818,12 @@ class BilayerDPPC(BaseLipid):
             self.bilayer_rough,
             vfsolv=self.core_solv,
         )
-
+        from hogben.models.samples import MagneticLayerSLD
         solution = refnx.reflect.SLD(contrast_sld)(0, self.bilayer_rough)
+        ul_slab = MagneticLayerSLD(SLDn=self.ul_nsld, SLDm=self.ul_msld,
+                                      thick=self.ul_thick, rough=3, underlayer=True)
+        layer1 = refnx.reflect.SLD(2.5, name="Layer 1")(thick=65,
+                                                        rough=4)
 
         # Add the underlayers if specified.
         if underlayers is None:
@@ -808,10 +831,12 @@ class BilayerDPPC(BaseLipid):
                 self.sio2_thick,
                 self.sio2_sld,
                 self.si_rough,
-                vfsolv=self.sio2_solv,
+          #      vfsolv=self.sio2_solv,
             )
             return (
                 substrate
+                | sio2
+                | ul_slab
                 | sio2
                 | inner_hg
                 | inner_tg
@@ -833,7 +858,7 @@ class BilayerDPPC(BaseLipid):
                 )  # Default 2 roughness.
                 structure |= underlayer
 
-            return structure | inner_hg | inner_tg | outer_tg | core | solution
+            return structure | ul_slab | inner_hg | inner_tg | outer_tg | core | solution
 
 
 if __name__ == '__main__':

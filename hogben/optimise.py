@@ -29,9 +29,6 @@ def optimise_parameters(sample, angle_times):
         print(f"{param.name}: {sig_fig_round(value, 3)}")
         param.value = value
 
-    for param, value in zip(sample.get_optimization_parameters(), res):
-        sample.scan_parameter(param, angle_times)
-
     fisher = Fisher.from_sample(sample, angle_times).min_eigenval
     sample_no_ul = copy.deepcopy(sample)._remove_underlayers()
     angle_times_no_ul = []
@@ -44,9 +41,12 @@ def optimise_parameters(sample, angle_times):
         f"Fisher, polarised experiment with underlayer: {sig_fig_round(fisher, 3)}")
     print(
         f"Fisher, unpolarised experiment without underlayer: {sig_fig_round(fisher_no_ul, 3)},")
-    ratio = sig_fig_round((fisher / fisher_no_ul) * 100, 3)
-    print(f"Improvement by using magnetic reference layer: {ratio - 100}% \n")
+    ratio = sig_fig_round((fisher / fisher_no_ul) * 100 - 100, 3)
+    print(f"Improvement by using magnetic reference layer: {ratio}% \n")
     print("----------------------")
+    for param, value in zip(sample.get_optimization_parameters(), res):
+        sample.scan_parameter(param, angle_times)
+
     sample.sld_profile()
     sample.reflectivity_profile()
     return sample

@@ -1,10 +1,11 @@
 """Base classes for different sample types """
 
-import os
+import os, copy
 from abc import ABC, abstractmethod
 from typing import Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import refnx.dataset
 import refnx.reflect
@@ -12,7 +13,7 @@ import refnx.analysis
 from refnx.reflect import ReflectModel
 
 from hogben.simulate import SimulateReflectivity
-from hogben.utils import Fisher, Sampler, save_plot, flatten
+from hogben.utils import Fisher, Sampler, save_plot, flatten, sig_fig_round
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -71,6 +72,44 @@ class BaseSample(VariableAngle):
         """Runs nested sampling on measured or simulated data of the sample."""
         pass
 
+    def scan_parameter(self, param, angle_times):
+        lb, ub = param.bounds.lb, param.bounds.ub
+        old_value = param.value
+        param_range = np.linspace(lb, ub, 100)
+        eigenvals = []
+        fig, ax = plt.subplots()
+        for value in param_range:
+            param.value = value
+            eigenvals.append(Fisher.from_sample(self, angle_times).min_eigenval)
+        ax.plot(param_range, eigenvals)
+        ax.set_title(param.name)
+        ax.set_ylabel("Minimum eigenvalue")
+        ax.set_xlabel("Parameter value")
+
+        param.value = old_value
+
+
+    @property
+    def underlayers_indices(self):
+        underlayer_list = []
+        if not hasattr(self, "base_structures"):
+            self.base_structures = self.structures
+        for structure in self.base_structures:
+            underlayers = []
+            for index, layer in enumerate(structure):
+                if hasattr(layer, "underlayer") and layer.underlayer:
+                    underlayers.append(index)
+            underlayer_list.append(underlayers)
+        return underlayer_list
+
+    def _remove_underlayers(self):
+        delete_index = self.underlayers_indices
+        delete_index.reverse()
+        for structure, indices in zip(self.structures, delete_index):
+            for index in indices:
+                del structure[index]
+        return self
+
     def get_optimization_parameters(self):
         """Get list of parameters that are varying
         Current implementation won't win any beauty prices, but works as
@@ -111,6 +150,168 @@ class BaseSample(VariableAngle):
                     params.extend([_p for _p in p.dependencies() if _p.vary])
         return list(set(params))
 
+    def get_models(self):
+        # Add code to set background for each structure with D2O
+        return [refnx.reflect.ReflectModel(structure,
+                                       scale=self.scale,
+                                       bkg=self.bkg,
+                                       dq=self.dq)
+            for structure in self.get_structures()]
+
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        spin_structures = []
+        from hogben.models.samples import MagneticLayerSLD
+        if not hasattr(self, "base_structures"):
+            self.base_structures = self.structures
+        for structure in self.base_structures:
+            magnetic = False
+            up_structure = structure.copy()
+            down_structure = structure.copy()
+            for i, layer in enumerate(structure):
+                if isinstance(layer, MagneticLayerSLD):
+                    magnetic = True
+                    up_structure[i] = layer.spin_up
+                    down_structure[i] = layer.spin_down
+            if magnetic:
+                spin_structures.extend([up_structure, down_structure])
+            else:
+                spin_structures.extend([structure.copy()])
+        if magnetic:
+            return spin_structures
+        return self.base_structures
+
+    def sld_profile(self, save_path=None, single=True):
+        """Plots the SLD profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save SLD profile to.
+            single (bool): whether to plot all profiles on a single plot or
+            separate ones.
+
+        """
+        # Create a figure and axes based on the 'single' parameter
+        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        for i, (z, slds) in enumerate(self._get_sld_profile()):
+            # Create a new subplot for each profile if not 'single'
+            if self.underlayers_indices[0]:
+                label = \
+                    self.get_structures()[i][self.underlayers_indices[0][0]].name
+            else:
+                label = f"SLD profile {i}"
+
+            # Create a new subplot for each profile if not 'single'
+            if not single:
+                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
+                ax.set_title(f"SLD Profile {label}")
+                fig.subplots_adjust(hspace=0.5)
+            ax.plot(z, slds, label=label)
+
+            ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11,
+                          weight='bold')
+            ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$',
+                          fontsize=11, weight='bold')
+            # Add a legend if 'single'
+            if single:
+                ax.set_title("SLD Profile")
+                ax.legend()
+
+        # Save the plot.
+        if save_path:
+            save_path = os.path.join(save_path, self.name)
+            save_plot(fig, save_path, 'sld_profile')
+
+    def _get_sld_profile(self):
+        """
+        Obtains the SLD profile of the sample, in terms of z (depth) vs SLD
+
+        Returns:
+            numpy.ndarray: depth
+            numpy.ndarray: SLD values
+        """
+        return [structure.sld_profile() for structure in self.get_structures()]
+
+    def reflectivity_profile(self,
+                             save_path: str = None,
+                             q_min: float = 0.005,
+                             q_max: float = 0.4,
+                             points: int = 500,
+                             scale: float = 1,
+                             bkg: float = 1e-7,
+                             dq: float = 2,
+                             single = True,
+                             ) -> None:
+        """Plots the reflectivity profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save reflectivity profile to.
+            q_min (float): minimum Q value to plot.
+            q_max (float): maximum Q value to plot.
+            points (int): number of points to plot.
+            scale (float): experimental scale factor.
+            bkg (float): level of instrument background noise.
+            dq (float): instrument resolution.
+
+        """
+        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
+                                              bkg, dq)
+        for i, (q, r) in enumerate(profiles):
+            if self.underlayers_indices[0]:
+                label = \
+                    self.get_structures()[i][self.underlayers_indices[0][0]].name
+            else:
+                label = f"Reflectivity profile {i}"
+
+            # Create a new subplot for each profile if not 'single'
+            if not single:
+                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
+                ax.set_title(f"Reflectivity profile {label}")
+                fig.subplots_adjust(hspace=0.5)
+
+            # Plot Q versus model reflectivity.
+            ax.plot(q, r, label=label)
+
+            x_label = '$\mathregular{Q\ (Å^{-1})}$'
+            y_label = 'Reflectivity (arb.)'
+
+            ax.set_xlabel(x_label, fontsize=11, weight='bold')
+            ax.set_ylabel(y_label, fontsize=11, weight='bold')
+            ax.set_yscale('log')
+
+            # Add a legend if 'single'
+            if single:
+                ax.set_title(f"Reflectivity profile")
+                ax.legend()
+
+
+        if save_path:
+            # Save the plot.
+            save_path = os.path.join(save_path, self.name)
+            save_plot(fig, save_path, 'reflectivity_profile')
+
+    def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
+        """
+        Obtains the reflectivity profile of the sample, in terms of q
+        vs r
+
+        Returns:
+            numpy.ndarray: q values at each reflectivity point
+            numpy.ndarray: model reflectivity values
+        """
+        profiles = []
+        for structure in self.get_structures():
+            # Geometriaclly-space Q points over the specified range.
+            q = np.geomspace(q_min, q_max, points)
+
+            # Determine if the structure was defined in refnx.
+            model = refnx.reflect.ReflectModel(structure, scale=scale,
+                                               bkg=bkg, dq=dq)
+            r = SimulateReflectivity(model).reflectivity(q)
+            profiles.append((q, r))
+        return profiles
 
 class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     """Abstract class representing the base class for a lipid model."""
@@ -210,96 +411,6 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
     def _using_conditions(self):
         """Creates a structure describing the given measurement conditions."""
         pass
-
-    def sld_profile(self,
-                    save_path: str,
-                    filename: str = 'sld_profile',
-                    ylim: Optional[tuple] = None,
-                    legend: bool = True) -> None:
-        """Plots the SLD profile of the lipid sample.
-
-        Args:
-            save_path (str): path to directory to save SLD profile to.
-            filename (str): file name to use when saving the SLD profile.
-            ylim (tuple): limits to place on the SLD profile y-axis.
-            legend (bool): whether to include a legend in the SLD profile.
-
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-        # Plot the SLD profile for each measured contrast.
-        for structure in self.structures:
-            ax.plot(*structure.sld_profile(self.distances))
-
-        x_label = '$\mathregular{Distance\ (\AA)}$'
-        y_label = '$\mathregular{SLD\ (10^{-6} \AA^{-2})}$'
-
-        ax.set_xlabel(x_label, fontsize=11, weight='bold')
-        ax.set_ylabel(y_label, fontsize=11, weight='bold')
-
-        # Limit the y-axis if specified.
-        if ylim:
-            ax.set_ylim(*ylim)
-
-        # Add a legend if specified.
-        if legend:
-            ax.legend(self.labels, loc='upper left')
-
-        # Save the plot.
-        save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, filename)
-
-    def reflectivity_profile(self,
-                             save_path: str,
-                             filename: str = 'reflectivity_profile') -> None:
-        """Plots the reflectivity profile of the lipid sample.
-
-        Args:
-            save_path (str): path to directory to save profile to.
-            filename (str): file name to use when saving the profile.
-
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-        # Iterate over each measured contrast.
-        colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        for i, objective in enumerate(self.objectives):
-            # Get the measured data and calculate the model reflectivity.
-            q, r, dr = objective.data.x, objective.data.y, objective.data.y_err
-            r_model = objective.model(q)
-
-            # Offset the data, for clarity.
-            offset = 10 ** (-2 * i)
-            r *= offset
-            dr *= offset
-            r_model *= offset
-
-            # Add the offset in the label.
-            label = self.labels[i]
-            if offset != 1:
-                label += ' $\\mathregular{(x10^{-' + str(2 * i) + '})}$'
-
-            # Plot the measured data and the model reflectivity.
-            ax.errorbar(q, r, dr,
-                        marker='o', ms=3, lw=0, elinewidth=1, capsize=1.5,
-                        color=colours[i], label=label)
-            ax.plot(q, r_model, color=colours[i], zorder=20)
-
-        x_label = '$\\mathregular{Q\\ (Å^{-1})}$'
-        y_label = 'Reflectivity (arb.)'
-
-        ax.set_xlabel(x_label, fontsize=11, weight='bold')
-        ax.set_ylabel(y_label, fontsize=11, weight='bold')
-        ax.set_xscale('log')
-        ax.set_yscale('log')
-        ax.set_ylim(1e-10, 3)
-        ax.legend()
-
-        # Save the plot.
-        save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, filename)
 
     def nested_sampling(self,
                         contrasts: list,

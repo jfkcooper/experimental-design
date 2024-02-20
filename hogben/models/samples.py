@@ -102,17 +102,6 @@ class Sample(BaseSample):
         self.dq = settings.get('dq', 0.02)
 
     @property
-    def underlayers_indices(self):
-        underlayer_list = []
-        for structure in self.base_structures:
-            underlayers = []
-            for index, layer in enumerate(structure):
-                if hasattr(layer, "underlayer") and layer.underlayer:
-                    underlayers.append(index)
-            underlayer_list.append(underlayers)
-        return underlayer_list
-
-    @property
     def params(self):
         return self.get_varying_parameters()
 
@@ -154,14 +143,6 @@ class Sample(BaseSample):
 
             return params
 
-    def _remove_underlayers(self):
-        delete_index = self.underlayers_indices
-        delete_index.reverse()
-        for structure, indices in zip(self.base_structures, delete_index):
-            for index in indices:
-                del structure[index]
-        return self
-
     @property
     def structures(self):
         return self.get_structures(
@@ -177,16 +158,19 @@ class Sample(BaseSample):
         Get a list of the possible sample structures.
         """
         spin_structures = []
-        magnetic = False
         for structure in self.base_structures:
+            magnetic = False
+            up_structure = structure.copy()
+            down_structure = structure.copy()
             for i, layer in enumerate(structure):
                 if isinstance(layer, MagneticLayerSLD):
                     magnetic = True
-                    up_structure = structure.copy()
-                    down_structure = structure.copy()
                     up_structure[i] = layer.spin_up
                     down_structure[i] = layer.spin_down
-                    spin_structures.extend([up_structure, down_structure])
+            if magnetic:
+                spin_structures.extend([up_structure, down_structure])
+            else:
+                spin_structures.extend([structure.copy()])
         if magnetic:
             return spin_structures
         return self.base_structures
@@ -203,7 +187,7 @@ class Sample(BaseSample):
                                        scale=self.scale,
                                        bkg=self.bkg,
                                        dq=self.dq)
-            for structure in self.base_structures]
+            for structure in self.structures]
 
     def angle_info(self, angle_times, contrasts=None):
         """Calculates the Fisher information matrix for a sample measured
@@ -222,141 +206,10 @@ class Sample(BaseSample):
         qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
 
-    def sld_profile(self, save_path=None, single=True):
-        """Plots the SLD profile of the sample.
-
-        Args:
-            save_path (str): path to directory to save SLD profile to.
-            single (bool): whether to plot all profiles on a single plot or
-            separate ones.
-
-        """
-        # Create a figure and axes based on the 'single' parameter
-        fig, ax = plt.subplots() if single else (plt.figure(), None)
-        for i, (z, slds) in enumerate(self._get_sld_profile()):
-            # Create a new subplot for each profile if not 'single'
-            if self.underlayers_indices[0]:
-                label = \
-                    self.structures[i][self.underlayers_indices[0][0]].name
-            else:
-                label = f"SLD profile {i}"
-
-            # Create a new subplot for each profile if not 'single'
-            if not single:
-                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
-                ax.set_title(f"SLD Profile {label}")
-                fig.subplots_adjust(hspace=0.5)
-            ax.plot(z, slds, label=label)
-
-            ax.set_xlabel('$\mathregular{Distance\ (\AA)}$', fontsize=11,
-                          weight='bold')
-            ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$',
-                          fontsize=11, weight='bold')
-            # Add a legend if 'single'
-            if single:
-                ax.set_title("SLD Profile")
-                ax.legend()
-
-        # Save the plot.
-        if save_path:
-            save_path = os.path.join(save_path, self.name)
-            save_plot(fig, save_path, 'sld_profile')
-
-    def _get_sld_profile(self):
-        """
-        Obtains the SLD profile of the sample, in terms of z (depth) vs SLD
-
-        Returns:
-            numpy.ndarray: depth
-            numpy.ndarray: SLD values
-        """
-        return [structure.sld_profile() for structure in self.structures]
-
-    def reflectivity_profile(self,
-                             save_path: str = None,
-                             q_min: float = 0.005,
-                             q_max: float = 0.4,
-                             points: int = 500,
-                             scale: float = 1,
-                             bkg: float = 1e-7,
-                             dq: float = 2,
-                             single = True,
-                             ) -> None:
-        """Plots the reflectivity profile of the sample.
-
-        Args:
-            save_path (str): path to directory to save reflectivity profile to.
-            q_min (float): minimum Q value to plot.
-            q_max (float): maximum Q value to plot.
-            points (int): number of points to plot.
-            scale (float): experimental scale factor.
-            bkg (float): level of instrument background noise.
-            dq (float): instrument resolution.
-
-        """
-        fig, ax = plt.subplots() if single else (plt.figure(), None)
-        profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
-                                              bkg, dq)
-        for i, (q, r) in enumerate(profiles):
-            if self.underlayers_indices[0]:
-                label = \
-                    self.structures[i][self.underlayers_indices[0][0]].name
-            else:
-                label = f"Reflectivity profile {i}"
-
-            # Create a new subplot for each profile if not 'single'
-            if not single:
-                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
-                ax.set_title(f"Reflectivity profile {label}")
-                fig.subplots_adjust(hspace=0.5)
-
-            # Plot Q versus model reflectivity.
-            ax.plot(q, r, label=label)
-
-            x_label = '$\mathregular{Q\ (Å^{-1})}$'
-            y_label = 'Reflectivity (arb.)'
-
-            ax.set_xlabel(x_label, fontsize=11, weight='bold')
-            ax.set_ylabel(y_label, fontsize=11, weight='bold')
-            ax.set_yscale('log')
-
-            # Add a legend if 'single'
-            if single:
-                ax.set_title(f"Reflectivity profile")
-                ax.legend()
-
-
-        if save_path:
-            # Save the plot.
-            save_path = os.path.join(save_path, self.name)
-            save_plot(fig, save_path, 'reflectivity_profile')
-
-
-    def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
-        """
-        Obtains the reflectivity profile of the sample, in terms of q
-        vs r
-
-        Returns:
-            numpy.ndarray: q values at each reflectivity point
-            numpy.ndarray: model reflectivity values
-        """
-        profiles = []
-        for structure in self.structures:
-            # Geometriaclly-space Q points over the specified range.
-            q = np.geomspace(q_min, q_max, points)
-
-            # Determine if the structure was defined in refnx.
-            model = refnx.reflect.ReflectModel(structure, scale=scale,
-                                               bkg=bkg, dq=dq)
-            r = SimulateReflectivity(model).reflectivity(q)
-            profiles.append((q, r))
-        return profiles
-
     def scan_parameter(self, param, angle_times):
         lb, ub = param.bounds.lb, param.bounds.ub
         old_value = param.value
-        param_range = np.linspace(lb, ub, 150)
+        param_range = np.linspace(lb, ub, 100)
         eigenvals = []
         fig, ax = plt.subplots()
         for value in param_range:
