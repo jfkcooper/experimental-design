@@ -150,6 +150,27 @@ class Fisher():
         self.models = models
         self.step = step
 
+    @classmethod
+    def from_sample(cls,
+                    sample,
+                    angle_times,
+                    instrument='OFFSPEC'):
+        """
+        Get Fisher object using a sample.
+        Seperate constructor for magnetic simulation maybe? Probably depends
+        on new simulate function either way.
+        """
+        qs, counts = [], []
+        models = sample.get_models()
+        for model in models:
+            sim = SimulateReflectivity(model, angle_times,
+                                       inst_or_path=instrument)
+            data = sim.simulate()
+            qs.append(data[0])
+            counts.append(data[3])
+        xi = sample.get_varying_parameters()
+        return cls(qs, xi, counts, models)
+
     @property
     def fisher_information(self) -> np.ndarray:
         """Calculate and return the Fisher information matrix.
@@ -295,3 +316,23 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
+
+def flatten(seq):
+    for el in seq:
+        try:
+            iter(el)
+            if isinstance(el, (str, bytes)):
+                raise TypeError
+            yield from flatten(el)
+        except TypeError:
+            yield el
+
+
+def sig_fig_round(number, digits):
+    """Round a number to the specified number of significant digits."""
+    try:
+        # Convert to scientific notation, and get power
+        power = "{:e}".format(float(number)).split("e")[1]
+    except IndexError:
+        return None
+    return round(float(number), -(int(power) - digits + 1))

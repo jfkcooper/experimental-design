@@ -31,21 +31,29 @@ class Sample(BaseSample):
 
     """
 
-    def __init__(self, structure):
+    def __init__(self, structure, **settings):
         """
         Initializes a sample given a structure, and sets the sample name and
         parameters
 
         Args:
-            structure: Sample structure defined in the refnx model
+            structure: Sample structure defined in the refnx or refl1d model
         """
-        self.structure = structure
-        self.name = structure.name
-        self.params = Sample.__vary_structure(structure)
+        if isinstance(structure, refnx.reflect.Structure):
+            structure = [structure]
+        self.structures = structure
+        self.name = structure[0].name
+        self.scale = settings.get('scale', 1)
+        self.bkg = settings.get('bkg', 5e-6)
+        self.dq = settings.get('dq', 2)
+        self.polarised = settings.get('polarised', True)
 
-    @staticmethod
-    def __vary_structure(structure, bound_size=0.2):
-        """Varies the SLD and thickness of each layer of a given `structure`.
+    @property
+    def params(self):
+        return self.get_varying_parameters()
+
+    def _vary_structure(self, bound_size=0.2):
+        """Varies the SLD and thickness of each layer in the sample structures.
 
         Args:
             structure (refnx.reflect.Structure): structure to vary.
@@ -55,27 +63,36 @@ class Sample(BaseSample):
             list: varying parameters of sample.
 
         """
-        params = []
+        for structure in self._structures:
+            params = []
+            # The structure was defined in refnx.
+            if isinstance(structure, refnx.reflect.Structure):
+                # Vary the SLD and thickness of each coprimponent (layer).
+                for component in structure[1:-1]:
+                    sld = component.sld.real
+                    sld_bounds = (
+                        sld.value * (1 - bound_size),
+                        sld.value * (1 + bound_size),
+                    )
+                    sld.setp(vary=True, bounds=sld_bounds)
+                    params.append(sld)
 
-        # Vary the SLD and thickness of each component (layer).
-        for component in structure[1:-1]:
-            sld = component.sld.real
-            sld_bounds = (
-                sld.value * (1 - bound_size),
-                sld.value * (1 + bound_size),
-            )
-            sld.setp(vary=True, bounds=sld_bounds)
-            params.append(sld)
+                    thick = component.thick
+                    thick_bounds = (
+                        thick.value * (1 - bound_size),
+                        thick.value * (1 + bound_size),
+                    )
+                    thick.setp(vary=True, bounds=thick_bounds)
+                    params.append(thick)
 
-            thick = component.thick
-            thick_bounds = (
-                thick.value * (1 - bound_size),
-                thick.value * (1 + bound_size),
-            )
-            thick.setp(vary=True, bounds=thick_bounds)
-            params.append(thick)
+            else:
+                raise RuntimeError('invalid structure given')
 
-        return params
+            return params
+
+    @property
+    def models(self):
+        return self.get_models()
 
     def angle_info(self, angle_times, contrasts=None):
         """Calculates the Fisher information matrix for a sample measured
@@ -89,109 +106,10 @@ class Sample(BaseSample):
 
         """
         # Return the Fisher information matrix calculated from simulated data.
-        model = refnx.reflect.ReflectModel(self.structure)
+        model = refnx.reflect.ReflectModel(self.get_structures()[0])
         data = SimulateReflectivity(model, angle_times).simulate()
         qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
-
-
-    def sld_profile(self, save_path):
-        """Plots the SLD profile of the sample.
-
-        Args:
-            save_path (str): path to directory to save SLD profile to.
-
-        """
-        # Determine if the structure was defined in refnx.
-
-        z, slds = self._get_sld_profile()
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-        # Plot the SLD profile.
-        ax.plot(z, slds, color='black', label=self.name)
-
-        x_label = '$\mathregular{Distance\ (\AA)}$'
-        y_label = '$\mathregular{SLD\ (10^{-6} \AA^{-2})}$'
-
-        ax.set_xlabel(x_label, fontsize=11, weight='bold')
-        ax.set_ylabel(y_label, fontsize=11, weight='bold')
-
-        # Save the plot.
-        save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'sld_profile')
-
-    def _get_sld_profile(self):
-        """
-        Obtains the SLD profile of the sample, in terms of z (depth) vs SLD
-
-        Returns:
-            numpy.ndarray: depth
-            numpy.ndarray: SLD values
-        """
-        z, slds = self.structure.sld_profile()
-
-        return z, slds
-
-    def reflectivity_profile(self,
-                             save_path: str,
-                             q_min: float = 0.005,
-                             q_max: float = 0.4,
-                             points: int = 500,
-                             scale: float = 1,
-                             bkg: float = 1e-7,
-                             dq: float = 2,
-                             ) -> None:
-        """Plots the reflectivity profile of the sample.
-
-        Args:
-            save_path (str): path to directory to save reflectivity profile to.
-            q_min (float): minimum Q value to plot.
-            q_max (float): maximum Q value to plot.
-            points (int): number of points to plot.
-            scale (float): experimental scale factor.
-            bkg (float): level of instrument background noise.
-            dq (float): instrument resolution.
-
-        """
-        # Calculate the model reflectivity.
-        q, r = self._get_reflectivity_profile(q_min, q_max, points, scale,
-                                              bkg, dq)
-
-        # Plot Q versus model reflectivity.
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(q, r, color='black')
-
-        x_label = '$\mathregular{Q\ (Å^{-1})}$'
-        y_label = 'Reflectivity (arb.)'
-
-        ax.set_xlabel(x_label, fontsize=11, weight='bold')
-        ax.set_ylabel(y_label, fontsize=11, weight='bold')
-        ax.set_yscale('log')
-
-        # Save the plot.
-        save_path = os.path.join(save_path, self.name)
-        save_plot(fig, save_path, 'reflectivity_profile')
-
-    def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
-        """
-        Obtains the reflectivity profile of the sample, in terms of q
-        vs r
-
-        Returns:
-            numpy.ndarray: q values at each reflectivity point
-            numpy.ndarray: model reflectivity values
-        """
-        # Geometriaclly-space Q points over the specified range.
-        q = np.geomspace(q_min, q_max, points)
-
-        # Determine if the structure was defined in refnx.
-        model = refnx.reflect.ReflectModel(self.structure, scale=scale,
-                                           bkg=bkg, dq=dq)
-        r = SimulateReflectivity(model).reflectivity(q)
-        return q, r
 
     def nested_sampling(self,
                         angle_times: list,
@@ -208,7 +126,7 @@ class Sample(BaseSample):
 
         """
         # Simulate data for the sample.
-        model = refnx.reflect.ReflectModel(self.structure)
+        model = refnx.reflect.ReflectModel(self.get_structures()[0])
         data = SimulateReflectivity(model, angle_times).simulate()
 
         objective = Objective(model, data)

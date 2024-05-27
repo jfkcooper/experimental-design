@@ -180,6 +180,68 @@ class Optimiser:
         )
         return res[:num_contrasts], res[num_contrasts:], val
 
+    def optimise_parameters(
+        self,
+        angle_times,
+        workers=-1,
+        verbose=True,
+    ) -> tuple:
+        """Finds the optimal underlayer thicknesses and SLDs of a sample.
+
+        Args:
+            angle_times (list): points and times for each angle to simulate.
+            contrasts (list): contrasts to simulate.
+            thick_bounds (tuple): underlayer thicknesses to consider.
+            sld_bounds (tuple): underlayer SLDs to consider.
+            workers (int): number of CPU cores to use when optimising.
+            verbose (bool): whether to display progress or not.
+
+        Returns:
+            tuple: optimised underlayer thicknesses and SLD, and the
+                   corresponding optimisation function value.
+
+        """
+        # Check that the underlayers of the sample can be varied.
+        bounds = []
+        params = self.sample.get_optimization_parameters()
+        for parameter in params:
+            if hasattr(parameter, 'optimize') and parameter.optimize:
+                bounds += [(parameter.bounds.lb, parameter.bounds.ub)]
+        # Arguments for the optimisation function.
+        args = [params, angle_times]
+
+        # Optimise underlayer thicknesses and SLDs, and return the results.
+        res, val = Optimiser.__optimise(
+            self._parameter_func, bounds, [], args, workers, verbose
+        )
+        return res, val
+
+    def _parameter_func(self,
+                          x: list,
+                          params,
+                          angle_times: type) -> float:
+        """Defines the function for optimising an experiment's underlayers.
+
+        Args:
+            x (list): underlayer thicknesses and SLDs to calculate with.
+            angle_times (type): points and times for each angle.
+            contrasts (list): contrasts of the experiment, if applicable.
+
+        Returns:
+            float: negative of minimum eigenvalue using given conditions.
+
+        """
+        # Extract the underlayer thicknesses and SLDs from the given `x` list.
+        i = 0
+        for param in params:
+            if hasattr(param, 'optimize') and param.optimize:
+                param.value = x[i]
+                i += 1
+        fisher = Fisher.from_sample(self.sample, angle_times)
+        # Return negative of the minimum eigenvalue as algorithm is minimising.
+        return -fisher.min_eigenval
+
+
 
     def optimise_underlayers(
         self,
