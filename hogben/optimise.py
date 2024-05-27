@@ -13,6 +13,30 @@ from hogben.models.base import (
     VariableUnderlayer,
 )
 
+def optimise_parameters(sample, angle_times, polarised = None):
+    if polarised is None:
+        polarised = sample.polarised
+    sample.polarised = polarised
+    optimiser = Optimiser(sample)
+    res, val = optimiser.optimise_parameters(angle_times, verbose=False)
+    print("The parameters with the highest information could be found at:")
+    for param, value in zip(sample.get_optimization_parameters(), res):
+        print(f"{param.name}: {sig_fig_round(value, 3)}")
+        param.value = value
+
+    angle_times_ul = []
+    for condition in angle_times:
+        angle, points, time = condition
+        time_ = time / 4 if polarised else time
+        angle_times_ul.append((angle, points, time_))
+
+    sample.scan_parameters(sample.get_optimization_parameters(), angle_times_ul)
+    sample.sld_profile()
+    sample.reflectivity_profile()
+
+
+    return sample
+
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
 
