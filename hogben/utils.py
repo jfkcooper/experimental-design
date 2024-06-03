@@ -168,7 +168,7 @@ class Fisher():
             data = sim.simulate()
             qs.append(data[0])
             counts.append(data[3])
-        xi = sample.get_varying_parameters()
+        xi = sample.get_param_by_attribute("vary")
         return cls(qs, xi, counts, models)
 
     @property

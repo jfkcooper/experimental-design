@@ -12,30 +12,39 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
+from hogben.utils import Fisher, sig_fig_round
+from hogben.visualise import scan_parameters
 
-def optimise_parameters(sample, angle_times, polarised = None):
-    if polarised is None:
-        polarised = sample.polarised
-    sample.polarised = polarised
+
+def optimise_parameters(sample, angle_times, visualise=True):
+    fisher = Fisher.from_sample(sample, angle_times)
+    eigenval_initial = fisher.min_eigenval
+
     optimiser = Optimiser(sample)
     res, val = optimiser.optimise_parameters(angle_times, verbose=False)
+    optimize_params = sample.get_param_by_attribute("optimize")
+
     print("The parameters with the highest information could be found at:")
-    for param, value in zip(sample.get_optimization_parameters(), res):
-        print(f"{param.name}: {sig_fig_round(value, 3)}")
+    for param, value in zip(optimize_params, res):
+        print(f'{param.name}: {sig_fig_round(value, 3)}')
         param.value = value
 
-    angle_times_ul = []
-    for condition in angle_times:
-        angle, points, time = condition
-        time_ = time / 4 if polarised else time
-        angle_times_ul.append((angle, points, time_))
+    eigenval_after = fisher.min_eigenval
+    print(f"-----------------------------------------------------------------")
+    print(f"The minimum eigenvalue of the Fisher Information before "
+          f"optimization is {sig_fig_round(eigenval_initial, 3)}")
+    print(f"After the optimization, the minimum eigenvalue of the Fisher"
+          f" Information is {sig_fig_round(fisher.min_eigenval, 3)}")
+    print(f"The information content is thus"
+          f" {sig_fig_round(eigenval_after / eigenval_initial, 3)}"
+          f" times as large after optimization.")
 
-    sample.scan_parameters(sample.get_optimization_parameters(), angle_times_ul)
-    sample.sld_profile()
-    sample.reflectivity_profile()
-
-
+    if visualise:
+        scan_parameters(sample, optimize_params, angle_times)
+        sample.sld_profile()
+        sample.reflectivity_profile()
     return sample
+
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -55,14 +64,14 @@ class Optimiser:
         self.sample = sample
 
     def optimise_angle_times(
-        self,
-        num_angles: int,
-        contrasts: Optional[list] = None,
-        total_time: float = 1000,
-        angle_bounds: tuple = (0.2, 4),
-        points: int = 100,
-        workers: int = -1,
-        verbose: bool = True,
+            self,
+            num_angles: int,
+            contrasts: Optional[list] = None,
+            total_time: float = 1000,
+            angle_bounds: tuple = (0.2, 4),
+            points: int = 100,
+            workers: int = -1,
+            verbose: bool = True,
     ) -> tuple:
         """Optimises the measurement angles and associated counting times
            of an experiment, given a fixed time budget.
@@ -119,13 +128,13 @@ class Optimiser:
         return res[:num_angles], res[num_angles:], val
 
     def optimise_contrasts(
-        self,
-        num_contrasts: int,
-        angle_splits: list,
-        total_time: float = 1000,
-        contrast_bounds: tuple = (-0.56, 6.36),
-        workers: int = -1,
-        verbose: bool = True,
+            self,
+            num_contrasts: int,
+            angle_splits: list,
+            total_time: float = 1000,
+            contrast_bounds: tuple = (-0.56, 6.36),
+            workers: int = -1,
+            verbose: bool = True,
     ) -> tuple:
         """Finds the optimal contrasts, given a fixed time budget.
 
@@ -181,10 +190,10 @@ class Optimiser:
         return res[:num_contrasts], res[num_contrasts:], val
 
     def optimise_parameters(
-        self,
-        angle_times,
-        workers=-1,
-        verbose=True,
+            self,
+            angle_times,
+            workers=-1,
+            verbose=True,
     ) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
@@ -203,7 +212,7 @@ class Optimiser:
         """
         # Check that the underlayers of the sample can be varied.
         bounds = []
-        params = self.sample.get_optimization_parameters()
+        params = self.sample.get_param_by_attribute("optimize")
         for parameter in params:
             if hasattr(parameter, 'optimize') and parameter.optimize:
                 bounds += [(parameter.bounds.lb, parameter.bounds.ub)]
@@ -217,9 +226,9 @@ class Optimiser:
         return res, val
 
     def _parameter_func(self,
-                          x: list,
-                          params,
-                          angle_times: type) -> float:
+                        x: list,
+                        params,
+                        angle_times: type) -> float:
         """Defines the function for optimising an experiment's underlayers.
 
         Args:
@@ -241,17 +250,15 @@ class Optimiser:
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
 
-
-
     def optimise_underlayers(
-        self,
-        num_underlayers,
-        angle_times,
-        contrasts,
-        thick_bounds=(0, 500),
-        sld_bounds=(1, 9),
-        workers=-1,
-        verbose=True,
+            self,
+            num_underlayers,
+            angle_times,
+            contrasts,
+            thick_bounds=(0, 500),
+            sld_bounds=(1, 9),
+            workers=-1,
+            verbose=True,
     ) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
@@ -318,7 +325,6 @@ class Optimiser:
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
-
 
     def _contrasts_func(self,
                         x: list,

@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import refnx.dataset
 import refnx.reflect
@@ -55,40 +56,32 @@ class VariableUnderlayer(ABC):
 class BaseSample(VariableAngle):
     """Abstract class representing a "standard" neutron reflectometry sample
     defined by a series of contiguous layers."""
+    def __init__(self):
+        self._structures = []
 
-    def get_optimization_parameters(self):
-        """Get list of parameters that are varying
-        Current implementation won't win any beauty prices, but works as
-        temporary solution. Will clean this a bit...
+    @abstractmethod
+    def get_structures(self):
         """
+        Get a list of the possible sample structures.
+        """
+        pass
+    @property
+    def structures(self):
+        return self.get_structures()
+
+    @structures.setter
+    def structures(self, structures):
+        self._structures = structures
+
+    def get_param_by_attribute(self, attr):
         params = []
         for model in self.get_models():
             for p in flatten(model.parameters):
-                if hasattr(p, "optimize") and p.optimize:
+                if hasattr(p, attr) and getattr(p, attr):
                     params.append(p)
                     continue
-                if len(p._deps):
-                    params.extend([_p for _p in p.dependencies() if hasattr(_p, "optimize") and _p.optimize])
-        return list(set(params))
-
-    def get_varying_parameters(self):
-        """Get list of parameters that are varying
-        Current implementation won't win any beauty prices, but works as
-        temporary solution. Will clean this a bit...
-        """
-        #if not hasattr(self, "model"):
-            # This is kinda a temp. workaround, for the predefined cases
-            # where no model is defined (so it doesn't crash on the lack
-            # of self.model.parameters).
-         #   return self.params
-        params = []
-        for model in self.get_models():
-            for p in flatten(model.parameters):
-                if p.vary:
-                    params.append(p)
-                    continue
-                if len(p._deps):
-                    params.extend([_p for _p in p.dependencies() if _p.vary])
+                if p._deps:
+                    params.extend([_p for _p in p.dependencies() if hasattr(_p, attr) and getattr(_p, attr)])
         return list(set(params))
 
     def get_models(self):
@@ -97,18 +90,7 @@ class BaseSample(VariableAngle):
                                        scale=self.scale,
                                        bkg=self.bkg,
                                        dq=self.dq)
-            for structure in self.structures()]
-
-
-    @abstractmethod
-    def sld_profile(self):
-        """Plots the SLD profile of the sample."""
-        pass
-
-    @abstractmethod
-    def reflectivity_profile(self):
-        """Plots the reflectivity profile of the sample."""
-        pass
+            for structure in self.get_structures()]
 
     @abstractmethod
     def nested_sampling(self):
@@ -233,7 +215,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax = fig.add_subplot(111)
 
         # Plot the SLD profile for each measured contrast.
-        for structure in self.structures:
+        for structure in self.get_structures():
             ax.plot(*structure.sld_profile(self.distances))
 
         x_label = '$\mathregular{Distance\ (\AA)}$'
@@ -299,6 +281,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylim(1e-10, 3)
+        ax.set_title('Reflectivity profile')
         ax.legend()
 
         # Save the plot.

@@ -16,6 +16,7 @@ from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
 from refnx.analysis import Objective
+from refnx.reflect import ReflectModel
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600
@@ -48,9 +49,15 @@ class Sample(BaseSample):
         self.dq = settings.get('dq', 2)
         self.polarised = settings.get('polarised', True)
 
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        return self._structures
+
     @property
     def params(self):
-        return self.get_varying_parameters()
+        return self.get_param_by_attribute("vary")
 
     def _vary_structure(self, bound_size=0.2):
         """Varies the SLD and thickness of each layer in the sample structures.
@@ -63,11 +70,11 @@ class Sample(BaseSample):
             list: varying parameters of sample.
 
         """
-        for structure in self._structures:
+        for structure in self.structures:
             params = []
             # The structure was defined in refnx.
             if isinstance(structure, refnx.reflect.Structure):
-                # Vary the SLD and thickness of each coprimponent (layer).
+                # Vary the SLD and thickness of each component (layer).
                 for component in structure[1:-1]:
                     sld = component.sld.real
                     sld_bounds = (
@@ -110,6 +117,116 @@ class Sample(BaseSample):
         data = SimulateReflectivity(model, angle_times).simulate()
         qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
+
+    def sld_profile(self, font_size = 17, save_path=None, single=True):
+        """Plots the SLD profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save SLD profile to.
+            single (bool): whether to plot all profiles on a single plot or
+            separate ones.
+
+        """
+        # Create a figure and axes based on the 'single' parameter
+        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        for i, (z, slds) in enumerate(self._get_sld_profile()):
+            # Create a new subplot for each profile if not 'single'
+            label = f"SLD profile {i}"
+
+            # Create a new subplot for each profile if not 'single'
+            if not single:
+                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
+                ax.set_title(f'SLD Profile {label}')
+                fig.subplots_adjust(hspace=0.5)
+            ax.set_xlim(min(z), max(z))
+            ax.plot(z, slds, label=label)
+
+            ax.set_xlabel('$\mathregular{Distance\ (\AA)}$')
+            ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$')
+            ax.set_title('SLD Profile')
+            ax.legend()
+
+        # Save the plot.
+        if save_path:
+            save_path = os.path.join(save_path, self.name)
+            save_plot(fig, save_path, 'sld_profile')
+
+    def _get_sld_profile(self):
+        """
+        Obtains the SLD profile of the sample, in terms of z (depth) vs SLD
+
+        Returns:
+            numpy.ndarray: depth
+            numpy.ndarray: SLD values
+        """
+        return [structure.sld_profile() for structure in self.get_structures()]
+
+    def reflectivity_profile(self,
+                             save_path: str = None,
+                             q_min: float = 0.005,
+                             q_max: float = 0.4,
+                             points: int = 500,
+                             scale: float = 1,
+                             bkg: float = 1e-7,
+                             dq: float = 2,
+                             single = True,
+                             ) -> None:
+        """Plots the reflectivity profile of the sample.
+
+        Args:
+            save_path (str): path to directory to save reflectivity profile to.
+            q_min (float): minimum Q value to plot.
+            q_max (float): maximum Q value to plot.
+            points (int): number of points to plot.
+            scale (float): experimental scale factor.
+            bkg (float): level of instrument background noise.
+            dq (float): instrument resolution.
+
+        """
+        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
+                                              bkg, dq)
+        for i, (q, r) in enumerate(profiles):
+            label = f"Reflectivity profile {i}"
+
+            # Plot Q versus model reflectivity.
+            ax.plot(q, r, label=label)
+
+            x_label = '$\mathregular{Q\ (Å^{-1})}$'
+            y_label = 'Reflectivity (arb.)'
+
+            ax.set_xlabel(x_label, fontsize=11, weight='bold')
+            ax.set_ylabel(y_label, fontsize=11, weight='bold')
+            ax.set_title("Reflectivity profile")
+            ax.set_yscale('log')
+            ax.legend()
+
+
+        if save_path:
+            # Save the plot.
+            save_path = os.path.join(save_path, self.name)
+            save_plot(fig, save_path, 'reflectivity_profile')
+
+
+    def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
+        """
+        Obtains the reflectivity profile of the sample, in terms of q
+        vs r
+
+        Returns:
+            numpy.ndarray: q values at each reflectivity point
+            numpy.ndarray: model reflectivity values
+        """
+        profiles = []
+        for structure in self.get_structures():
+            # Geometrically-space Q points over the specified range.
+            q = np.geomspace(q_min, q_max, points)
+
+            model = ReflectModel(structure, scale=scale,
+                                            bkg=bkg, dq=dq)
+            r = SimulateReflectivity(model).reflectivity(q)
+            profiles.append((q, r))
+        return profiles
 
     def nested_sampling(self,
                         angle_times: list,

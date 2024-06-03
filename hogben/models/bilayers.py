@@ -151,6 +151,12 @@ class BilayerPOPC(BaseLipid):
         # Call the BaseLipid constructor.
         super().__init__()
 
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        return self._structures
+
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define scattering lengths and densities of D2O and H2O.
@@ -413,6 +419,12 @@ class BilayerDMPC(BaseLipid):
 
         # Call the BaseLipid constructor.
         super().__init__()
+
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        return self._structures
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
@@ -718,6 +730,16 @@ class BilayerDPPC(BaseLipid):
 
         # Call the BaseLipid constructor.
         super().__init__()
+
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        structures = []
+        for sld in self.contrast_slds:
+            structures.append(self._using_conditions(sld))
+        self.structures = structures
+        return self._structures
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
