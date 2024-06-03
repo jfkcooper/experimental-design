@@ -3,20 +3,22 @@ import pytest
 import numpy as np
 
 from hogben.optimise import Optimiser
-from refnx.reflect import SLD as SLD_refnx
+from refnx.reflect import SLD
 from hogben.models.samples import Sample
 from hogben.models.bilayers import BilayerDMPC
 from unittest.mock import patch
-
+from hogben.utils import Fisher
 
 @pytest.fixture
 def refnx_sample():
     """Defines a structure describing a simple sample."""
-    air = SLD_refnx(0, name='Air')
-    layer1 = SLD_refnx(4, name='Layer 1')(thick=100, rough=2)
-    layer2 = SLD_refnx(8, name='Layer 2')(thick=150, rough=2)
-    substrate = SLD_refnx(2.047, name='Substrate')(thick=0, rough=2)
+    air = SLD(0, name='Air')
+    layer1 = SLD(4, name='Layer 1')(thick=100, rough=2)
+    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
     structure = air | layer1 | layer2 | substrate
+    # layer1.thick.vary = True
+    # layer2.thick.vary = True
     return Sample(structure)
 
 
@@ -97,6 +99,7 @@ def test_angle_times_func_result(refnx_sample):
     total_time = 10000
 
     optimiser = Optimiser(refnx_sample)
+    refnx_sample._vary_structure()
     result = optimiser._angle_times_func(angle_time_split, num_angles,
                                          contrasts, points, total_time)
 
