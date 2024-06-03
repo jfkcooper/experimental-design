@@ -85,6 +85,7 @@ def angle_choice(
     # Return the angle with largest minimum eigenvalue.
     return angle_range[np.argmax(min_eigs)]
 
+
 def scan_parameters(sample, params, angle_times):
     param_values, eigenval_list = [], []
     for param in params:
@@ -105,10 +106,10 @@ def scan_parameters(sample, params, angle_times):
     for i, param in enumerate(params):
         fig, ax = plt.subplots()
 
-        ax.set_ylabel("Minimum eigenvalue")
-        ax.set_xlabel("Parameter value")
+        ax.set_ylabel('Minimum eigenvalue')
+        ax.set_xlabel('Parameter value')
 
-        ax.set_ylim(0, 1.05*ymax)
+        ax.set_ylim(0, 1.05 * ymax)
         ax.set_xlim(min(param_values[i]), max(param_values[i]))
 
         ax.set_title(param.name)

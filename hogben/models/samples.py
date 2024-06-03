@@ -57,7 +57,7 @@ class Sample(BaseSample):
 
     @property
     def params(self):
-        return self.get_param_by_attribute("vary")
+        return self.get_param_by_attribute('vary')
 
     def _vary_structure(self, bound_size=0.2):
         """Varies the SLD and thickness of each layer in the sample structures.
@@ -118,7 +118,7 @@ class Sample(BaseSample):
         qs, counts, models = [data[0]], [data[3]], [model]
         return Fisher(qs, self.params, counts, models)
 
-    def sld_profile(self, font_size = 17, save_path=None, single=True):
+    def sld_profile(self, save_path=None):
         """Plots the SLD profile of the sample.
 
         Args:
@@ -128,16 +128,12 @@ class Sample(BaseSample):
 
         """
         # Create a figure and axes based on the 'single' parameter
-        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        fig, ax = plt.subplots()
         for i, (z, slds) in enumerate(self._get_sld_profile()):
             # Create a new subplot for each profile if not 'single'
-            label = f"SLD profile {i}"
+            label = f'SLD profile {i}'
 
             # Create a new subplot for each profile if not 'single'
-            if not single:
-                ax = fig.add_subplot(len(self.get_structures()), 1, i + 1)
-                ax.set_title(f'SLD Profile {label}')
-                fig.subplots_adjust(hspace=0.5)
             ax.set_xlim(min(z), max(z))
             ax.plot(z, slds, label=label)
 
@@ -169,7 +165,6 @@ class Sample(BaseSample):
                              scale: float = 1,
                              bkg: float = 1e-7,
                              dq: float = 2,
-                             single = True,
                              ) -> None:
         """Plots the reflectivity profile of the sample.
 
@@ -183,11 +178,11 @@ class Sample(BaseSample):
             dq (float): instrument resolution.
 
         """
-        fig, ax = plt.subplots() if single else (plt.figure(), None)
+        fig, ax = plt.subplots()
         profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
-                                              bkg, dq)
+                                                  bkg, dq)
         for i, (q, r) in enumerate(profiles):
-            label = f"Reflectivity profile {i}"
+            label = f'Reflectivity profile {i}'
 
             # Plot Q versus model reflectivity.
             ax.plot(q, r, label=label)
@@ -197,16 +192,14 @@ class Sample(BaseSample):
 
             ax.set_xlabel(x_label, fontsize=11, weight='bold')
             ax.set_ylabel(y_label, fontsize=11, weight='bold')
-            ax.set_title("Reflectivity profile")
+            ax.set_title('Reflectivity profile')
             ax.set_yscale('log')
             ax.legend()
 
-
+        # Save the plot.
         if save_path:
-            # Save the plot.
             save_path = os.path.join(save_path, self.name)
             save_plot(fig, save_path, 'reflectivity_profile')
-
 
     def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
         """
@@ -223,7 +216,7 @@ class Sample(BaseSample):
             q = np.geomspace(q_min, q_max, points)
 
             model = ReflectModel(structure, scale=scale,
-                                            bkg=bkg, dq=dq)
+                                 bkg=bkg, dq=dq)
             r = SimulateReflectivity(model).reflectivity(q)
             profiles.append((q, r))
         return profiles
@@ -378,7 +371,6 @@ def run_main(save_path: Optional[str] = '../results') -> None:
     for structure in [simple_sample, many_param_sample,
                       thin_layer_sample_1, thin_layer_sample_2,
                       similar_sld_sample_1, similar_sld_sample_2]:
-
         sample = structure()
         sample.sld_profile(save_path)
         sample.reflectivity_profile(save_path)

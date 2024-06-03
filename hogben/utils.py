@@ -168,7 +168,7 @@ class Fisher():
             data = sim.simulate()
             qs.append(data[0])
             counts.append(data[3])
-        xi = sample.get_param_by_attribute("vary")
+        xi = sample.get_param_by_attribute('vary')
         return cls(qs, xi, counts, models)
 
     @property
@@ -317,6 +317,7 @@ def save_plot(fig, save_path, filename):
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
 
+
 def flatten(seq):
     for el in seq:
         try:
@@ -332,7 +333,7 @@ def sig_fig_round(number, digits):
     """Round a number to the specified number of significant digits."""
     try:
         # Convert to scientific notation, and get power
-        power = "{:e}".format(float(number)).split("e")[1]
+        power = '{:e}'.format(float(number)).split('e')[1]
     except IndexError:
         return None
     return round(float(number), -(int(power) - digits + 1))

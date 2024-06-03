@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 import refnx.dataset
 import refnx.reflect
@@ -25,7 +24,6 @@ class VariableAngle(ABC):
 
     @abstractmethod
     def angle_info(self):
-
         """Calculates the Fisher information matrix for a sample measured
         over a number of angles."""
         pass
@@ -56,6 +54,7 @@ class VariableUnderlayer(ABC):
 class BaseSample(VariableAngle):
     """Abstract class representing a "standard" neutron reflectometry sample
     defined by a series of contiguous layers."""
+
     def __init__(self):
         self._structures = []
 
@@ -65,6 +64,7 @@ class BaseSample(VariableAngle):
         Get a list of the possible sample structures.
         """
         pass
+
     @property
     def structures(self):
         return self.get_structures()
@@ -81,16 +81,17 @@ class BaseSample(VariableAngle):
                     params.append(p)
                     continue
                 if p._deps:
-                    params.extend([_p for _p in p.dependencies() if hasattr(_p, attr) and getattr(_p, attr)])
+                    params.extend([_p for _p in p.dependencies() if
+                                   hasattr(_p, attr) and getattr(_p, attr)])
         return list(set(params))
 
     def get_models(self):
         # Add code to set background for each structure with D2O
         return [refnx.reflect.ReflectModel(structure,
-                                       scale=self.scale,
-                                       bkg=self.bkg,
-                                       dq=self.dq)
-            for structure in self.get_structures()]
+                                           scale=self.scale,
+                                           bkg=self.bkg,
+                                           dq=self.dq)
+                for structure in self.get_structures()]
 
     @abstractmethod
     def nested_sampling(self):

@@ -22,22 +22,22 @@ def optimise_parameters(sample, angle_times, visualise=True):
 
     optimiser = Optimiser(sample)
     res, val = optimiser.optimise_parameters(angle_times, verbose=False)
-    optimize_params = sample.get_param_by_attribute("optimize")
+    optimize_params = sample.get_param_by_attribute('optimize')
 
-    print("The parameters with the highest information could be found at:")
+    print('The parameters with the highest information could be found at:')
     for param, value in zip(optimize_params, res):
         print(f'{param.name}: {sig_fig_round(value, 3)}')
         param.value = value
 
     eigenval_after = fisher.min_eigenval
-    print(f"-----------------------------------------------------------------")
-    print(f"The minimum eigenvalue of the Fisher Information before "
-          f"optimization is {sig_fig_round(eigenval_initial, 3)}")
-    print(f"After the optimization, the minimum eigenvalue of the Fisher"
-          f" Information is {sig_fig_round(fisher.min_eigenval, 3)}")
-    print(f"The information content is thus"
-          f" {sig_fig_round(eigenval_after / eigenval_initial, 3)}"
-          f" times as large after optimization.")
+    print('-----------------------------------------------------------------')
+    print(f'The minimum eigenvalue of the Fisher Information before '
+          f'optimization is {sig_fig_round(eigenval_initial, 3)}')
+    print(f'After the optimization, the minimum eigenvalue of the Fisher'
+          f' Information is {sig_fig_round(fisher.min_eigenval, 3)}')
+    print(f'The information content is thus'
+          f' {sig_fig_round(eigenval_after / eigenval_initial, 3)}'
+          f' times as large after optimization.')
 
     if visualise:
         scan_parameters(sample, optimize_params, angle_times)
@@ -64,14 +64,14 @@ class Optimiser:
         self.sample = sample
 
     def optimise_angle_times(
-            self,
-            num_angles: int,
-            contrasts: Optional[list] = None,
-            total_time: float = 1000,
-            angle_bounds: tuple = (0.2, 4),
-            points: int = 100,
-            workers: int = -1,
-            verbose: bool = True,
+        self,
+        num_angles: int,
+        contrasts: Optional[list] = None,
+        total_time: float = 1000,
+        angle_bounds: tuple = (0.2, 4),
+        points: int = 100,
+        workers: int = -1,
+        verbose: bool = True,
     ) -> tuple:
         """Optimises the measurement angles and associated counting times
            of an experiment, given a fixed time budget.
@@ -128,13 +128,13 @@ class Optimiser:
         return res[:num_angles], res[num_angles:], val
 
     def optimise_contrasts(
-            self,
-            num_contrasts: int,
-            angle_splits: list,
-            total_time: float = 1000,
-            contrast_bounds: tuple = (-0.56, 6.36),
-            workers: int = -1,
-            verbose: bool = True,
+        self,
+        num_contrasts: int,
+        angle_splits: list,
+        total_time: float = 1000,
+        contrast_bounds: tuple = (-0.56, 6.36),
+        workers: int = -1,
+        verbose: bool = True,
     ) -> tuple:
         """Finds the optimal contrasts, given a fixed time budget.
 
@@ -212,10 +212,9 @@ class Optimiser:
         """
         # Check that the underlayers of the sample can be varied.
         bounds = []
-        params = self.sample.get_param_by_attribute("optimize")
+        params = self.sample.get_param_by_attribute('optimize')
         for parameter in params:
-            if hasattr(parameter, 'optimize') and parameter.optimize:
-                bounds += [(parameter.bounds.lb, parameter.bounds.ub)]
+            bounds += [(parameter.bounds.lb, parameter.bounds.ub)]
         # Arguments for the optimisation function.
         args = [params, angle_times]
 
@@ -243,22 +242,21 @@ class Optimiser:
         # Extract the underlayer thicknesses and SLDs from the given `x` list.
         i = 0
         for param in params:
-            if hasattr(param, 'optimize') and param.optimize:
-                param.value = x[i]
-                i += 1
+            param.value = x[i]
+            i += 1
         fisher = Fisher.from_sample(self.sample, angle_times)
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
 
     def optimise_underlayers(
-            self,
-            num_underlayers,
-            angle_times,
-            contrasts,
-            thick_bounds=(0, 500),
-            sld_bounds=(1, 9),
-            workers=-1,
-            verbose=True,
+        self,
+        num_underlayers,
+        angle_times,
+        contrasts,
+        thick_bounds=(0, 500),
+        sld_bounds=(1, 9),
+        workers=-1,
+        verbose=True,
     ) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
