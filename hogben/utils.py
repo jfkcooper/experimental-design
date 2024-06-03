@@ -318,7 +318,8 @@ def save_plot(fig, save_path, filename):
     fig.savefig(file_path, dpi=600)
 
 
-def flatten(seq):
+def flatten(seq: list):
+    """Flatten a nested list"""
     for el in seq:
         try:
             iter(el)

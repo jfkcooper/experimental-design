@@ -56,6 +56,7 @@ class BaseSample(VariableAngle):
     defined by a series of contiguous layers."""
 
     def __init__(self):
+        """Initialise the sample and define class attributes"""
         self._structures = []
 
     @abstractmethod
@@ -67,13 +68,25 @@ class BaseSample(VariableAngle):
 
     @property
     def structures(self):
+        """Return the structures that belong to the sample"""
         return self.get_structures()
 
     @structures.setter
     def structures(self, structures):
         self._structures = structures
 
-    def get_param_by_attribute(self, attr):
+    def get_param_by_attribute(self, attr: str) -> list:
+        """
+        Get all parameters defined in the sample model that have a given
+        attribute. Returns a list with all parameters with this attribute,
+        e.g. `attr='vary'` returns all varying parameters.
+
+        Args:
+            attr (str): The attribute to filter for
+
+        Returns:
+            list: A list of all parameters with the given attribute
+        """
         params = []
         for model in self.get_models():
             for p in flatten(model.parameters):
@@ -86,7 +99,11 @@ class BaseSample(VariableAngle):
         return list(set(params))
 
     def get_models(self):
-        # Add code to set background for each structure with D2O
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+        # TODO: Add code to set background for each structure with D2O
         return [refnx.reflect.ReflectModel(structure,
                                            scale=self.scale,
                                            bkg=self.bkg,

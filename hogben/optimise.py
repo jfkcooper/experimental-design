@@ -16,7 +16,25 @@ from hogben.utils import Fisher, sig_fig_round
 from hogben.visualise import scan_parameters
 
 
-def optimise_parameters(sample, angle_times, visualise=True):
+def optimise_parameters(sample: BaseSample,
+                        angle_times: list,
+                        visualise: bool = True) -> BaseSample:
+    """
+    Optimises the given parameters of a sample to the FI.
+
+    Optimise the parameters that have the "optimize" attribute to the FI.
+    Outputs a summary with the optical values, as well as the improvement.
+    Also graphs are given for the reflectivity curves, SLD profile and
+    parameter scan over the FI.
+
+    Args:
+        sample (Any): The sample object whose parameters are to be optimised.
+        angle_times (list): points and times for each angle to simulate.
+        visualise (bool): Whether to generate graphs..
+
+    Returns:
+        Sample: The sample object with optimised parameters.
+    """
     fisher = Fisher.from_sample(sample, angle_times)
     eigenval_initial = fisher.min_eigenval
 

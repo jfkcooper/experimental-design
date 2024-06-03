@@ -3,7 +3,7 @@ Contains class and methods related to the Sample class.
 """
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +38,7 @@ class Sample(BaseSample):
         parameters
 
         Args:
-            structure: Sample structure defined in the refnx or refl1d model
+            structure: Sample structure defined in the refnx model
         """
         if isinstance(structure, refnx.reflect.Structure):
             structure = [structure]
@@ -57,6 +57,7 @@ class Sample(BaseSample):
 
     @property
     def params(self):
+        """List of all varying parameters of the sample"""
         return self.get_param_by_attribute('vary')
 
     def _vary_structure(self, bound_size=0.2):
@@ -99,9 +100,15 @@ class Sample(BaseSample):
 
     @property
     def models(self):
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
         return self.get_models()
 
-    def angle_info(self, angle_times, contrasts=None):
+    def angle_info(self,
+                   angle_times: list,
+                   contrasts: Any | None = None) -> Fisher:
         """Calculates the Fisher information matrix for a sample measured
            over a number of angles.
 

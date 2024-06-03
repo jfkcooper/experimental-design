@@ -86,7 +86,20 @@ def angle_choice(
     return angle_range[np.argmax(min_eigs)]
 
 
-def scan_parameters(sample, params, angle_times):
+def scan_parameters(sample: BaseSample,
+                    params: list,
+                    angle_times: list) -> None:
+    """
+    Scans parameter values over FI and generate graphs.
+
+    Args:
+        sample (object): The sample data.
+        params (list): List of parameters to scan.
+        angle_times (list): List of angle times.
+
+    Returns:
+        None
+    """
     param_values, eigenval_list = [], []
     for param in params:
         lb, ub = param.bounds.lb, param.bounds.ub
