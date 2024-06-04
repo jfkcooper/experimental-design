@@ -50,14 +50,14 @@ class MockSample:
 class MockFisher:
     """Mocks the Fisher class, to return a simple minimum eigenvalue of 1.0 """
 
-    def __init__(self, _sample, _angle_times):
+    def __init__(self, _sample, _angle_times, inst_or_path='OFFSPEC'):
         """Initialize the mocked Fisher class and set eigenval to 1"""
         self.min_eigenval = 1.0
 
     @staticmethod
-    def from_sample(sample, angle_times):
+    def from_sample(sample, angle_times, inst_or_path='OFFSPEC'):
         """Create a Mocked Fisher object from sample"""
-        return MockFisher(sample, angle_times)
+        return MockFisher(sample, angle_times, inst_or_path)
 
 @patch('hogben.optimise.Optimiser._Optimiser__optimise')
 def test_optimise_angle_times_length(mock_optimise, refnx_sample):

@@ -89,14 +89,14 @@ class Optimiser:
         self.sample = sample
 
     def optimise_angle_times(
-        self,
-        num_angles: int,
-        contrasts: Optional[list] = None,
-        total_time: float = 1000,
-        angle_bounds: tuple = (0.2, 4),
-        points: int = 100,
-        workers: int = -1,
-        verbose: bool = True,
+            self,
+            num_angles: int,
+            contrasts: Optional[list] = None,
+            total_time: float = 1000,
+            angle_bounds: tuple = (0.2, 4),
+            points: int = 100,
+            workers: int = -1,
+            verbose: bool = True,
     ) -> tuple:
         """Optimises the measurement angles and associated counting times
            of an experiment, given a fixed time budget.
@@ -153,13 +153,13 @@ class Optimiser:
         return res[:num_angles], res[num_angles:], val
 
     def optimise_contrasts(
-        self,
-        num_contrasts: int,
-        angle_splits: list,
-        total_time: float = 1000,
-        contrast_bounds: tuple = (-0.56, 6.36),
-        workers: int = -1,
-        verbose: bool = True,
+            self,
+            num_contrasts: int,
+            angle_splits: list,
+            total_time: float = 1000,
+            contrast_bounds: tuple = (-0.56, 6.36),
+            workers: int = -1,
+            verbose: bool = True,
     ) -> tuple:
         """Finds the optimal contrasts, given a fixed time budget.
 
@@ -255,7 +255,7 @@ class Optimiser:
                         x: list,
                         params,
                         angle_times: type,
-                        inst_or_path: str) -> float:
+                        inst_or_path: str = 'OFFSPEC') -> float:
         """Defines the function for optimising arbitrary parameters in sample.
 
         Args:
@@ -280,14 +280,14 @@ class Optimiser:
         return -fisher.min_eigenval
 
     def optimise_underlayers(
-        self,
-        num_underlayers,
-        angle_times,
-        contrasts,
-        thick_bounds=(0, 500),
-        sld_bounds=(1, 9),
-        workers=-1,
-        verbose=True,
+            self,
+            num_underlayers,
+            angle_times,
+            contrasts,
+            thick_bounds=(0, 500),
+            sld_bounds=(1, 9),
+            workers=-1,
+            verbose=True,
     ) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
