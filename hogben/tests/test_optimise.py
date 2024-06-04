@@ -205,8 +205,8 @@ def test_optimise_parameters(mock_scan_parameters, mock_optimise_parameters,
 
 def test_optimise_params_length(refnx_sample):
     """
-    Tests that the optimise_parameters method outputs the correct amount of
-    counting parameters.
+    Runs the optimiser workflow and tests that the optimise_parameters method
+    outputs the correct amount of counting parameters.
     """
     angle_times = [(0.7, 100, 10000), (2.3, 100, 10000)]
     params = refnx_sample.get_param_by_attribute('optimize')
@@ -221,9 +221,10 @@ def test_parameter_func(refnx_sample):
     """Checks that the _underlayers_func method gives the correct result"""
     optimiser = Optimiser(refnx_sample)
     params = refnx_sample.get_param_by_attribute('optimize')
+    params.sort(key=lambda x: x.name)
     values = [3.3, 109]
     angle_times = [(0.7, 100, 10000), (2.3, 100, 10000)]
     result = optimiser._parameter_func(values, params, angle_times)
 
-    expected_result = -1.8832728225228448
+    expected_result = -15.442966403808276
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)

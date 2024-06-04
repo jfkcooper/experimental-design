@@ -254,7 +254,7 @@ class Optimiser:
     def _parameter_func(self,
                         x: list,
                         params,
-                        angle_times: type,
+                        angle_times: list,
                         inst_or_path: str = 'OFFSPEC') -> float:
         """Defines the function for optimising arbitrary parameters in sample.
 
