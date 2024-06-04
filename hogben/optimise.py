@@ -236,7 +236,7 @@ class Optimiser:
         # Arguments for the optimisation function.
         args = [params, angle_times]
 
-        # Optimise underlayer thicknesses and SLDs, and return the results.
+        # Optimise parameters and return the results.
         res, val = Optimiser.__optimise(
             self._parameter_func, bounds, [], args, workers, verbose
         )
@@ -249,7 +249,7 @@ class Optimiser:
         """Defines the function for optimising an experiment's underlayers.
 
         Args:
-            x (list): underlayer thicknesses and SLDs to calculate with.
+            x (list): parameter values to calculate with.
             angle_times (type): points and times for each angle.
             contrasts (list): contrasts of the experiment, if applicable.
 

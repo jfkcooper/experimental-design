@@ -9,7 +9,7 @@ import hogben.models.samples as samples
 from hogben.models.samples import Sample
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher
-from refnx.reflect import SLD, ReflectModel
+from refnx.reflect import SLD
 from unittest.mock import Mock, patch
 
 
