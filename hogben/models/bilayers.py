@@ -151,7 +151,7 @@ class BilayerPOPC(BaseLipid):
         # Call the BaseLipid constructor.
         super().__init__()
 
-    def get_structures(self):
+    def get_structures(self) -> list:
         """
         Get a list of the possible sample structures.
         """
@@ -731,7 +731,7 @@ class BilayerDPPC(BaseLipid):
         # Call the BaseLipid constructor.
         super().__init__()
 
-    def get_structures(self):
+    def get_structures(self) -> list:
         """
         Get a list of the possible sample structures.
         """

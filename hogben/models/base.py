@@ -98,7 +98,7 @@ class BaseSample(VariableAngle):
                                    hasattr(_p, attr) and getattr(_p, attr)])
         return list(set(params))
 
-    def get_models(self):
+    def get_models(self) -> list:
         """
         Returns a list of all refnx `ReflectModel` models that are
         associated with each structure of the sample.

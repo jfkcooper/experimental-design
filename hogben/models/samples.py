@@ -49,18 +49,18 @@ class Sample(BaseSample):
         self.dq = settings.get('dq', 2)
         self.polarised = settings.get('polarised', True)
 
-    def get_structures(self):
+    def get_structures(self) -> list:
         """
         Get a list of the possible sample structures.
         """
         return self._structures
 
     @property
-    def params(self):
+    def params(self) -> list:
         """List of all varying parameters of the sample"""
         return self.get_param_by_attribute('vary')
 
-    def _vary_structure(self, bound_size=0.2):
+    def _vary_structure(self, bound_size: float = 0.2) -> list:
         """Varies the SLD and thickness of each layer in the sample structures.
 
         Args:
@@ -99,7 +99,7 @@ class Sample(BaseSample):
             return params
 
     @property
-    def models(self):
+    def models(self) -> list:
         """
         Returns a list of all refnx `ReflectModel` models that are
         associated with each structure of the sample.
@@ -208,7 +208,13 @@ class Sample(BaseSample):
             save_path = os.path.join(save_path, self.name)
             save_plot(fig, save_path, 'reflectivity_profile')
 
-    def _get_reflectivity_profile(self, q_min, q_max, points, scale, bkg, dq):
+    def _get_reflectivity_profile(self,
+                                  q_min: float,
+                                  q_max: float,
+                                  points: int,
+                                  scale: float,
+                                  bkg: float,
+                                  dq: float) -> list:
         """
         Obtains the reflectivity profile of the sample, in terms of q
         vs r
