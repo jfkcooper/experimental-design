@@ -7,7 +7,6 @@ from refnx.reflect import SLD
 from hogben.models.samples import Sample
 from hogben.models.bilayers import BilayerDMPC
 from unittest.mock import patch
-from hogben.utils import Fisher
 
 @pytest.fixture
 def refnx_sample():
