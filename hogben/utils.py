@@ -154,7 +154,7 @@ class Fisher():
     def from_sample(cls,
                     sample,
                     angle_times,
-                    instrument='OFFSPEC'):
+                    inst_or_path='OFFSPEC'):
         """
         Get Fisher object using a sample.
         Seperate constructor for magnetic simulation maybe? Probably depends
@@ -164,7 +164,7 @@ class Fisher():
         models = sample.get_models()
         for model in models:
             sim = SimulateReflectivity(model, angle_times,
-                                       inst_or_path=instrument)
+                                       inst_or_path=inst_or_path)
             data = sim.simulate()
             qs.append(data[0])
             counts.append(data[3])

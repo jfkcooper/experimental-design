@@ -18,28 +18,35 @@ from hogben.visualise import scan_parameters
 
 def optimise_parameters(sample: BaseSample,
                         angle_times: list,
+                        inst_or_path: str = 'OFFSPEC',
                         visualise: bool = True) -> BaseSample:
     """
     Optimises the given parameters of a sample to the FI.
 
-    Optimise the parameters that have the "optimize" attribute to the FI.
+    Optimise the parameters that have the 'optimize' attribute to the FI.
     Outputs a summary with the optical values, as well as the improvement.
     Also graphs are given for the reflectivity curves, SLD profile and
     parameter scan over the FI.
 
     Args:
-        sample (Any): The sample object whose parameters are to be optimised.
+        sample (BaseSample): The sample object whose parameters are to be
+                             optimised.
         angle_times (list): points and times for each angle to simulate.
-        visualise (bool): Whether to generate graphs..
+        inst_or_path: either the name of an instrument already in HOGBEN,
+                      or the path to a direct beam file, defaults to
+                      'OFFSPEC'
+        visualise (bool): Whether to generate graphs.
 
     Returns:
         Sample: The sample object with optimised parameters.
     """
-    fisher = Fisher.from_sample(sample, angle_times)
+    fisher = Fisher.from_sample(sample, angle_times, inst_or_path=inst_or_path)
     eigenval_initial = fisher.min_eigenval
 
     optimiser = Optimiser(sample)
-    res, val = optimiser.optimise_parameters(angle_times, verbose=False)
+    res, val = optimiser.optimise_parameters(angle_times,
+                                             inst_or_path=inst_or_path,
+                                             verbose=False)
     optimize_params = sample.get_param_by_attribute('optimize')
 
     print('The parameters with the highest information could be found at:')
@@ -210,22 +217,24 @@ class Optimiser:
     def optimise_parameters(
             self,
             angle_times,
+            inst_or_path='OFFSPEC',
             workers=-1,
             verbose=True,
     ) -> tuple:
-        """Finds the optimal underlayer thicknesses and SLDs of a sample.
+        """
+        Finds the optimal parameters for a given sample.
 
         Args:
             angle_times (list): points and times for each angle to simulate.
-            contrasts (list): contrasts to simulate.
-            thick_bounds (tuple): underlayer thicknesses to consider.
-            sld_bounds (tuple): underlayer SLDs to consider.
+            inst_or_path: either the name of an instrument already in HOGBEN,
+                          or the path to a direct beam file, defaults to
+                          'OFFSPEC'
             workers (int): number of CPU cores to use when optimising.
             verbose (bool): whether to display progress or not.
 
         Returns:
-            tuple: optimised underlayer thicknesses and SLD, and the
-                   corresponding optimisation function value.
+            tuple: optimised underlayer parameters and the corresponding
+                   optimisation function value.
 
         """
         # Check that the underlayers of the sample can be varied.
@@ -234,7 +243,7 @@ class Optimiser:
         for parameter in params:
             bounds += [(parameter.bounds.lb, parameter.bounds.ub)]
         # Arguments for the optimisation function.
-        args = [params, angle_times]
+        args = [params, angle_times, inst_or_path]
 
         # Optimise parameters and return the results.
         res, val = Optimiser.__optimise(
@@ -245,13 +254,17 @@ class Optimiser:
     def _parameter_func(self,
                         x: list,
                         params,
-                        angle_times: type) -> float:
-        """Defines the function for optimising an experiment's underlayers.
+                        angle_times: type,
+                        inst_or_path: str) -> float:
+        """Defines the function for optimising arbitrary parameters in sample.
 
         Args:
             x (list): parameter values to calculate with.
             angle_times (type): points and times for each angle.
             contrasts (list): contrasts of the experiment, if applicable.
+            inst_or_path: either the name of an instrument already in HOGBEN,
+                          or the path to a direct beam file, defaults to
+                          'OFFSPEC'
 
         Returns:
             float: negative of minimum eigenvalue using given conditions.
@@ -262,7 +275,7 @@ class Optimiser:
         for param in params:
             param.value = x[i]
             i += 1
-        fisher = Fisher.from_sample(self.sample, angle_times)
+        fisher = Fisher.from_sample(self.sample, angle_times, inst_or_path)
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
 
