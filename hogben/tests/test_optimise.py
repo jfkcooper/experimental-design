@@ -175,19 +175,16 @@ def test_underlayers_func():
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
 
 
-@patch('hogben.optimise.sig_fig_round')
 @patch('hogben.optimise.Optimiser.optimise_parameters')
 @patch('hogben.optimise.scan_parameters')
 @patch('hogben.optimise.Fisher.from_sample', new=MockFisher)
-def test_optimise_parameters(mock_scan_parameters, mock_optimise_parameters,
-                             mock_sig_fig_round):
+def test_optimise_parameters(mock_scan_parameters, mock_optimise_parameters):
     """
     Runs the general `optimise_parameters` workflow, and makes sure the output
     is handled correctly, and data visualization is called.
     """
     mock_optimise_parameters.return_value = ([0.5, 0.5], 2.0)
     mock_scan_parameters.return_value = None
-    mock_sig_fig_round.return_value = 0.5
 
     sample = MockSample()
     angle_times = [1, 2, 3]

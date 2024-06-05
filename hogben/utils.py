@@ -316,25 +316,3 @@ def save_plot(fig, save_path, filename):
 
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=600)
-
-
-def flatten(seq: list):
-    """Flatten a nested list"""
-    for el in seq:
-        try:
-            iter(el)
-            if isinstance(el, (str, bytes)):
-                raise TypeError
-            yield from flatten(el)
-        except TypeError:
-            yield el
-
-
-def sig_fig_round(number, digits):
-    """Round a number to the specified number of significant digits."""
-    try:
-        # Convert to scientific notation, and get power
-        power = '{:e}'.format(float(number)).split('e')[1]
-    except IndexError:
-        return None
-    return round(float(number), -(int(power) - digits + 1))

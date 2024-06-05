@@ -10,9 +10,12 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 from refnx.reflect import ReflectModel
+from refnx._lib import flatten
+
+import itertools
 
 from hogben.simulate import SimulateReflectivity
-from hogben.utils import Fisher, Sampler, save_plot, flatten
+from hogben.utils import Fisher, Sampler, save_plot
 
 plt.rcParams['figure.figsize'] = (9, 7)
 plt.rcParams['figure.dpi'] = 600

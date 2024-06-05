@@ -12,7 +12,7 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
-from hogben.utils import Fisher, sig_fig_round
+from hogben.utils import Fisher
 from hogben.visualise import scan_parameters
 
 
@@ -51,17 +51,17 @@ def optimise_parameters(sample: BaseSample,
 
     print('The parameters with the highest information could be found at:')
     for param, value in zip(optimize_params, res):
-        print(f'{param.name}: {sig_fig_round(value, 3)}')
+        print(f'{param.name}: {"{:.3g}".format(value)}')
         param.value = value
 
     eigenval_after = fisher.min_eigenval
     print('-----------------------------------------------------------------')
     print(f'The minimum eigenvalue of the Fisher Information before '
-          f'optimization is {sig_fig_round(eigenval_initial, 3)}')
+          f'optimization is {"{:.3g}".format(eigenval_initial)}')
     print(f'After the optimization, the minimum eigenvalue of the Fisher'
-          f' Information is {sig_fig_round(fisher.min_eigenval, 3)}')
+          f' Information is {"{:.3g}".format(fisher.min_eigenval)}')
     print(f'The information content is thus'
-          f' {sig_fig_round(eigenval_after / eigenval_initial, 3)}'
+          f' {"{:.3g}".format(eigenval_after / eigenval_initial)}'
           f' times as large after optimization.')
 
     if visualise:
