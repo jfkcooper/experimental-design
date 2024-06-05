@@ -156,9 +156,18 @@ class Fisher():
                     angle_times,
                     inst_or_path='OFFSPEC'):
         """
-        Get Fisher object using a sample.
-        Seperate constructor for magnetic simulation maybe? Probably depends
-        on new simulate function either way.
+        This class method constructs a Fisher object using a HOGBEN sample.
+
+        Args:
+        sample (BaseSample): The sample object to calculate the FI for.
+        angle_times (list [tuple]): points and times for each angle to
+                                    simulate.
+        inst_or_path (str): The instrument or path to use for the simulation.
+                            Defaults to 'OFFSPEC'.
+
+        Returns:
+        Fisher
+            A new instance of the Fisher class
         """
         qs, counts = [], []
         models = sample.get_models()

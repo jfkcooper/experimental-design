@@ -15,7 +15,7 @@ import refnx.analysis
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
 from hogben.models.base import BaseSample
-from refnx.analysis import Objective
+from refnx.analysis import Objective, GlobalObjective
 from refnx.reflect import ReflectModel
 
 plt.rcParams['figure.figsize'] = (9, 7)
@@ -73,28 +73,28 @@ class Sample(BaseSample):
         """
         for structure in self.structures:
             params = []
-            # The structure was defined in refnx.
-            if isinstance(structure, refnx.reflect.Structure):
-                # Vary the SLD and thickness of each component (layer).
-                for component in structure[1:-1]:
-                    sld = component.sld.real
-                    sld_bounds = (
-                        sld.value * (1 - bound_size),
-                        sld.value * (1 + bound_size),
-                    )
-                    sld.setp(vary=True, bounds=sld_bounds)
-                    params.append(sld)
+            # Vary the SLD and thickness of each component (layer).
+            for component in structure[1:-1]:
+                sld = component.sld.real
+                if sld.bounds.lb == -float('inf'):
+                    sld.bounds.lb = sld.value * (1 - bound_size)
+                if sld.bounds.ub == float('inf'):
+                    sld.bounds.ub = sld.value * (1 + bound_size)
 
-                    thick = component.thick
-                    thick_bounds = (
-                        thick.value * (1 - bound_size),
-                        thick.value * (1 + bound_size),
-                    )
-                    thick.setp(vary=True, bounds=thick_bounds)
-                    params.append(thick)
+                sld_bounds = (
+                    sld.bounds.lb,
+                    sld.bounds.ub,
+                )
+                sld.setp(vary=True, bounds=sld_bounds)
+                params.append(sld)
 
-            else:
-                raise RuntimeError('invalid structure given')
+                thick = component.thick
+                thick_bounds = (
+                    thick.value * (1 - bound_size),
+                    thick.value * (1 + bound_size),
+                )
+                thick.setp(vary=True, bounds=thick_bounds)
+                params.append(thick)
 
             return params
 
@@ -107,7 +107,7 @@ class Sample(BaseSample):
         return self.get_models()
 
     def angle_info(self,
-                   angle_times: list,
+                   angle_times: list[tuple],
                    contrasts: Any | None = None) -> Fisher:
         """Calculates the Fisher information matrix for a sample measured
            over a number of angles.
@@ -120,9 +120,12 @@ class Sample(BaseSample):
 
         """
         # Return the Fisher information matrix calculated from simulated data.
-        model = refnx.reflect.ReflectModel(self.get_structures()[0])
-        data = SimulateReflectivity(model, angle_times).simulate()
-        qs, counts, models = [data[0]], [data[3]], [model]
+        models = self.get_models()
+        qs, counts = [], []
+        for model in models:
+            data = SimulateReflectivity(model, angle_times).simulate()
+            qs.append(data[0])
+            counts.append(data[3])
         return Fisher(qs, self.params, counts, models)
 
     def sld_profile(self, save_path=None):
@@ -130,9 +133,6 @@ class Sample(BaseSample):
 
         Args:
             save_path (str): path to directory to save SLD profile to.
-            single (bool): whether to plot all profiles on a single plot or
-            separate ones.
-
         """
         # Create a figure and axes based on the 'single' parameter
         fig, ax = plt.subplots()
@@ -224,10 +224,10 @@ class Sample(BaseSample):
             numpy.ndarray: model reflectivity values
         """
         profiles = []
-        for structure in self.get_structures():
-            # Geometrically-space Q points over the specified range.
-            q = np.geomspace(q_min, q_max, points)
+        # Geometrically-space Q points over the specified range.
+        q = np.geomspace(q_min, q_max, points)
 
+        for structure in self.get_structures():
             model = ReflectModel(structure, scale=scale,
                                  bkg=bkg, dq=dq)
             r = SimulateReflectivity(model).reflectivity(q)
@@ -242,20 +242,24 @@ class Sample(BaseSample):
         """Runs nested sampling on simulated data of the sample.
 
         Args:
-            angle_times (list): points and times for each angle to simulate.
+            angle_times (list: points and times for each angle to simulate.
             save_path (str): path to directory to save corner plot to.
             filename (str): file name to use when saving corner plot.
             dynamic (bool): whether to use static or dynamic nested sampling.
 
         """
         # Simulate data for the sample.
-        model = refnx.reflect.ReflectModel(self.get_structures()[0])
-        data = SimulateReflectivity(model, angle_times).simulate()
-
-        objective = Objective(model, data)
+        objectives = []
+        for structure in self.get_structures():
+            model = refnx.reflect.ReflectModel(structure)
+            data = SimulateReflectivity(model, angle_times).simulate()
+            objective = Objective(model, data)
+            objectives.append(objective)
+        global_objective = GlobalObjective(objectives)
+        global_objective.varying_parameters = lambda: self.params
 
         # Sample the objective using nested sampling.
-        sampler = Sampler(objective)
+        sampler = Sampler(global_objective)
         fig = sampler.sample(dynamic=dynamic)
 
         # Save the sampling corner plot.

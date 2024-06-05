@@ -35,7 +35,7 @@ def optimise_parameters(sample: BaseSample,
         inst_or_path: either the name of an instrument already in HOGBEN,
                       or the path to a direct beam file, defaults to
                       'OFFSPEC'
-        visualise (bool): Whether to generate graphs.
+        visualise (bool): Whether to generate graphs. Defaults to `True`.
 
     Returns:
         Sample: The sample object with optimised parameters.
@@ -88,16 +88,14 @@ class Optimiser:
         """
         self.sample = sample
 
-    def optimise_angle_times(
-            self,
-            num_angles: int,
-            contrasts: Optional[list] = None,
-            total_time: float = 1000,
-            angle_bounds: tuple = (0.2, 4),
-            points: int = 100,
-            workers: int = -1,
-            verbose: bool = True,
-    ) -> tuple:
+    def optimise_angle_times(self,
+                             num_angles: int,
+                             contrasts: Optional[list] = None,
+                             total_time: float = 1000,
+                             angle_bounds: tuple = (0.2, 4),
+                             points: int = 100,
+                             workers: int = -1,
+                             verbose: bool = True) -> tuple:
         """Optimises the measurement angles and associated counting times
            of an experiment, given a fixed time budget.
 
@@ -107,7 +105,8 @@ class Optimiser:
             total_time (float): time budget of the experiment.
             angle_bounds (tuple): interval containing angles to consider.
             points (int): number of data points to use for each angle.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -152,15 +151,13 @@ class Optimiser:
                                         constraints, args, workers, verbose)
         return res[:num_angles], res[num_angles:], val
 
-    def optimise_contrasts(
-            self,
-            num_contrasts: int,
-            angle_splits: list,
-            total_time: float = 1000,
-            contrast_bounds: tuple = (-0.56, 6.36),
-            workers: int = -1,
-            verbose: bool = True,
-    ) -> tuple:
+    def optimise_contrasts(self,
+                           num_contrasts: int,
+                           angle_splits: list,
+                           total_time: float = 1000,
+                           contrast_bounds: tuple = (-0.56, 6.36),
+                           workers: int = -1,
+                           verbose: bool = True) -> tuple:
         """Finds the optimal contrasts, given a fixed time budget.
 
         Args:
@@ -168,7 +165,8 @@ class Optimiser:
             angle_splits (list): points and proportion of time for each angle.
             total_time (float): time budget for the experiment.
             contrast_bounds (tuple): contrast to consider.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -214,22 +212,22 @@ class Optimiser:
         )
         return res[:num_contrasts], res[num_contrasts:], val
 
-    def optimise_parameters(
-            self,
-            angle_times,
-            inst_or_path='OFFSPEC',
-            workers=-1,
-            verbose=True,
-    ) -> tuple:
+    def optimise_parameters(self,
+                            angle_times,
+                            inst_or_path='OFFSPEC',
+                            workers=-1,
+                            verbose=True) -> tuple:
         """
         Finds the optimal parameters for a given sample.
 
         Args:
-            angle_times (list): points and times for each angle to simulate.
+            angle_times (list [tuple]): points and times for each angle to
+                                        simulate.
             inst_or_path: either the name of an instrument already in HOGBEN,
                           or the path to a direct beam file, defaults to
                           'OFFSPEC'
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -267,7 +265,8 @@ class Optimiser:
                           'OFFSPEC'
 
         Returns:
-            float: negative of minimum eigenvalue using given conditions.
+            float: negative of minimum eigenvalue of the Fisher information
+                   matrix using the given conditions.
 
         """
         # Extract the underlayer thicknesses and SLDs from the given `x` list.
@@ -279,16 +278,14 @@ class Optimiser:
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
 
-    def optimise_underlayers(
-            self,
-            num_underlayers,
-            angle_times,
-            contrasts,
-            thick_bounds=(0, 500),
-            sld_bounds=(1, 9),
-            workers=-1,
-            verbose=True,
-    ) -> tuple:
+    def optimise_underlayers(self,
+                             num_underlayers,
+                             angle_times,
+                             contrasts,
+                             thick_bounds=(0, 500),
+                             sld_bounds=(1, 9),
+                             workers=-1,
+                             verbose=True) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
         Args:
@@ -297,7 +294,8 @@ class Optimiser:
             contrasts (list): contrasts to simulate.
             thick_bounds (tuple): underlayer thicknesses to consider.
             sld_bounds (tuple): underlayer SLDs to consider.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -437,7 +435,8 @@ class Optimiser:
             bounds (list): permissible values for the conditions to optimise.
             constraints (list): constraints on conditions to optimise.
             args (list): arguments for optimisation function.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:

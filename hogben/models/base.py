@@ -12,8 +12,6 @@ import refnx.analysis
 from refnx.reflect import ReflectModel
 from refnx._lib import flatten
 
-import itertools
-
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
 
@@ -96,6 +94,8 @@ class BaseSample(VariableAngle):
                 if hasattr(p, attr) and getattr(p, attr):
                     params.append(p)
                     continue
+                # Get parameters that are coupled to model attributes as
+                # dependencies:
                 if p._deps:
                     params.extend([_p for _p in p.dependencies() if
                                    hasattr(_p, attr) and getattr(_p, attr)])

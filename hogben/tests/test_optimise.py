@@ -35,7 +35,6 @@ class MockSample:
     def __init__(self):
         """Iniitalize the mocked sample"""
         self.params = [MagicMock(name='param1'), MagicMock(name='param2')]
-        self.sld_profile = MagicMock()
         self.reflectivity_profile = MagicMock()
         self.sld_profile = MagicMock()
         self.get_models = MagicMock()
@@ -139,7 +138,7 @@ def test_angle_times_func_result(refnx_sample):
     result = optimiser._angle_times_func(angle_time_split, num_angles,
                                          contrasts, points, total_time)
 
-    expected_result = -1.722251
+    expected_result = -1.7716709840530174
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
 
 
@@ -197,7 +196,7 @@ def test_optimise_parameters(mock_scan_parameters, mock_optimise_parameters):
     # Check whether the visualisation functions are called
     sample.sld_profile.assert_called_once()
     sample.reflectivity_profile.assert_called_once()
-    sample.reflectivity_profile.scan_parameters()
+    mock_scan_parameters.assert_called_once()
 
 
 def test_optimise_params_length(refnx_sample):
@@ -222,6 +221,5 @@ def test_parameter_func(refnx_sample):
     values = [3.3, 109]
     angle_times = [(0.7, 100, 10000), (2.3, 100, 10000)]
     result = optimiser._parameter_func(values, params, angle_times)
-
-    expected_result = -15.442966403808276
+    expected_result = -15.438106789796723
     np.testing.assert_allclose(result, expected_result, rtol=1e-06)
