@@ -157,17 +157,6 @@ class BilayerPOPC(BaseLipid):
         """
         return self._structures
 
-    def get_models(self) -> list:
-        """
-        Generates a refnx `ReflectModel` for each structure associated with the
-        all structures of the Sample, and returns these in a list.
-        """
-        return [refnx.reflect.ReflectModel(structure,
-                                           scale=scale,
-                                           bkg=bkg,
-                                           dq=self.dq)
-                for structure, scale, bkg
-                in zip(self.get_structures(), self.scales, self.bkgs)]
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define scattering lengths and densities of D2O and H2O.
@@ -437,18 +426,6 @@ class BilayerDMPC(BaseLipid):
         """
         return self._structures
 
-    def get_models(self) -> list:
-        """
-        Generates a refnx `ReflectModel` for each structure associated with the
-        all structures of the Sample, and returns these in a list.
-        """
-        return [refnx.reflect.ReflectModel(structure,
-                                           scale=scale,
-                                           bkg=bkg,
-                                           dq=self.dq)
-                for structure, scale, bkg
-                in zip(self.get_structures(), self.scales, self.bkgs)]
-
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define scattering lengths and densities of D2O and H2O.
@@ -664,7 +641,7 @@ class BilayerDPPC(BaseLipid):
         self.distances = np.linspace(-30, 110, 500)
 
         self.contrast_slds = [6.14, 2.07, -0.56]
-        self.scale = 0.8
+        self.scales = [0.8, 0.8, 0.8]
         self.bkgs = [4.6e-6, 8.6e-6, 8.7e-6]
         self.dq = 4
 
@@ -759,18 +736,6 @@ class BilayerDPPC(BaseLipid):
         Get a list of the possible sample structures.
         """
         return self._structures
-
-    def get_models(self) -> list:
-        """
-        Generates a refnx `ReflectModel` for each structure associated with the
-        all structures of the Sample, and returns these in a list.
-        """
-        return [refnx.reflect.ReflectModel(structure,
-                                           scale=self.scale,
-                                           bkg=bkg,
-                                           dq=self.dq)
-                for structure, bkg
-                in zip(self.get_structures(), self.bkgs)]
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""

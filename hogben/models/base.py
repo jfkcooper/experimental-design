@@ -149,6 +149,18 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         """
         return self.__conditions_info(angle_times, contrasts, None)
 
+    def get_models(self) -> list:
+        """
+        Generates a refnx `ReflectModel` for each structure associated with the
+        all structures of the Sample, and returns these in a list.
+        """
+        return [refnx.reflect.ReflectModel(structure,
+                                           scale=scale,
+                                           bkg=bkg,
+                                           dq=self.dq)
+                for structure, scale, bkg
+                in zip(self.get_structures(), self.scales, self.bkgs)]
+
     def contrast_info(self, angle_times, contrasts):
         """Calculates the Fisher information matrix for the lipid sample
            with contrasts measured over a number of angles.

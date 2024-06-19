@@ -99,18 +99,6 @@ class MonolayerDPPG(BaseLipid):
         """
         return self._structures
 
-    def get_models(self) -> list:
-        """
-        Generates a refnx `ReflectModel` for each structure associated with the
-        all structures of the Sample, and returns these in a list.
-        """
-        return [refnx.reflect.ReflectModel(structure,
-                                           scale=scale,
-                                           bkg=bkg,
-                                           dq=self.dq)
-                for structure, scale, bkg
-                in zip(self.get_structures(), self.scales, self.bkgs)]
-
     def _create_objectives(self, protein: bool = True) -> None:
         """Creates objectives corresponding to each measured contrast.
 
