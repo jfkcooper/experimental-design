@@ -53,8 +53,8 @@ class MonolayerDPPG(BaseLipid):
         self.distances = None  # np.linspace(-25, 90, 500)
         self.deuterated = deuterated
 
-        self.scales = [1.8899, 1.8832, 1.8574]
-        self.bkgs = [3.565e-6, 5.348e-6, 6.542e-6]
+        self.scale = [1.8899, 1.8832, 1.8574]
+        self.bkg = [3.565e-6, 5.348e-6, 6.542e-6]
         self.dq = 3
 
         # Define the varying parameters of the model.
@@ -122,8 +122,8 @@ class MonolayerDPPG(BaseLipid):
             # Define the model.
             model = refnx.reflect.ReflectModel(
                 structure,
-                scale=self.scales[i],
-                bkg=self.bkgs[i] * self.scales[i],
+                scale=self.scale[i],
+                bkg=self.bkg[i] * self.scale[i],
                 dq=self.dq,
             )
             # Load the measured data.

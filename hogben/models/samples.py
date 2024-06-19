@@ -44,15 +44,103 @@ class Sample(BaseSample):
             structure = [structure]
         self.structures = structure
         self.name = structure[0].name
+        self._bkg = None
+        self._dq = None
+        self._scale = None
+
         self.scale = settings.get('scale', 1)
         self.bkg = settings.get('bkg', 5e-6)
         self.dq = settings.get('dq', 2)
+
         self.polarised = settings.get('polarised', True)
 
+    def _validate_and_set(self, attribute, value):
+        """
+        Validates the length of the value list against the number of structures
+        and sets the attribute accordingly.
+
+        Args:
+            attribute (str): The name of the attribute to set.
+            value (float or list of floats): The value(s) to set for the
+                                             attribute.
+
+        Raises:
+            ValueError: If the length of the value list does not match the
+                        number of structures.
+        """
+        if isinstance(value, list):
+            if len(value) != len(self.structures):
+                raise ValueError(
+                    f'The length of `{attribute}` must be equal to the number '
+                    f'of structures in the sample when using a list!'
+                )
+            else:
+                setattr(self, f'_{attribute}', value)
+        else:
+            setattr(self, f'_{attribute}', [value] * len(self.structures))
+
+    @property
+    def bkg(self):
+        """
+        Gets the background levels for the structures.
+
+        Returns:
+            list of floats: The background levels.
+        """
+        return self._bkg
+
+    @bkg.setter
+    def bkg(self, value):
+        """
+        Sets the background levels for the structures.
+
+        Args:
+            value (float or list of floats): The background level(s) to set.
+        """
+        self._validate_and_set('bkg', value)
+
+    @property
+    def dq(self):
+        """
+        Gets the dq values for the structures.
+
+        Returns:
+            list of floats: The dq values.
+        """
+        return self._bkg
+
+    @dq.setter
+    def dq(self, value):
+        """
+        Sets the dq values for the structures.
+
+        Args:
+            value (float or list of floats): The dq value(s) to set.
+        """
+        self._validate_and_set('dq', value)
+
+    @property
+    def scale(self):
+        """
+        Gets the scale factors for the structures.
+
+        Returns:
+            list of floats: The scale factors.
+        """
+        return self._scale
+
+    @scale.setter
+    def scale(self, value):
+        """
+        Sets the scale factors for the structures.
+
+        Args:
+            value (float or list of floats): The scale factor(s) to set.
+        """
+        self._validate_and_set('scale', value)
+
     def get_structures(self) -> list:
-        """
-        Get a list of the possible sample structures.
-        """
+        """Get a list of the possible sample structures."""
         return self._structures
 
     @property

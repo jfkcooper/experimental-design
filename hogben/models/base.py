@@ -105,14 +105,13 @@ class BaseSample(VariableAngle):
         """
         Generates a refnx `ReflectModel` for each structure associated with the
         all structures of the Sample, and returns these in a list.
-        Returns a list of all refnx `ReflectModel` models that are
-        associated with each structure of the sample.
         """
         return [refnx.reflect.ReflectModel(structure,
-                                           scale=self.scale,
-                                           bkg=self.bkg,
-                                           dq=self.dq)
-                for structure in self.get_structures()]
+                                           scale=scale,
+                                           bkg=bkg,
+                                           dq=dq)
+                for structure, scale, bkg, dq
+                in zip(self.get_structures(), self.scale, self.bkg, self.dq)]
 
     @abstractmethod
     def nested_sampling(self):
@@ -148,18 +147,6 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
 
         """
         return self.__conditions_info(angle_times, contrasts, None)
-
-    def get_models(self) -> list:
-        """
-        Generates a refnx `ReflectModel` for each structure associated with the
-        all structures of the Sample, and returns these in a list.
-        """
-        return [refnx.reflect.ReflectModel(structure,
-                                           scale=scale,
-                                           bkg=bkg,
-                                           dq=self.dq)
-                for structure, scale, bkg
-                in zip(self.get_structures(), self.scales, self.bkgs)]
 
     def contrast_info(self, angle_times, contrasts):
         """Calculates the Fisher information matrix for the lipid sample
