@@ -107,7 +107,7 @@ class Sample(BaseSample):
         Returns:
             list of floats: The dq values.
         """
-        return self._bkg
+        return self._dq
 
     @dq.setter
     def dq(self, value):
