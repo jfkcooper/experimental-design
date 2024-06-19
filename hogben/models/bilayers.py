@@ -157,6 +157,17 @@ class BilayerPOPC(BaseLipid):
         """
         return self._structures
 
+    def get_models(self) -> list:
+        """
+        Generates a refnx `ReflectModel` for each structure associated with the
+        all structures of the Sample, and returns these in a list.
+        """
+        return [refnx.reflect.ReflectModel(structure,
+                                           scale=scale,
+                                           bkg=bkg,
+                                           dq=self.dq)
+                for structure, scale, bkg
+                in zip(self.get_structures(), self.scales, self.bkgs)]
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define scattering lengths and densities of D2O and H2O.
@@ -425,6 +436,18 @@ class BilayerDMPC(BaseLipid):
         Get a list of the possible sample structures.
         """
         return self._structures
+
+    def get_models(self) -> list:
+        """
+        Generates a refnx `ReflectModel` for each structure associated with the
+        all structures of the Sample, and returns these in a list.
+        """
+        return [refnx.reflect.ReflectModel(structure,
+                                           scale=scale,
+                                           bkg=bkg,
+                                           dq=self.dq)
+                for structure, scale, bkg
+                in zip(self.get_structures(), self.scales, self.bkgs)]
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
@@ -736,6 +759,18 @@ class BilayerDPPC(BaseLipid):
         Get a list of the possible sample structures.
         """
         return self._structures
+
+    def get_models(self) -> list:
+        """
+        Generates a refnx `ReflectModel` for each structure associated with the
+        all structures of the Sample, and returns these in a list.
+        """
+        return [refnx.reflect.ReflectModel(structure,
+                                           scale=self.scale,
+                                           bkg=bkg,
+                                           dq=self.dq)
+                for structure, bkg
+                in zip(self.get_structures(), self.bkgs)]
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""

@@ -105,8 +105,9 @@ class BaseSample(VariableAngle):
         """
         Generates a refnx `ReflectModel` for each structure associated with the
         all structures of the Sample, and returns these in a list.
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
         """
-        # TODO: Add code to set background for each structure with D2O
         return [refnx.reflect.ReflectModel(structure,
                                            scale=self.scale,
                                            bkg=self.bkg,
