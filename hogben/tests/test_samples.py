@@ -54,6 +54,7 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=40)
 
+
 @pytest.mark.parametrize('bkg', ([1e-6],
                                  [1e-6, 5e-6],
                                  [1e-6, 5e-6, 2e-6],
@@ -68,10 +69,11 @@ def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
         with pytest.raises(ValueError):
             Sample(refnx_two_solvents, bkg=bkg)
 
+
 @pytest.mark.parametrize('scale', ([1],
-                                 [1, 5],
-                                 [1, 5, 2],
-                                 [1, 5, 2, 4])
+                                   [1, 5],
+                                   [1, 5, 2],
+                                   [1, 5, 2, 4])
                          )
 def test_sample_with_multiple_scales_length(refnx_two_solvents, scale):
     """
@@ -82,19 +84,6 @@ def test_sample_with_multiple_scales_length(refnx_two_solvents, scale):
         with pytest.raises(ValueError):
             Sample(refnx_two_solvents, scale=scale)
 
-@pytest.mark.parametrize('bkg', ([1e-6],
-                                 [1e-6, 5e-6],
-                                 [1e-6, 5e-6, 2e-6],
-                                 [1e-6, 5e-6, 2e-6, 4e-6])
-                         )
-def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
-    """
-    Tests whether a ValueError is properly raised when a list of backgrounds
-    is given to a sample that does not equal the amount of structures
-    """
-    if len(bkg) != len(refnx_two_solvents):
-        with pytest.raises(ValueError):
-            Sample(refnx_two_solvents, bkg=bkg)
 
 @pytest.mark.parametrize('dq', ([1],
                                 [1, 5],
@@ -110,15 +99,6 @@ def test_sample_with_multiple_dq_length(refnx_two_solvents, dq):
         with pytest.raises(ValueError):
             Sample(refnx_two_solvents, dq=dq)
 
-def test_different_scale(refnx_two_solvents):
-    """
-    Tests whether the angle_info function correctly calculates the Fisher
-    information, and outputs the same values as if the functions were called
-    manually.
-    """
-    # Get Fisher information from tested unit
-    angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
-    sample = Sample(refnx_two_solvents, bkg=[1e-6, 5e-6])
 
 def test_angle_info(refnx_sample):
     """

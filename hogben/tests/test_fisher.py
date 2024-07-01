@@ -61,6 +61,7 @@ def mock_model():
     model.xi = parameters
     return model
 
+
 @pytest.fixture
 def refnx_two_solvents():
     """Defines a structure describing a simple sample with two solvents"""
@@ -100,12 +101,13 @@ def test_fisher_workflow(model):
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
 
+
 def test_fisher_multiple_backgrounds(refnx_two_solvents):
     """
     Tests whether the Fisher information still behaves as expected when using
     two different backgrounds in a sample.
     """
-    sample = Sample(refnx_two_solvents, bkg = [1e-6, 5e-6])
+    sample = Sample(refnx_two_solvents, bkg=[1e-6, 5e-6])
     sample._vary_structure()
     angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
     fisher = Fisher.from_sample(sample, angle_times)
