@@ -57,10 +57,10 @@ def optimise_parameters(sample: BaseSample,
     eigenval_after = fisher.min_eigenval
     print('-----------------------------------------------------------------')
     print(f'The minimum eigenvalue of the Fisher Information before '
-          f'optimization is {"{:.3g}".format(eigenval_initial)}')
-    print(f'After the optimization, the minimum eigenvalue of the Fisher'
-          f' Information is {"{:.3g}".format(fisher.min_eigenval)}')
-    print(f'The information content is thus'
+          f'optimization: {"{:.3g}".format(eigenval_initial)}')
+    print(f'The minimum eigenvalue of the Fisher Information after '
+          f'optimization {"{:.3g}".format(fisher.min_eigenval)}')
+    print(f'The information content is'
           f' {"{:.3g}".format(eigenval_after / eigenval_initial)}'
           f' times as large after optimization.')
 
