@@ -24,6 +24,19 @@ def refnx_sample():
     return Sample(structure)
 
 
+@pytest.fixture
+def refnx_two_solvents():
+    """Defines a structure describing a simple sample with two solvents"""
+    H2O = SLD(-0.52, name='H2O')
+    D2O = SLD(6.19, name='D2O')
+    layer1 = SLD(4, name='Layer 1')(thick=60, rough=8)
+    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
+    structure_H2O = H2O | layer1 | layer2 | substrate
+    structure_D2O = D2O | layer1 | layer2 | substrate
+    return [structure_H2O, structure_D2O]
+
+
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
                    filename: str) -> None:
@@ -41,6 +54,71 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=40)
 
+@pytest.mark.parametrize('bkg', ([1e-6],
+                                 [1e-6, 5e-6],
+                                 [1e-6, 5e-6, 2e-6],
+                                 [1e-6, 5e-6, 2e-6, 4e-6])
+                         )
+def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
+    """
+    Tests whether a ValueError is properly raised when a list of backgrounds
+    is given to a sample that does not equal the amount of structures
+    """
+    if len(bkg) == len(refnx_two_solvents):
+        with pytest.raises(ValueError):
+            Sample(refnx_two_solvents, bkg=bkg)
+
+@pytest.mark.parametrize('scale', ([1],
+                                 [1, 5],
+                                 [1, 5, 2],
+                                 [1, 5, 2, 4])
+                         )
+def test_sample_with_multiple_scales_length(refnx_two_solvents, scale):
+    """
+    Tests whether a ValueError is properly raised when a list of scales
+    is given to a sample that does not equal the amount of structures
+    """
+    if len(scale) != len(refnx_two_solvents):
+        with pytest.raises(ValueError):
+            Sample(refnx_two_solvents, scale=scale)
+
+@pytest.mark.parametrize('bkg', ([1e-6],
+                                 [1e-6, 5e-6],
+                                 [1e-6, 5e-6, 2e-6],
+                                 [1e-6, 5e-6, 2e-6, 4e-6])
+                         )
+def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
+    """
+    Tests whether a ValueError is properly raised when a list of backgrounds
+    is given to a sample that does not equal the amount of structures
+    """
+    if len(bkg) != len(refnx_two_solvents):
+        with pytest.raises(ValueError):
+            Sample(refnx_two_solvents, bkg=bkg)
+
+@pytest.mark.parametrize('dq', ([1],
+                                [1, 5],
+                                [1, 5, 2],
+                                [1, 5, 2, 4])
+                         )
+def test_sample_with_multiple_dq_length(refnx_two_solvents, dq):
+    """
+    Tests whether a ValueError is properly raised when a list of dq's
+    is given to a sample that does not equal the amount of structures
+    """
+    if len(dq) != len(refnx_two_solvents):
+        with pytest.raises(ValueError):
+            Sample(refnx_two_solvents, dq=dq)
+
+def test_different_scale(refnx_two_solvents):
+    """
+    Tests whether the angle_info function correctly calculates the Fisher
+    information, and outputs the same values as if the functions were called
+    manually.
+    """
+    # Get Fisher information from tested unit
+    angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
+    sample = Sample(refnx_two_solvents, bkg=[1e-6, 5e-6])
 
 def test_angle_info(refnx_sample):
     """
