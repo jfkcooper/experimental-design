@@ -71,21 +71,6 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
     fig.savefig(file_path, dpi=40)
 
 
-@pytest.mark.parametrize('bkg', ([1e-6],
-                                 [1e-6, 5e-6],
-                                 [1e-6, 5e-6, 2e-6],
-                                 [1e-6, 5e-6, 2e-6, 4e-6])
-                         )
-def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
-    """
-    Tests whether a ValueError is properly raised when a list of backgrounds
-    is given to a sample that does not equal the amount of structures
-    """
-    if len(bkg) != len(refnx_two_solvents):
-        with pytest.raises(ValueError):
-            Sample(refnx_two_solvents, bkg=bkg)
-
-
 def test_sample_with_multiple_bkg_order(refnx_three_solvents):
     """
     Tests whether the order of the sample backgrounds is still as expected
@@ -119,8 +104,20 @@ def test_sample_with_multiple_dq_order(refnx_three_solvents):
     assert refnx_three_solvents == sample.structures
 
 
+@pytest.mark.parametrize('bkg', ([1e-6],
+                                 [1e-6, 5e-6, 2e-6],
+                                 [1e-6, 5e-6, 2e-6, 4e-6])
+                         )
+def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
+    """
+    Tests whether a ValueError is properly raised when a list of backgrounds
+    is given to a sample that does not equal the amount of structures
+    """
+    with pytest.raises(ValueError):
+        Sample(refnx_two_solvents, bkg=bkg)
+
+
 @pytest.mark.parametrize('scale', ([1],
-                                   [1, 5],
                                    [1, 5, 2],
                                    [1, 5, 2, 4])
                          )
@@ -129,13 +126,11 @@ def test_sample_with_multiple_scales_length(refnx_two_solvents, scale):
     Tests whether a ValueError is properly raised when a list of scales
     is given to a sample that does not equal the amount of structures
     """
-    if len(scale) != len(refnx_two_solvents):
-        with pytest.raises(ValueError):
-            Sample(refnx_two_solvents, scale=scale)
+    with pytest.raises(ValueError):
+        Sample(refnx_two_solvents, scale=scale)
 
 
 @pytest.mark.parametrize('dq', ([1],
-                                [1, 5],
                                 [1, 5, 2],
                                 [1, 5, 2, 4])
                          )
@@ -144,9 +139,8 @@ def test_sample_with_multiple_dq_length(refnx_two_solvents, dq):
     Tests whether a ValueError is properly raised when a list of dq's
     is given to a sample that does not equal the amount of structures
     """
-    if len(dq) != len(refnx_two_solvents):
-        with pytest.raises(ValueError):
-            Sample(refnx_two_solvents, dq=dq)
+    with pytest.raises(ValueError):
+        Sample(refnx_two_solvents, dq=dq)
 
 
 def test_angle_info(refnx_sample):
