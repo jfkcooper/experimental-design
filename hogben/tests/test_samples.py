@@ -36,6 +36,21 @@ def refnx_two_solvents():
     structure_D2O = D2O | layer1 | layer2 | substrate
     return [structure_H2O, structure_D2O]
 
+@pytest.fixture
+def refnx_three_solvents():
+    """Defines a structure describing a simple sample with three solvents"""
+    H2O = SLD(-0.52, name='H2O')
+    D2O = SLD(6.19, name='D2O')
+    SMW = SLD(2.07, name='SMW')
+    layer1 = SLD(4, name='Layer 1')(thick=60, rough=8)
+    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
+    structure_H2O = H2O | layer1 | layer2 | substrate
+    structure_D2O = D2O | layer1 | layer2 | substrate
+    structure_SMW = SMW | layer1 | layer2 | substrate
+    return [structure_H2O, structure_D2O, structure_SMW]
+
+
 
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
@@ -68,6 +83,39 @@ def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
     if len(bkg) == len(refnx_two_solvents):
         with pytest.raises(ValueError):
             Sample(refnx_two_solvents, bkg=bkg)
+
+
+def test_sample_with_multiple_bkg_order(refnx_three_solvents):
+    """
+    Tests whether the order of the sample backgrounds is still as expected
+    when using multiple backgrounds
+    """
+    bkg = [2e-6, 5e-6, 1e-5]
+    sample = Sample(refnx_three_solvents, bkg=bkg)
+    assert bkg == sample.bkg
+    assert refnx_three_solvents == sample.structures
+
+
+def test_sample_with_multiple_scale_order(refnx_three_solvents):
+    """
+    Tests whether the order of the sample scales is still as expected
+    when using multiple scales
+    """
+    scale = [2, 5, 1]
+    sample = Sample(refnx_three_solvents, scale=scale)
+    assert scale == sample.scale
+    assert refnx_three_solvents == sample.structures
+
+
+def test_sample_with_multiple_dq_order(refnx_three_solvents):
+    """
+    Tests whether the order of the sample backgrounds is still as expected
+    when using multiple backgrounds
+    """
+    dq = [2, 5, 1]
+    sample = Sample(refnx_three_solvents, dq=dq)
+    assert dq == sample.dq
+    assert refnx_three_solvents == sample.structures
 
 
 @pytest.mark.parametrize('scale', ([1],
