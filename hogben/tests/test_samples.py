@@ -36,6 +36,7 @@ def refnx_two_solvents():
     structure_D2O = D2O | layer1 | layer2 | substrate
     return [structure_H2O, structure_D2O]
 
+
 @pytest.fixture
 def refnx_three_solvents():
     """Defines a structure describing a simple sample with three solvents"""
@@ -80,7 +81,7 @@ def test_sample_with_multiple_bkg_length(refnx_two_solvents, bkg):
     Tests whether a ValueError is properly raised when a list of backgrounds
     is given to a sample that does not equal the amount of structures
     """
-    if len(bkg) == len(refnx_two_solvents):
+    if len(bkg) != len(refnx_two_solvents):
         with pytest.raises(ValueError):
             Sample(refnx_two_solvents, bkg=bkg)
 
