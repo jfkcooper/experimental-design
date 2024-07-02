@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import refnx.dataset
 import refnx.reflect
 import refnx.analysis
-from refnx.reflect import ReflectModel, SLD
+from refnx.reflect import ReflectModel
 from refnx._lib import flatten
 
 from hogben.simulate import SimulateReflectivity
@@ -62,27 +62,13 @@ class BaseSample(VariableAngle):
         self._bkg = None
         self._dq = None
         self._scale = None
-        self.polarised = True
 
-    def get_structures(self) -> list:
+    @abstractmethod
+    def get_structures(self):
         """
         Get a list of the possible sample structures.
         """
-        spin_structures = []
-        if self.polarised:
-            for structure in self._structures:
-                up_structure = structure.copy()
-                down_structure = structure.copy()
-                for i, layer in enumerate(structure):
-                    if isinstance(layer, MagneticSLD):
-                        up_structure[i] = layer.spin_up
-                        down_structure[i] = layer.spin_down
-                if self.is_magnetic():
-                    spin_structures.extend([up_structure, down_structure])
-                else:
-                    spin_structures.extend([structure.copy()])
-            return spin_structures
-        return self._structures
+        pass
 
     @property
     def structures(self):
@@ -92,14 +78,6 @@ class BaseSample(VariableAngle):
     @structures.setter
     def structures(self, structures):
         self._structures = structures
-
-    def is_magnetic(self):
-        for structure in self._structures:
-            for layer in structure:
-                if isinstance(layer, MagneticSLD):
-                    return True
-        return False
-
 
     def get_param_by_attribute(self, attr: str) -> list:
         """
@@ -441,80 +419,3 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'nested_sampling_' + filename)
-
-class MagneticSLD(refnx.reflect.structure.Slab):
-    """
-    A class to represent a layer with a magnetic SLD component.
-
-    This class extends the `Slab` class from `refnx.reflect.structure` to
-    include properties for magnetic Scattering Length Density (SLD) as well.
-
-    Attributes:
-        SLD_n (float): Nuclear scattering length density.
-        SLD_m (float): Magnetic scattering length density.
-        thickness (float): Thickness of the layer.
-        roughness (float): Roughness of the layer.
-        name (str): Name of the layer.
-    """
-
-    def __init__(self, SLDn=0, SLDm=0, thick=0, rough=0, name="Magnetic Layer"):
-        """
-        Initialize a MagneticSLD object.
-
-        Parameters:
-            SLDn (float): Nuclear scattering length density. Default is 0.
-            SLDm (float): Magnetic scattering length density. Default is 0.
-            thick (float): Thickness of the layer. Default is 0.
-            rough (float): Roughness of the layer. Default is 0.
-            name (str): Name of the layer. Default is "Magnetic Layer".
-        """
-        self.SLD_n = SLDn
-        self.SLD_m = SLDm
-        self.thickness = thick
-        self.roughness = rough
-        self.name = name
-        super().__init__(thick=self.thickness, sld=self.SLD_n+0*self.SLD_m,
-                         rough=self.roughness, name=self.name)
-
-    @property
-    def spin_up(self):
-        """
-        Calculate the spin-up scattering length density.
-
-        Returns:
-            SLD: An SLD object representing the spin-up component with the
-            appropriate thickness and roughness.
-        """
-        SLD_value = self.SLD_n + self.SLD_m
-        return SLD(SLD_value, name='spin_up')(thick=self.thickness,
-                                              rough=self.rough)
-
-    @property
-    def spin_down(self):
-        """
-        Calculate the spin-down scattering length density.
-
-        Returns:
-            SLD: An SLD object representing the spin-down component with the
-            appropriate thickness and roughness.
-        """
-        SLD_value = self.SLD_n - self.SLD_m
-        return SLD(SLD_value, name='spin_down')(thick=self.thickness,
-                                                rough=self.rough)
-
-    def __call__(self, thick=None, rough=None):
-        """
-        Update the thickness and roughness of the layer.
-
-        Parameters:
-            thick (float, optional): New thickness of the layer. If None, the
-            current thickness is retained.
-            rough (float, optional): New roughness of the layer. If None, the
-            current roughness is retained.
-
-        Returns:
-            MagneticSLD: The updated MagneticSLD object.
-        """
-        self.thickness = thick if thick is not None else self.thickness
-        self.roughness = rough if rough is not None else self.roughness
-        return self
