@@ -125,8 +125,8 @@ def test_magnetic_sample_length(refnx_magnetic_structure,
     sample_single = Sample(refnx_magnetic_structure)
     sample_double = Sample(refnx_magnetic_structure_multiple_layers)
 
-    assert len(sample_single.structures) == 2*len(sample_single._structures)
-    assert len(sample_double.structures) == 2*len(sample_double._structures)
+    assert len(sample_single.structures) == 2 * len(sample_single._structures)
+    assert len(sample_double.structures) == 2 * len(sample_double._structures)
 
 
 def test_sample_with_multiple_bkg_order(refnx_three_solvents):

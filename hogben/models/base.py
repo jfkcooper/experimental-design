@@ -90,10 +90,11 @@ class BaseSample(VariableAngle):
         return self.get_structures()
 
     @structures.setter
-    def structures(self, structures):
+    def structures(self, structures: list):
         self._structures = structures
 
-    def is_magnetic(self):
+    def is_magnetic(self) -> bool:
+        """Checks whether the sample contains at least one magnetic layer"""
         for structure in self._structures:
             for layer in structure:
                 if isinstance(layer, MagneticSLD):
@@ -442,6 +443,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'nested_sampling_' + filename)
 
+
 class MagneticSLD(refnx.reflect.structure.Slab):
     """
     A class to represent a layer with a magnetic SLD component.
@@ -457,7 +459,12 @@ class MagneticSLD(refnx.reflect.structure.Slab):
         name (str): Name of the layer.
     """
 
-    def __init__(self, SLDn=0, SLDm=0, thick=0, rough=0, name="Magnetic Layer"):
+    def __init__(self,
+                 SLDn: float = 0,
+                 SLDm: float = 0,
+                 thick: float = 0,
+                 rough: float = 0,
+                 name: str = 'Magnetic Layer'):
         """
         Initialize a MagneticSLD object.
 
@@ -475,6 +482,7 @@ class MagneticSLD(refnx.reflect.structure.Slab):
         self.name = name
         super().__init__(thick=self.thickness, sld=self.SLD_n,
                          rough=self.roughness, name=self.name)
+
     @property
     def spin_up(self):
         """

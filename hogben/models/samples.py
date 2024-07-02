@@ -14,7 +14,7 @@ import refnx.analysis
 
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
-from hogben.models.base import BaseSample, MagneticSLD
+from hogben.models.base import BaseSample
 from refnx.analysis import Objective, GlobalObjective
 from refnx.reflect import ReflectModel
 
@@ -229,7 +229,6 @@ class Sample(BaseSample):
             ]
         return labels
 
-
     @labels.setter
     def labels(self, labels: list) -> None:
         """
@@ -384,7 +383,7 @@ class Sample(BaseSample):
             profiles.append((q, r))
         return profiles
 
-    def nested_sampling(self,
+    def nested_sampling(self,MagneticSLD
                         angle_times: list,
                         save_path: str,
                         filename: str,
