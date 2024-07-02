@@ -138,7 +138,7 @@ class BaseSample(VariableAngle):
             data = SimulateReflectivity(model, angle_times[i],
                                         inst_or_path).simulate()
             # Extract each column of the simulated `data`.
-            q, r, dr, counts = data[0], data[1], data[2], data[3]
+            q, r, dr, _ = data[0], data[1], data[2], data[3]
 
             # Calculate the model reflectivity.
             r_model = SimulateReflectivity(model, angle_times[i],
@@ -161,7 +161,7 @@ class BaseSample(VariableAngle):
         ax.set_ylabel('Reflectivity (arb.)', weight='bold')
         ax.set_yscale('log')
         ax.set_title('Reflectivity Profile')
-        ax.set_xlim(0, 1.05*current_xmax)
+        ax.set_xlim(0, 1.05 * current_xmax)
         ax.legend()
 
     @abstractmethod
@@ -385,7 +385,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
             background_level = 2e-6 * contrast_point + 4e-6 * (
-                    1 - contrast_point)
+                1 - contrast_point)
 
             model = ReflectModel(sample)
             model.bkg = background_level

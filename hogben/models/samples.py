@@ -79,7 +79,6 @@ class Sample(BaseSample):
         else:
             setattr(self, f'_{attribute}', [value] * len(self.structures))
 
-
     @property
     def labels(self) -> list:
         """
@@ -104,7 +103,6 @@ class Sample(BaseSample):
                          f' {"{:.3g}".format(structure[-1].sld.real.value)}')
             labels.append(label)
         return labels
-
 
     @property
     def bkg(self):
