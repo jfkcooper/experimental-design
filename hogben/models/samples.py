@@ -40,19 +40,20 @@ class Sample(BaseSample):
         Args:
             structure: Sample structure defined in the refnx model
         """
+        super().__init__()
         if isinstance(structure, refnx.reflect.Structure):
             structure = [structure]
         self.polarised = settings.get('polarised', True)
         self.structures = structure
-        self.name = structure[0].name
-        self._bkg = None
-        self._dq = None
-        self._scale = None
+        self.name = ', '.join(
+            {structure.name for structure in self.get_structures()})
 
+        self._labels = None
+        self.labels = settings.get('labels', self._labels)
         self.scale = settings.get('scale', 1)
         self.bkg = settings.get('bkg', 5e-6)
         self.dq = settings.get('dq', 2)
-
+        self.polarised = settings.get('polarised', True)
 
     def _validate_and_set(self, attribute, value):
         """
@@ -81,6 +82,56 @@ class Sample(BaseSample):
                 setattr(self, f'_{attribute}', value)
         else:
             setattr(self, f'_{attribute}', [value] * len(self.structures))
+
+    @property
+    def labels(self) -> list:
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+        labels = []
+        if self._labels:
+            return self._labels
+
+        # Check if the different structures have the same solvent
+        first_solvent_sld = self.get_structures()[0][-1].sld.real.value
+        same_solvent = all(structure[-1].sld.real.value == first_solvent_sld
+                           for structure in self._structures)
+
+        for index, structure in enumerate(self._structures):
+            if same_solvent:
+                label = f'structure {index}'
+            else:
+                label = (f'Solvent SLD:'
+                         f' {"{:.3g}".format(structure[-1].sld.real.value)}')
+            labels.append(label)
+        return labels
+
+    @labels.setter
+    def labels(self, labels: list) -> None:
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+
+        # Don't try to set the labels if no labels were specified
+        if labels is None:
+            return
+
+        if (isinstance(labels, list)
+                and all(isinstance(label, str) for label in labels)):
+            if len(labels) == len(self.structures):
+                self._labels = labels
+            else:
+                raise ValueError(
+                    'The amount of labels must be equal to the number '
+                    'of structures in the sample!'
+                )
+        else:
+            raise TypeError(
+                'The labels need to be given in the form of a list of'
+                ' strings!'
+            )
 
     @property
     def bkg(self):
@@ -248,7 +299,8 @@ class Sample(BaseSample):
         fig, ax = plt.subplots()
         for i, (z, slds) in enumerate(self._get_sld_profile()):
             # Create a new subplot for each profile if not 'single'
-            label = self.labels[i]
+            label = f'{self.labels[i]}'
+
 
             # Create a new subplot for each profile if not 'single'
             ax.set_xlim(min(z), max(z))
@@ -299,7 +351,6 @@ class Sample(BaseSample):
         profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
                                                   bkg, dq)
         for i, (q, r) in enumerate(profiles):
-            # Plot Q versus model reflectivity.
             ax.plot(q, r, label=self.labels[i])
 
             ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$')
