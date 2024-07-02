@@ -14,7 +14,7 @@ import refnx.analysis
 
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
-from hogben.models.base import BaseSample
+from hogben.models.base import BaseSample, MagneticSLD
 from refnx.analysis import Objective, GlobalObjective
 from refnx.reflect import ReflectModel
 
@@ -43,6 +43,7 @@ class Sample(BaseSample):
         super().__init__()
         if isinstance(structure, refnx.reflect.Structure):
             structure = [structure]
+        self.polarised = settings.get('polarised', True)
         self.structures = structure
         self.name = ', '.join(
             {structure.name for structure in self.get_structures()})
@@ -69,6 +70,9 @@ class Sample(BaseSample):
                         number of structures.
         """
         if isinstance(value, list):
+            if self.is_magnetic() and self.polarised:
+                # Duplicate each item for magnetic samples (up+down)
+                value = [item for item in value for _ in range(2)]
             if len(value) != len(self.structures):
                 raise ValueError(
                     f'The length of `{attribute}` must be equal to the number '
@@ -189,10 +193,6 @@ class Sample(BaseSample):
         """
         self._validate_and_set('scale', value)
 
-    def get_structures(self) -> list:
-        """Get a list of the possible sample structures."""
-        return self._structures
-
     @property
     def params(self) -> list:
         """List of all varying parameters of the sample"""
@@ -244,6 +244,29 @@ class Sample(BaseSample):
         """
         return self.get_models()
 
+    @property
+    def labels(self) -> list:
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+        labels = []
+        for structure in self._structures:
+            if len(self._structures) == 1:
+                label = ''
+            else:
+                label = f'Solvent SLD: {structure[-1].sld.real.value}'
+            labels.append(label)
+        if self.is_magnetic() and self.polarised:
+            # Duplicate each label per spin state
+            labels = [item for item in labels for _ in range(2)]
+            # Add spin-state for every structure
+            labels = [
+                f'Spin-up, {item}' if index % 2 == 0 else f'Spin-down, {item}'
+                for index, item in enumerate(labels)
+            ]
+        return labels
+
     def angle_info(self,
                    angle_times: list[tuple],
                    contrasts: Any | None = None) -> Fisher:
@@ -277,6 +300,7 @@ class Sample(BaseSample):
         for i, (z, slds) in enumerate(self._get_sld_profile()):
             # Create a new subplot for each profile if not 'single'
             label = f'{self.labels[i]}'
+
 
             # Create a new subplot for each profile if not 'single'
             ax.set_xlim(min(z), max(z))
@@ -327,15 +351,10 @@ class Sample(BaseSample):
         profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
                                                   bkg, dq)
         for i, (q, r) in enumerate(profiles):
-
-            # Plot Q versus model reflectivity.
             ax.plot(q, r, label=self.labels[i])
 
-            x_label = '$\mathregular{Q\ (Å^{-1})}$'
-            y_label = 'Reflectivity (arb.)'
-
-            ax.set_xlabel(x_label, fontsize=11, weight='bold')
-            ax.set_ylabel(y_label, fontsize=11, weight='bold')
+            ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$')
+            ax.set_ylabel('Reflectivity (arb.)')
             ax.set_title('Reflectivity profile')
             ax.set_yscale('log')
             ax.legend()
