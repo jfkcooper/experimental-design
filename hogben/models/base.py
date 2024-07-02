@@ -204,6 +204,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         Initialize a BaseLipid object sample, and loads the
         experimentally measured data
         """
+        super().__init__()
         self._create_objectives()  # Load experimentally-measured data.
 
     @abstractmethod

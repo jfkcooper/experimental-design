@@ -383,7 +383,7 @@ class Sample(BaseSample):
             profiles.append((q, r))
         return profiles
 
-    def nested_sampling(self,MagneticSLD
+    def nested_sampling(self,
                         angle_times: list,
                         save_path: str,
                         filename: str,
