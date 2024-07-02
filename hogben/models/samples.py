@@ -43,7 +43,6 @@ class Sample(BaseSample):
         super().__init__()
         if isinstance(structure, refnx.reflect.Structure):
             structure = [structure]
-        self.polarised = settings.get('polarised', True)
         self.structures = structure
         self.name = ', '.join(
             {structure.name for structure in self.get_structures()})
@@ -54,6 +53,8 @@ class Sample(BaseSample):
         self.bkg = settings.get('bkg', 5e-6)
         self.dq = settings.get('dq', 2)
         self.polarised = settings.get('polarised', True)
+
+
 
     def _validate_and_set(self, attribute, value):
         """
@@ -82,56 +83,6 @@ class Sample(BaseSample):
                 setattr(self, f'_{attribute}', value)
         else:
             setattr(self, f'_{attribute}', [value] * len(self.structures))
-
-    @property
-    def labels(self) -> list:
-        """
-        Returns a list of all refnx `ReflectModel` models that are
-        associated with each structure of the sample.
-        """
-        labels = []
-        if self._labels:
-            return self._labels
-
-        # Check if the different structures have the same solvent
-        first_solvent_sld = self.get_structures()[0][-1].sld.real.value
-        same_solvent = all(structure[-1].sld.real.value == first_solvent_sld
-                           for structure in self._structures)
-
-        for index, structure in enumerate(self._structures):
-            if same_solvent:
-                label = f'structure {index}'
-            else:
-                label = (f'Solvent SLD:'
-                         f' {"{:.3g}".format(structure[-1].sld.real.value)}')
-            labels.append(label)
-        return labels
-
-    @labels.setter
-    def labels(self, labels: list) -> None:
-        """
-        Returns a list of all refnx `ReflectModel` models that are
-        associated with each structure of the sample.
-        """
-
-        # Don't try to set the labels if no labels were specified
-        if labels is None:
-            return
-
-        if (isinstance(labels, list)
-                and all(isinstance(label, str) for label in labels)):
-            if len(labels) == len(self.structures):
-                self._labels = labels
-            else:
-                raise ValueError(
-                    'The amount of labels must be equal to the number '
-                    'of structures in the sample!'
-                )
-        else:
-            raise TypeError(
-                'The labels need to be given in the form of a list of'
-                ' strings!'
-            )
 
     @property
     def bkg(self):
@@ -251,21 +202,60 @@ class Sample(BaseSample):
         associated with each structure of the sample.
         """
         labels = []
-        for structure in self._structures:
+        if self._labels:
+            return self._labels
+
+        # Check if the different structures have the same solvent
+        first_solvent_sld = self.get_structures()[0][-1].sld.real.value
+        same_solvent = all(structure[-1].sld.real.value == first_solvent_sld
+                           for structure in self._structures)
+
+        for index, structure in enumerate(self._structures):
             if len(self._structures) == 1:
                 label = ''
+            elif same_solvent:
+                label = f'Structure {index}'
             else:
-                label = f'Solvent SLD: {structure[-1].sld.real.value}'
+                label = (f'Solvent SLD:'
+                         f' {"{:.3g}".format(structure[-1].sld.real.value)}')
             labels.append(label)
         if self.is_magnetic() and self.polarised:
             # Duplicate each label per spin state
             labels = [item for item in labels for _ in range(2)]
             # Add spin-state for every structure
             labels = [
-                f'Spin-up, {item}' if index % 2 == 0 else f'Spin-down, {item}'
-                for index, item in enumerate(labels)
+                f'Spin-up {label}' if index % 2 == 0 else f'Spin-down {label}'
+                for index, label in enumerate(labels)
             ]
         return labels
+
+
+    @labels.setter
+    def labels(self, labels: list) -> None:
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+
+        # Don't try to set the labels if no labels were specified
+        if labels is None:
+            return
+
+        if (isinstance(labels, list)
+                and all(isinstance(label, str) for label in labels)):
+            if len(labels) == len(self.structures):
+                self._labels = labels
+            else:
+                raise ValueError(
+                    'The amount of labels must be equal to the number '
+                    'of structures in the sample!'
+                )
+        else:
+            raise TypeError(
+                'The labels need to be given in the form of a list of'
+                ' strings!'
+            )
+
 
     def angle_info(self,
                    angle_times: list[tuple],
@@ -299,8 +289,7 @@ class Sample(BaseSample):
         fig, ax = plt.subplots()
         for i, (z, slds) in enumerate(self._get_sld_profile()):
             # Create a new subplot for each profile if not 'single'
-            label = f'{self.labels[i]}'
-
+            label = self.labels[i]
 
             # Create a new subplot for each profile if not 'single'
             ax.set_xlim(min(z), max(z))
@@ -351,13 +340,16 @@ class Sample(BaseSample):
         profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
                                                   bkg, dq)
         for i, (q, r) in enumerate(profiles):
+            # Plot Q versus model reflectivity.
             ax.plot(q, r, label=self.labels[i])
 
             ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$')
             ax.set_ylabel('Reflectivity (arb.)')
             ax.set_title('Reflectivity profile')
             ax.set_yscale('log')
-            ax.legend()
+
+            if len(self.structures) > 1:
+                ax.legend()
 
         # Save the plot.
         if save_path:

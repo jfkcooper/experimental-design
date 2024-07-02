@@ -35,7 +35,7 @@ class MockSample:
     def __init__(self):
         """Iniitalize the mocked sample"""
         self.params = [MagicMock(name='param1'), MagicMock(name='param2')]
-        self.simulate_reflectivity = MagicMock()
+        self.reflectivity_profile = MagicMock()
         self.sld_profile = MagicMock()
         self.get_models = MagicMock()
 
@@ -195,7 +195,7 @@ def test_optimise_parameters(mock_scan_parameters, mock_optimise_parameters):
 
     # Check whether the visualisation functions are called
     sample.sld_profile.assert_called_once()
-    sample.simulate_reflectivity.assert_called_once()
+    sample.reflectivity_profile.assert_called_once()
     mock_scan_parameters.assert_called_once()
 
 

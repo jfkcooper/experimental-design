@@ -171,12 +171,8 @@ class Fisher():
         """
         qs, counts = [], []
         models = sample.get_models()
-
-        if not isinstance(angle_times[0], list):
-            angle_times = [angle_times for _ in models]
-
-        for model, angle_time in zip(models, angle_times):
-            sim = SimulateReflectivity(model, angle_time,
+        for model in models:
+            sim = SimulateReflectivity(model, angle_times,
                                        inst_or_path=inst_or_path)
             data = sim.simulate()
             qs.append(data[0])

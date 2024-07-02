@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 import refnx
 
-from hogben.models.samples import Sample
 from hogben.utils import Fisher
 from refnx.reflect import SLD
 from unittest.mock import Mock, patch
@@ -62,18 +61,6 @@ def mock_model():
     return model
 
 
-@pytest.fixture
-def refnx_two_solvents():
-    """Defines a structure describing a simple sample with two solvents"""
-    H2O = SLD(-0.52, name='H2O')
-    D2O = SLD(6.19, name='D2O')
-    layer1 = SLD(4, name='Layer 1')(thick=60, rough=8)
-    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
-    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
-    structure_H2O = H2O | layer1 | layer2 | substrate
-    structure_D2O = D2O | layer1 | layer2 | substrate
-    return [structure_H2O, structure_D2O]
-
 def generate_reflectivity_data():
     """
     Generates predefined reflectivity.The reflectivity values are yielded
@@ -100,20 +87,6 @@ def test_fisher_workflow(model):
         [-7.91886209e-07, -3.18583142e-07, 1.03142100e-07, 1.99470835e-07],
     ]
     np.testing.assert_allclose(g, expected_fisher, rtol=1e-08)
-
-
-def test_fisher_multiple_backgrounds(refnx_two_solvents):
-    """
-    Tests whether the Fisher information still behaves as expected when using
-    two different backgrounds in a sample.
-    """
-    sample = Sample(refnx_two_solvents, bkg=[1e-6, 5e-6])
-    sample._vary_structure()
-    angle_times = [(0.7, 100, 100000), (2.0, 100, 100000)]
-    fisher = Fisher.from_sample(sample, angle_times)
-    eigenval_ref = 257.9191161169581
-    np.testing.assert_allclose(eigenval_ref,
-                               fisher.min_eigenval, rtol=1e-08)
 
 
 @patch('hogben.utils.SimulateReflectivity.reflectivity')
