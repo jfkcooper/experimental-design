@@ -10,6 +10,7 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 from refnx.reflect import ReflectModel
+from refnx._lib import flatten
 
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher, Sampler, save_plot
@@ -24,7 +25,6 @@ class VariableAngle(ABC):
 
     @abstractmethod
     def angle_info(self):
-
         """Calculates the Fisher information matrix for a sample measured
         over a number of angles."""
         pass
@@ -56,15 +56,116 @@ class BaseSample(VariableAngle):
     """Abstract class representing a "standard" neutron reflectometry sample
     defined by a series of contiguous layers."""
 
-    @abstractmethod
-    def sld_profile(self):
-        """Plots the SLD profile of the sample."""
-        pass
+    def __init__(self):
+        """Initialise the sample and define class attributes"""
+        self._structures = []
+        self._bkg = None
+        self._dq = None
+        self._scale = None
 
     @abstractmethod
-    def reflectivity_profile(self):
-        """Plots the reflectivity profile of the sample."""
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
         pass
+
+    @property
+    def structures(self):
+        """Return the structures that belong to the sample"""
+        return self.get_structures()
+
+    @structures.setter
+    def structures(self, structures):
+        self._structures = structures
+
+    def get_param_by_attribute(self, attr: str) -> list:
+        """
+        Get all parameters defined in the sample model that have a given
+        attribute. Returns a list with all parameters with this attribute,
+        e.g. `attr='vary'` returns all varying parameters.
+
+        Args:
+            attr (str): The attribute to filter for
+
+        Returns:
+            list: A list of all parameters with the given attribute
+        """
+        params = []
+        for model in self.get_models():
+            for p in flatten(model.parameters):
+                if hasattr(p, attr) and getattr(p, attr):
+                    params.append(p)
+                    continue
+                # Get parameters that are coupled to model attributes as
+                # dependencies:
+                if p._deps:
+                    params.extend([_p for _p in p.dependencies() if
+                                   hasattr(_p, attr) and getattr(_p, attr)])
+        return list(set(params))
+
+    def get_models(self) -> list:
+        """
+        Generates a refnx `ReflectModel` for each structure associated with the
+        all structures of the Sample, and returns these in a list.
+        """
+        return [refnx.reflect.ReflectModel(structure,
+                                           scale=scale,
+                                           bkg=bkg,
+                                           dq=dq)
+                for structure, scale, bkg, dq
+                in zip(self.get_structures(), self.scale, self.bkg, self.dq)]
+
+    def simulate_reflectivity(self, angle_times,
+                              inst_or_path='OFFSPEC') -> None:
+        """
+        Plot a simulated reflectivity curve given a set of `angle_times` and
+        the neutron instrument.
+
+        Args:
+            angle_times (list): points and times for each angle.
+            inst_or_path (str): either the name of an instrument already in ,
+                                HOGBEN or the path to a direct beam file,
+                                defaults to 'OFFSPEC'
+
+        """
+        if not isinstance(angle_times[0], list):
+            angle_times = [angle_times for _ in self.get_models()]
+
+        # Plot the model and simulated reflectivity against Q.
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        current_xmax = 0
+
+        for i, model in enumerate(self.get_models()):
+            data = SimulateReflectivity(model, angle_times[i],
+                                        inst_or_path).simulate()
+            # Extract each column of the simulated `data`.
+            q, r, dr, _ = data[0], data[1], data[2], data[3]
+
+            # Calculate the model reflectivity.
+            r_model = SimulateReflectivity(model, angle_times[i],
+                                           inst_or_path).reflectivity(q)
+
+            label = f', {self.labels[i]}' if len(self.structures) > 1 else ''
+
+            # Model reflectivity.
+            ax.plot(q, r_model, zorder=20, label=f'Model Reflectivity{label}')
+
+            # Simulated reflectivity
+            ax.errorbar(q, r, dr, marker='o', ms=3, lw=0,
+                        elinewidth=1, capsize=1.5, label='Simulated Data'
+                                                         f'{label}')
+            if max(q) > current_xmax:
+                current_xmax = max(q)
+
+        ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$',
+                      weight='bold')
+        ax.set_ylabel('Reflectivity (arb.)', weight='bold')
+        ax.set_yscale('log')
+        ax.set_title('Reflectivity Profile')
+        ax.set_xlim(0, 1.05 * current_xmax)
+        ax.legend()
 
     @abstractmethod
     def nested_sampling(self):
@@ -189,7 +290,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax = fig.add_subplot(111)
 
         # Plot the SLD profile for each measured contrast.
-        for structure in self.structures:
+        for structure in self.get_structures():
             ax.plot(*structure.sld_profile(self.distances))
 
         x_label = '$\mathregular{Distance\ (\AA)}$'
@@ -203,7 +304,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             ax.set_ylim(*ylim)
 
         # Add a legend if specified.
-        if legend:
+        if legend and self.get_structures() > 1:
             ax.legend(self.labels, loc='upper left')
 
         # Save the plot.
@@ -255,7 +356,9 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylim(1e-10, 3)
-        ax.legend()
+        ax.set_title('Reflectivity profile')
+        if len(self.get_structures()) > 1:
+            ax.legend()
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)

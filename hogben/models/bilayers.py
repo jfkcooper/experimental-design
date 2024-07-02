@@ -82,8 +82,8 @@ class BilayerPOPC(BaseLipid):
 
         self.labels = ['Si-D2O', 'Si-POPC-D2O', 'Si-POPC-H2O']
         self.distances = np.linspace(-20, 95, 500)
-        self.scales = [0.677763, 0.645217, 0.667776]
-        self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
+        self.scale = [0.677763, 0.645217, 0.667776]
+        self.bkg = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
 
         # Define known values.
@@ -150,6 +150,12 @@ class BilayerPOPC(BaseLipid):
 
         # Call the BaseLipid constructor.
         super().__init__()
+
+    def get_structures(self) -> list:
+        """
+        Get a list of the possible sample structures.
+        """
+        return self._structures
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
@@ -231,7 +237,7 @@ class BilayerPOPC(BaseLipid):
         for i, structure in enumerate(self.structures):
             # Define the model.
             model = refnx.reflect.ReflectModel(
-                structure, scale=self.scales[i], bkg=self.bkgs[i], dq=self.dq
+                structure, scale=self.scale[i], bkg=self.bkg[i], dq=self.dq
             )
             # Load the measured data.
             filename = '{}.dat'.format(self.labels[i])
@@ -345,8 +351,8 @@ class BilayerDMPC(BaseLipid):
 
         self.labels = ['Si-D2O', 'Si-DMPC-D2O', 'Si-DMPC-H2O']
         self.distances = np.linspace(-20, 95, 500)
-        self.scales = [0.677763, 0.645217, 0.667776]
-        self.bkgs = [3.20559e-06, 2.05875e-06, 2.80358e-06]
+        self.scale = [0.677763, 0.645217, 0.667776]
+        self.bkg = [3.20559e-06, 2.05875e-06, 2.80358e-06]
         self.dq = 2
 
         # Define known values.
@@ -413,6 +419,12 @@ class BilayerDMPC(BaseLipid):
 
         # Call the BaseLipid constructor.
         super().__init__()
+
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        return self._structures
 
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
@@ -506,7 +518,7 @@ class BilayerDMPC(BaseLipid):
         for i, structure in enumerate(self.structures):
             # Define the model.
             model = refnx.reflect.ReflectModel(
-                structure, scale=self.scales[i], bkg=self.bkgs[i], dq=self.dq
+                structure, scale=self.scale[i], bkg=self.bkg[i], dq=self.dq
             )
             # Load the measured data.
             filename = '{}.dat'.format(self.labels[i])
@@ -629,8 +641,8 @@ class BilayerDPPC(BaseLipid):
         self.distances = np.linspace(-30, 110, 500)
 
         self.contrast_slds = [6.14, 2.07, -0.56]
-        self.scale = 0.8
-        self.bkgs = [4.6e-6, 8.6e-6, 8.7e-6]
+        self.scale = [0.8, 0.8, 0.8]
+        self.bkg = [4.6e-6, 8.6e-6, 8.7e-6]
         self.dq = 4
 
         # Define known values.
@@ -719,6 +731,12 @@ class BilayerDPPC(BaseLipid):
         # Call the BaseLipid constructor.
         super().__init__()
 
+    def get_structures(self):
+        """
+        Get a list of the possible sample structures.
+        """
+        return self._structures
+
     def _create_objectives(self):
         """Creates objectives corresponding to each measured contrast."""
         # Define structures for each contrast.
@@ -732,7 +750,7 @@ class BilayerDPPC(BaseLipid):
         for i, structure in enumerate(self.structures):
             # Define the model.
             model = refnx.reflect.ReflectModel(
-                structure, scale=self.scale, bkg=self.bkgs[i], dq=self.dq
+                structure, scale=self.scale, bkg=self.bkg[i], dq=self.dq
             )
             # Load the measured data.
             filename = '{}.dat'.format(self.labels[i])

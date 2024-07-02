@@ -12,6 +12,64 @@ from hogben.models.base import (
     VariableContrast,
     VariableUnderlayer,
 )
+from hogben.utils import Fisher
+from hogben.visualise import scan_parameters
+
+
+def optimise_parameters(sample: BaseSample,
+                        angle_times: list,
+                        inst_or_path: str = 'OFFSPEC',
+                        visualise: bool = True) -> BaseSample:
+    """
+    Optimises the given parameters of a sample to the FI.
+
+    Optimise the parameters that have the 'optimize' attribute to the FI.
+    Outputs a summary with the optical values, as well as the improvement.
+    Also graphs are given for the reflectivity curves, SLD profile and
+    parameter scan over the FI.
+
+    Args:
+        sample (BaseSample): The sample object whose parameters are to be
+                             optimised.
+        angle_times (list): points and times for each angle to simulate.
+        inst_or_path: either the name of an instrument already in HOGBEN,
+                      or the path to a direct beam file, defaults to
+                      'OFFSPEC'
+        visualise (bool): Whether to generate graphs. Defaults to `True`.
+
+    Returns:
+        Sample: The sample object with optimised parameters.
+    """
+    fisher = Fisher.from_sample(sample, angle_times, inst_or_path=inst_or_path)
+    eigenval_initial = fisher.min_eigenval
+
+    optimiser = Optimiser(sample)
+    res, val = optimiser.optimise_parameters(angle_times,
+                                             inst_or_path=inst_or_path,
+                                             verbose=False)
+    optimize_params = sample.get_param_by_attribute('optimize')
+
+    print('The parameters with the highest information could be found at:')
+    for param, value in zip(optimize_params, res):
+        print(f'{param.name}: {"{:.3g}".format(value)}')
+        param.value = value
+
+    eigenval_after = fisher.min_eigenval
+    print('-----------------------------------------------------------------')
+    print(f'The minimum eigenvalue of the Fisher Information before '
+          f'optimization: {"{:.3g}".format(eigenval_initial)}')
+    print(f'The minimum eigenvalue of the Fisher Information after '
+          f'optimization: {"{:.3g}".format(fisher.min_eigenval)}')
+    print(f'The information content is'
+          f' {"{:.3g}".format(eigenval_after / eigenval_initial)}'
+          f' times as large after optimization.')
+
+    if visualise:
+        scan_parameters(sample, optimize_params, angle_times)
+        sample.sld_profile()
+        sample.simulate_reflectivity(angle_times, inst_or_path=inst_or_path)
+    return sample
+
 
 class Optimiser:
     """Contains code for optimising a neutron reflectometry experiment.
@@ -30,16 +88,14 @@ class Optimiser:
         """
         self.sample = sample
 
-    def optimise_angle_times(
-        self,
-        num_angles: int,
-        contrasts: Optional[list] = None,
-        total_time: float = 1000,
-        angle_bounds: tuple = (0.2, 4),
-        points: int = 100,
-        workers: int = -1,
-        verbose: bool = True,
-    ) -> tuple:
+    def optimise_angle_times(self,
+                             num_angles: int,
+                             contrasts: Optional[list] = None,
+                             total_time: float = 1000,
+                             angle_bounds: tuple = (0.2, 4),
+                             points: int = 100,
+                             workers: int = -1,
+                             verbose: bool = True) -> tuple:
         """Optimises the measurement angles and associated counting times
            of an experiment, given a fixed time budget.
 
@@ -49,7 +105,8 @@ class Optimiser:
             total_time (float): time budget of the experiment.
             angle_bounds (tuple): interval containing angles to consider.
             points (int): number of data points to use for each angle.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -94,15 +151,13 @@ class Optimiser:
                                         constraints, args, workers, verbose)
         return res[:num_angles], res[num_angles:], val
 
-    def optimise_contrasts(
-        self,
-        num_contrasts: int,
-        angle_splits: list,
-        total_time: float = 1000,
-        contrast_bounds: tuple = (-0.56, 6.36),
-        workers: int = -1,
-        verbose: bool = True,
-    ) -> tuple:
+    def optimise_contrasts(self,
+                           num_contrasts: int,
+                           angle_splits: list,
+                           total_time: float = 1000,
+                           contrast_bounds: tuple = (-0.56, 6.36),
+                           workers: int = -1,
+                           verbose: bool = True) -> tuple:
         """Finds the optimal contrasts, given a fixed time budget.
 
         Args:
@@ -110,7 +165,8 @@ class Optimiser:
             angle_splits (list): points and proportion of time for each angle.
             total_time (float): time budget for the experiment.
             contrast_bounds (tuple): contrast to consider.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -156,17 +212,80 @@ class Optimiser:
         )
         return res[:num_contrasts], res[num_contrasts:], val
 
+    def optimise_parameters(self,
+                            angle_times,
+                            inst_or_path='OFFSPEC',
+                            workers=-1,
+                            verbose=True) -> tuple:
+        """
+        Finds the optimal parameters for a given sample.
 
-    def optimise_underlayers(
-        self,
-        num_underlayers,
-        angle_times,
-        contrasts,
-        thick_bounds=(0, 500),
-        sld_bounds=(1, 9),
-        workers=-1,
-        verbose=True,
-    ) -> tuple:
+        Args:
+            angle_times (list [tuple]): points and times for each angle to
+                                        simulate.
+            inst_or_path: either the name of an instrument already in HOGBEN,
+                          or the path to a direct beam file, defaults to
+                          'OFFSPEC'
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
+            verbose (bool): whether to display progress or not.
+
+        Returns:
+            tuple: optimised underlayer parameters and the corresponding
+                   optimisation function value.
+
+        """
+        # Check that the underlayers of the sample can be varied.
+        bounds = []
+        params = self.sample.get_param_by_attribute('optimize')
+        for parameter in params:
+            bounds += [(parameter.bounds.lb, parameter.bounds.ub)]
+        # Arguments for the optimisation function.
+        args = [params, angle_times, inst_or_path]
+
+        # Optimise parameters and return the results.
+        res, val = Optimiser.__optimise(
+            self._parameter_func, bounds, [], args, workers, verbose
+        )
+        return res, val
+
+    def _parameter_func(self,
+                        x: list,
+                        params,
+                        angle_times: list,
+                        inst_or_path: str = 'OFFSPEC') -> float:
+        """Defines the function for optimising arbitrary parameters in sample.
+
+        Args:
+            x (list): parameter values to calculate with.
+            angle_times (type): points and times for each angle.
+            contrasts (list): contrasts of the experiment, if applicable.
+            inst_or_path: either the name of an instrument already in HOGBEN,
+                          or the path to a direct beam file, defaults to
+                          'OFFSPEC'
+
+        Returns:
+            float: negative of minimum eigenvalue of the Fisher information
+                   matrix using the given conditions.
+
+        """
+        # Extract the underlayer thicknesses and SLDs from the given `x` list.
+        i = 0
+        for param in params:
+            param.value = x[i]
+            i += 1
+        fisher = Fisher.from_sample(self.sample, angle_times, inst_or_path)
+        # Return negative of the minimum eigenvalue as algorithm is minimising.
+        return -fisher.min_eigenval
+
+    def optimise_underlayers(self,
+                             num_underlayers,
+                             angle_times,
+                             contrasts,
+                             thick_bounds=(0, 500),
+                             sld_bounds=(1, 9),
+                             workers=-1,
+                             verbose=True) -> tuple:
         """Finds the optimal underlayer thicknesses and SLDs of a sample.
 
         Args:
@@ -175,7 +294,8 @@ class Optimiser:
             contrasts (list): contrasts to simulate.
             thick_bounds (tuple): underlayer thicknesses to consider.
             sld_bounds (tuple): underlayer SLDs to consider.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:
@@ -232,7 +352,6 @@ class Optimiser:
 
         # Return negative of the minimum eigenvalue as algorithm is minimising.
         return -fisher.min_eigenval
-
 
     def _contrasts_func(self,
                         x: list,
@@ -316,7 +435,8 @@ class Optimiser:
             bounds (list): permissible values for the conditions to optimise.
             constraints (list): constraints on conditions to optimise.
             args (list): arguments for optimisation function.
-            workers (int): number of CPU cores to use when optimising.
+            workers (int): number of CPU cores to use when optimising. Use
+                           `workers=-1` to use all available cores.
             verbose (bool): whether to display progress or not.
 
         Returns:

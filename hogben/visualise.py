@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from itertools import combinations
 
-from hogben.utils import save_plot
+from hogben.utils import save_plot, Fisher
 from hogben.models.base import (
     BaseLipid,
     BaseSample,
@@ -85,6 +85,48 @@ def angle_choice(
     # Return the angle with largest minimum eigenvalue.
     return angle_range[np.argmax(min_eigs)]
 
+
+def scan_parameters(sample: BaseSample,
+                    params: list,
+                    angle_times: list) -> None:
+    """
+    Scans parameter values over FI and generate graphs.
+
+    Args:
+        sample (object): The sample data.
+        params (list): List of parameters to scan.
+        angle_times (list): List of angle times.
+
+    Returns:
+        None
+    """
+    param_values, eigenval_list = [], []
+    for param in params:
+        lb, ub = param.bounds.lb, param.bounds.ub
+        old_value = param.value
+        param_range = np.linspace(lb, ub, 200)
+        eigenvals = []
+        for value in param_range:
+            param.value = value
+            eigenvals.append(
+                Fisher.from_sample(sample, angle_times).min_eigenval)
+        param_values.append(param_range)
+        eigenval_list.append(eigenvals)
+        param.value = old_value
+    ymax = np.max(eigenval_list)
+
+    # Plot a scan for each parameter
+    for i, param in enumerate(params):
+        fig, ax = plt.subplots()
+
+        ax.set_ylabel('Minimum eigenvalue')
+        ax.set_xlabel('Parameter value')
+
+        ax.set_ylim(0, 1.05 * ymax)
+        ax.set_xlim(min(param_values[i]), max(param_values[i]))
+
+        ax.set_title(param.name)
+        ax.plot(param_values[i], eigenval_list[i], label=param.name)
 
 def angle_choice_with_time(
     sample: BaseSample,

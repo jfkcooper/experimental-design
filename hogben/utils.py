@@ -150,6 +150,40 @@ class Fisher():
         self.models = models
         self.step = step
 
+    @classmethod
+    def from_sample(cls,
+                    sample,
+                    angle_times,
+                    inst_or_path='OFFSPEC'):
+        """
+        This class method constructs a Fisher object using a HOGBEN sample.
+
+        Args:
+        sample (BaseSample): The sample object to calculate the FI for.
+        angle_times (list [tuple]): points and times for each angle to
+                                    simulate.
+        inst_or_path (str): The instrument or path to use for the simulation.
+                            Defaults to 'OFFSPEC'.
+
+        Returns:
+        Fisher
+            A new instance of the Fisher class
+        """
+        qs, counts = [], []
+        models = sample.get_models()
+
+        if not isinstance(angle_times[0], list):
+            angle_times = [angle_times for _ in models]
+
+        for model, angle_time in zip(models, angle_times):
+            sim = SimulateReflectivity(model, angle_time,
+                                       inst_or_path=inst_or_path)
+            data = sim.simulate()
+            qs.append(data[0])
+            counts.append(data[3])
+        xi = sample.get_param_by_attribute('vary')
+        return cls(qs, xi, counts, models)
+
     @property
     def fisher_information(self) -> np.ndarray:
         """Calculate and return the Fisher information matrix.
