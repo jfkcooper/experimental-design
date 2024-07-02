@@ -59,6 +59,9 @@ class BaseSample(VariableAngle):
     def __init__(self):
         """Initialise the sample and define class attributes"""
         self._structures = []
+        self._bkg = None
+        self._dq = None
+        self._scale = None
 
     @abstractmethod
     def get_structures(self):
@@ -144,7 +147,7 @@ class BaseSample(VariableAngle):
             r_model = SimulateReflectivity(model, angle_times[i],
                                            inst_or_path).reflectivity(q)
 
-            label = f', {self.labels[i]}' if self.labels[i] else ''
+            label = f', {self.labels[i]}' if len(self.structures) > 1 else ''
 
             # Model reflectivity.
             ax.plot(q, r_model, zorder=20, label=f'Model Reflectivity{label}')
@@ -301,7 +304,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             ax.set_ylim(*ylim)
 
         # Add a legend if specified.
-        if legend:
+        if legend and self.get_structures() > 1:
             ax.legend(self.labels, loc='upper left')
 
         # Save the plot.
@@ -354,7 +357,8 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax.set_yscale('log')
         ax.set_ylim(1e-10, 3)
         ax.set_title('Reflectivity profile')
-        ax.legend()
+        if len(self.get_structures()) > 1:
+            ax.legend()
 
         # Save the plot.
         save_path = os.path.join(save_path, self.name)
