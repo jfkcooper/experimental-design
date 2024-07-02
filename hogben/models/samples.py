@@ -114,21 +114,20 @@ class Sample(BaseSample):
         if labels is None:
             return
 
-        if (isinstance(labels, list) and
-                all(isinstance(label, str) for label in labels)):
+        if (isinstance(labels, list)
+                and all(isinstance(label, str) for label in labels)):
             if len(labels) == len(self.structures):
                 self._labels = labels
             else:
                 raise ValueError(
-                    f'The amount of labels must be equal to the number '
-                    f'of structures in the sample!'
+                    'The amount of labels must be equal to the number '
+                    'of structures in the sample!'
                 )
         else:
             raise TypeError(
                 'The labels need to be given in the form of a list of'
                 ' strings!'
             )
-
 
     @property
     def bkg(self):

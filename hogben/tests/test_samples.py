@@ -142,9 +142,9 @@ def test_sample_with_multiple_dq_length(refnx_two_solvents, dq):
         Sample(refnx_two_solvents, dq=dq)
 
 
-@pytest.mark.parametrize('label', (["1"],
-                                   ["1", "2", "3"],
-                                   ["1", "2", "3", "4"])
+@pytest.mark.parametrize('label', (['1'],
+                                   ['1', '2', '3'],
+                                   ['1', '2', '3', '4'])
                          )
 def test_sample_with_labels_length(refnx_two_solvents, label):
     """
@@ -160,13 +160,13 @@ def test_sample_with_labels_type(refnx_two_solvents):
     Tests whether a TypeError is properly raised when the labels are not given
     as a list
     """
-    label = "Structure 1"
+    label = 'Structure 1'
     with pytest.raises(TypeError):
         Sample(refnx_two_solvents, labels=label)
 
 
-@pytest.mark.parametrize('label', (["1", 2],
-                                   [1, "2"])
+@pytest.mark.parametrize('label', (['1', 2],
+                                   [1, '2'])
                          )
 def test_sample_with_labels_string_type(refnx_two_solvents, label):
     """
