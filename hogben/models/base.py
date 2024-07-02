@@ -113,6 +113,57 @@ class BaseSample(VariableAngle):
                 for structure, scale, bkg, dq
                 in zip(self.get_structures(), self.scale, self.bkg, self.dq)]
 
+    def simulate_reflectivity(self, angle_times,
+                              inst_or_path='OFFSPEC') -> None:
+        """
+        Plot a simulated reflectivity curve given a set of `angle_times` and
+        the neutron instrument.
+
+        Args:
+            angle_times (list): points and times for each angle.
+            inst_or_path (str): either the name of an instrument already in ,
+                                HOGBEN or the path to a direct beam file,
+                                defaults to 'OFFSPEC'
+
+        """
+        if not isinstance(angle_times[0], list):
+            angle_times = [angle_times for _ in self.get_models()]
+
+        # Plot the model and simulated reflectivity against Q.
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        current_xmax = 0
+
+        for i, model in enumerate(self.get_models()):
+            data = SimulateReflectivity(model, angle_times[i],
+                                        inst_or_path).simulate()
+            # Extract each column of the simulated `data`.
+            q, r, dr, counts = data[0], data[1], data[2], data[3]
+
+            # Calculate the model reflectivity.
+            r_model = SimulateReflectivity(model, angle_times[i],
+                                           inst_or_path).reflectivity(q)
+
+            label = f', {self.labels[i]}' if self.labels[i] else ''
+
+            # Model reflectivity.
+            ax.plot(q, r_model, zorder=20, label=f'Model Reflectivity{label}')
+
+            # Simulated reflectivity
+            ax.errorbar(q, r, dr, marker='o', ms=3, lw=0,
+                        elinewidth=1, capsize=1.5, label='Simulated Data'
+                                                         f'{label}')
+            if max(q) > current_xmax:
+                current_xmax = max(q)
+
+        ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$',
+                      weight='bold')
+        ax.set_ylabel('Reflectivity (arb.)', weight='bold')
+        ax.set_yscale('log')
+        ax.set_title('Reflectivity Profile')
+        ax.set_xlim(0, 1.05*current_xmax)
+        ax.legend()
+
     @abstractmethod
     def nested_sampling(self):
         """Runs nested sampling on measured or simulated data of the sample."""
@@ -334,7 +385,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             sample = self._using_conditions(contrast, underlayers)
             contrast_point = (contrast + 0.56) / (6.35 + 0.56)
             background_level = 2e-6 * contrast_point + 4e-6 * (
-                1 - contrast_point)
+                    1 - contrast_point)
 
             model = ReflectModel(sample)
             model.bkg = background_level

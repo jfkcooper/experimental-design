@@ -79,6 +79,33 @@ class Sample(BaseSample):
         else:
             setattr(self, f'_{attribute}', [value] * len(self.structures))
 
+
+    @property
+    def labels(self) -> list:
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+        # Don't need labels if we only have on structure
+        if len(self.get_structures()) == 1:
+            return ['']
+        labels = []
+
+        # Check if the different structures have the same solvent
+        first_solvent_sld = self.get_structures()[0][-1].sld.real.value
+        same_solvent = all(structure[-1].sld.real.value == first_solvent_sld
+                           for structure in self._structures)
+
+        for index, structure in enumerate(self._structures):
+            if same_solvent:
+                label = f'structure {index}'
+            else:
+                label = (f'Solvent SLD:'
+                         f' {"{:.3g}".format(structure[-1].sld.real.value)}')
+            labels.append(label)
+        return labels
+
+
     @property
     def bkg(self):
         """
@@ -226,7 +253,7 @@ class Sample(BaseSample):
         fig, ax = plt.subplots()
         for i, (z, slds) in enumerate(self._get_sld_profile()):
             # Create a new subplot for each profile if not 'single'
-            label = f'SLD profile {i}'
+            label = f'{self.labels[i]}'
 
             # Create a new subplot for each profile if not 'single'
             ax.set_xlim(min(z), max(z))
@@ -277,10 +304,9 @@ class Sample(BaseSample):
         profiles = self._get_reflectivity_profile(q_min, q_max, points, scale,
                                                   bkg, dq)
         for i, (q, r) in enumerate(profiles):
-            label = f'Reflectivity profile {i}'
 
             # Plot Q versus model reflectivity.
-            ax.plot(q, r, label=label)
+            ax.plot(q, r, label=self.labels[i])
 
             x_label = '$\mathregular{Q\ (Å^{-1})}$'
             y_label = 'Reflectivity (arb.)'

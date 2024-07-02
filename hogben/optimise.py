@@ -59,7 +59,7 @@ def optimise_parameters(sample: BaseSample,
     print(f'The minimum eigenvalue of the Fisher Information before '
           f'optimization: {"{:.3g}".format(eigenval_initial)}')
     print(f'The minimum eigenvalue of the Fisher Information after '
-          f'optimization {"{:.3g}".format(fisher.min_eigenval)}')
+          f'optimization: {"{:.3g}".format(fisher.min_eigenval)}')
     print(f'The information content is'
           f' {"{:.3g}".format(eigenval_after / eigenval_initial)}'
           f' times as large after optimization.')
@@ -67,7 +67,7 @@ def optimise_parameters(sample: BaseSample,
     if visualise:
         scan_parameters(sample, optimize_params, angle_times)
         sample.sld_profile()
-        sample.reflectivity_profile()
+        sample.simulate_reflectivity(angle_times, inst_or_path=inst_or_path)
     return sample
 
 
