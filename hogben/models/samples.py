@@ -54,7 +54,6 @@ class Sample(BaseSample):
         self.bkg = settings.get('bkg', 5e-6)
         self.dq = settings.get('dq', 2)
 
-
     def _validate_and_set(self, attribute, value_list):
         """
         Validates the length of the value list against the number of structures

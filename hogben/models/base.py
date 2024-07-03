@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import refnx.dataset
 import refnx.reflect
 import refnx.analysis
-from refnx.reflect import ReflectModel, SLD
+from refnx.reflect import ReflectModel
 from refnx.reflect.structure import Slab
 from refnx._lib import flatten
 
@@ -507,7 +507,7 @@ class MagneticSLD(Slab):
         """
         SLD_value = self.SLDn + self.SLDm
         return Slab(thick=self.thick, sld=SLD_value, rough=self.rough,
-                    vfsolv=self.vfsolv, name="Spin up",
+                    vfsolv=self.vfsolv, name='Spin up',
                     interface=self.interface)
 
     @property
@@ -521,7 +521,7 @@ class MagneticSLD(Slab):
         """
         SLD_value = self.SLDn - self.SLDm
         return Slab(thick=self.thick, sld=SLD_value, rough=self.rough,
-                    vfsolv=self.vfsolv, name="Spin down",
+                    vfsolv=self.vfsolv, name='Spin down',
                     interface=self.interface)
 
     def __call__(self, thick=None, rough=None, vfsolv=None):
