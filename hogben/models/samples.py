@@ -56,33 +56,37 @@ class Sample(BaseSample):
 
 
 
-    def _validate_and_set(self, attribute, value):
+    def _validate_and_set(self, attribute, value_list):
         """
         Validates the length of the value list against the number of structures
         and sets the attribute accordingly.
 
         Args:
             attribute (str): The name of the attribute to set.
-            value (float or list of floats): The value(s) to set for the
-                                             attribute.
+            value_list (float or list of floats): The value(s) to set for the
+                                                  attribute.
 
         Raises:
             ValueError: If the length of the value list does not match the
                         number of structures.
         """
-        if isinstance(value, list):
+        if isinstance(value_list, list):
             if self.is_magnetic() and self.polarised:
                 # Duplicate each item for magnetic samples (up+down)
-                value = [item for item in value for _ in range(2)]
-            if len(value) != len(self.structures):
+                new_list = []
+                for item in value_list:
+                    new_list.append(item)
+                    new_list.append(item)
+                value_list = new_list
+            if len(value_list) != len(self.structures):
                 raise ValueError(
                     f'The length of `{attribute}` must be equal to the number '
                     f'of structures in the sample when using a list!'
                 )
             else:
-                setattr(self, f'_{attribute}', value)
+                setattr(self, f'_{attribute}', value_list)
         else:
-            setattr(self, f'_{attribute}', [value] * len(self.structures))
+            setattr(self, f'_{attribute}', [value_list] * len(self.structures))
 
     @property
     def bkg(self):
