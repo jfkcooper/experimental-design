@@ -476,13 +476,13 @@ class MagneticSLD(refnx.reflect.structure.Slab):
             rough (float): Roughness of the layer. Default is 0.
             name (str): Name of the layer. Default is "Magnetic Layer".
         """
-        self.SLD_n = SLDn
-        self.SLD_m = SLDm
-        self.thickness = thick
-        self.roughness = rough
+        self.SLDn = SLDn
+        self.SLDm = SLDm
+        self.thick = thick
+        self.rough = rough
         self.name = name
-        super().__init__(thick=self.thickness, sld=self.SLD_n,
-                         rough=self.roughness, name=self.name)
+        super().__init__(thick=self.thick, sld=self.SLDn,
+                         rough=self.rough, name=self.name)
 
     @property
     def spin_up(self):
@@ -493,8 +493,8 @@ class MagneticSLD(refnx.reflect.structure.Slab):
             SLD: An SLD object representing the spin-up component with the
             appropriate thickness and roughness.
         """
-        SLD_value = self.SLD_n + self.SLD_m
-        return SLD(SLD_value, name='spin_up')(thick=self.thickness,
+        SLD_value = self.SLDn + self.SLDm
+        return SLD(SLD_value, name='spin_up')(thick=self.thick,
                                               rough=self.rough)
 
     @property
@@ -506,8 +506,8 @@ class MagneticSLD(refnx.reflect.structure.Slab):
             SLD: An SLD object representing the spin-down component with the
             appropriate thickness and roughness.
         """
-        SLD_value = self.SLD_n - self.SLD_m
-        return SLD(SLD_value, name='spin_down')(thick=self.thickness,
+        SLD_value = self.SLDn - self.SLDm
+        return SLD(SLD_value, name='spin_down')(thick=self.thick,
                                                 rough=self.rough)
 
     def __call__(self, thick=None, rough=None):
@@ -523,8 +523,8 @@ class MagneticSLD(refnx.reflect.structure.Slab):
         Returns:
             MagneticSLD: The updated MagneticSLD object.
         """
-        self.thickness = thick if thick is not None else self.thickness
-        self.roughness = rough if rough is not None else self.roughness
-        super().__init__(thick=self.thickness, sld=self.SLD_n,
-                         rough=self.roughness, name=self.name)
+        self.thick = thick if thick is not None else self.thick
+        self.rough = rough if rough is not None else self.rough
+        super().__init__(thick=self.thick, sld=self.SLDn,
+                         rough=self.rough, name=self.name)
         return self
