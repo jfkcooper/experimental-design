@@ -55,7 +55,6 @@ class Sample(BaseSample):
         self.dq = settings.get('dq', 2)
 
 
-
     def _validate_and_set(self, attribute, value_list):
         """
         Validates the length of the value list against the number of structures
