@@ -10,6 +10,7 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 from refnx.reflect import ReflectModel, SLD
+from refnx.reflect.structure import Slab
 from refnx._lib import flatten
 
 from hogben.simulate import SimulateReflectivity
@@ -445,7 +446,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         save_plot(fig, save_path, 'nested_sampling_' + filename)
 
 
-class MagneticSLD(refnx.reflect.structure.Slab):
+class MagneticSLD(Slab):
     """
     A class to represent a layer with a magnetic SLD component.
 
@@ -465,6 +466,8 @@ class MagneticSLD(refnx.reflect.structure.Slab):
                  SLDm: float = 0,
                  thick: float = 0,
                  rough: float = 0,
+                 vfsolv: float = 0,
+                 interface: refnx.reflect.interface = None,
                  name: str = 'Magnetic Layer'):
         """
         Initialize a MagneticSLD object.
@@ -474,15 +477,24 @@ class MagneticSLD(refnx.reflect.structure.Slab):
             SLDm (float): Magnetic scattering length density. Default is 0.
             thick (float): Thickness of the layer. Default is 0.
             rough (float): Roughness of the layer. Default is 0.
+            vfsolv (float): Volume fraction of the solvent, between 0 and 1.
+                            Default is 0.
             name (str): Name of the layer. Default is "Magnetic Layer".
+            interface (`refnx.reflect.Interface`):
+                The type of interfacial roughness associated with the Slab.
+                If `None`, then the default interfacial roughness is an Error
+                function (also known as Gaussian roughness).
         """
         self.SLDn = SLDn
         self.SLDm = SLDm
         self.thick = thick
         self.rough = rough
+        self.vfsolv = vfsolv
+        self.interface = interface
         self.name = name
         super().__init__(thick=self.thick, sld=self.SLDn,
-                         rough=self.rough, name=self.name)
+                         rough=self.rough, name=self.name, vfsolv=self.vfsolv,
+                         interface=self.interface)
 
     @property
     def spin_up(self):
@@ -494,8 +506,9 @@ class MagneticSLD(refnx.reflect.structure.Slab):
             appropriate thickness and roughness.
         """
         SLD_value = self.SLDn + self.SLDm
-        return SLD(SLD_value, name='spin_up')(thick=self.thick,
-                                              rough=self.rough)
+        return Slab(thick=self.thick, sld=SLD_value, rough=self.rough,
+                    vfsolv=self.vfsolv, name="Spin up",
+                    interface=self.interface)
 
     @property
     def spin_down(self):
@@ -507,24 +520,29 @@ class MagneticSLD(refnx.reflect.structure.Slab):
             appropriate thickness and roughness.
         """
         SLD_value = self.SLDn - self.SLDm
-        return SLD(SLD_value, name='spin_down')(thick=self.thick,
-                                                rough=self.rough)
+        return Slab(thick=self.thick, sld=SLD_value, rough=self.rough,
+                    vfsolv=self.vfsolv, name="Spin down",
+                    interface=self.interface)
 
-    def __call__(self, thick=None, rough=None):
+    def __call__(self, thick=None, rough=None, vfsolv=None):
         """
         Update the thickness and roughness of the layer.
 
         Parameters:
-            thick (float, optional): New thickness of the layer. If None, the
+            thick (float): New thickness of the layer. If None, the
             current thickness is retained.
-            rough (float, optional): New roughness of the layer. If None, the
+            rough (float): New roughness of the layer. If None, the
             current roughness is retained.
+            vfsolv (float): New volume fraction of the solvent, between 0 and
+                            1. Default is 0.
 
         Returns:
             MagneticSLD: The updated MagneticSLD object.
         """
         self.thick = thick if thick is not None else self.thick
         self.rough = rough if rough is not None else self.rough
+        self.vfsolv = vfsolv if vfsolv is not None else self.vfsolv
         super().__init__(thick=self.thick, sld=self.SLDn,
-                         rough=self.rough, name=self.name)
+                         rough=self.rough, name=self.name, vfsolv=self.vfsolv,
+                         interface=self.interface)
         return self
