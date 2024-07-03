@@ -201,30 +201,34 @@ class Sample(BaseSample):
         Returns a list of all refnx `ReflectModel` models that are
         associated with each structure of the sample.
         """
-        labels = []
+        # Use provided labels if present, else generate labels automatically
         if self._labels:
-            return self._labels
+            labels = self._labels
+        else:
+            labels = []
+            # Check if the different structures have the same solvent
+            solvent_sld = self.structures[0][-1].sld.real.value
+            same_solvent = all(structure[-1].sld.real.value == solvent_sld
+                               for structure in self._structures)
 
-        # Check if the different structures have the same solvent
-        first_solvent_sld = self.structures[0][-1].sld.real.value
-        same_solvent = all(structure[-1].sld.real.value == first_solvent_sld
-                           for structure in self._structures)
+            for index, structure in enumerate(self._structures):
+                if len(self._structures) == 1:
+                    label = ''
+                elif same_solvent:
+                    label = f'Structure {index}'
+                else:
+                    sld_value = structure[-1].sld.real.value
+                    label = f'Solvent SLD:{"{:.3g}".format(sld_value)}'
+                labels.append(label)
 
-        for index, structure in enumerate(self._structures):
-            if len(self._structures) == 1:
-                label = ''
-            elif same_solvent:
-                label = f'Structure {index}'
-            else:
-                label = (f'Solvent SLD:'
-                         f' {"{:.3g}".format(structure[-1].sld.real.value)}')
-            labels.append(label)
+        # Add spin-labels for polarised and magnetic samples
         if self.is_magnetic() and self.polarised:
             # Duplicate each label per spin state
             labels = [item for item in labels for _ in range(2)]
             # Add spin-state for every structure
             labels = [
-                f'Spin-up {label}' if index % 2 == 0 else f'Spin-down {label}'
+                f'Spin-up, {label}' if index % 2 == 0
+                else f'Spin-down, {label}'
                 for index, label in enumerate(labels)
             ]
         return labels
@@ -242,7 +246,7 @@ class Sample(BaseSample):
 
         if (isinstance(labels, list)
                 and all(isinstance(label, str) for label in labels)):
-            if len(labels) == len(self.structures):
+            if len(labels) == len(self._structures):
                 self._labels = labels
             else:
                 raise ValueError(
