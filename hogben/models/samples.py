@@ -44,6 +44,12 @@ class Sample(BaseSample):
 
         Args:
             structures: Sample structure defined in the refnx model
+            **settings The settings which can be applied to the experiment:
+                labels (list): The labels for each structure
+                scale (list|float): The scale factor used for the structures
+                bkg (list|float): The backgrounds for the structures
+                dq (list|float): The resolutions for the structures
+                polarised (bool): Whether the sample is polarised
         """
         super().__init__()
         if isinstance(structures, refnx.reflect.Structure):
