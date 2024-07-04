@@ -26,9 +26,15 @@ class Sample(BaseSample):
     """Wrapper class for a standard refnx reflectometry sample.
 
     Attributes:
-        structure (refnx.reflect.Structure: refnx sample.
+        structures (list[refnx.reflect.Structure]): List of structures in the
+                                                    sample
         name (str): name of the sample.
-        params (list): varying parameters of sample.
+        polarised (bool): Whether the sample is polarised or not.
+        labels (list): List of the labels corresponding to each structure
+        scale (list): List of the scale corresponding to each structure
+        bkg (list): List of the backgrounds corresponding to each structure
+        dq (list): List of the resolutions corresponding to each structure
+        params (list): The varying parameters in the sample.
 
     """
 
@@ -47,7 +53,6 @@ class Sample(BaseSample):
         self.polarised = settings.get('polarised', self.is_magnetic())
         self.name = ', '.join(
             {structure.name for structure in self.structures})
-
         self._labels = None
         self.labels = settings.get('labels', self._labels)
         self.scale = settings.get('scale', 1)
@@ -188,14 +193,6 @@ class Sample(BaseSample):
                 params.append(thick)
 
             return params
-
-    @property
-    def models(self) -> list:
-        """
-        Returns a list of all refnx `ReflectModel` models that are
-        associated with each structure of the sample.
-        """
-        return self.get_models()
 
     @property
     def labels(self) -> list:
