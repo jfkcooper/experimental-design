@@ -32,18 +32,18 @@ class Sample(BaseSample):
 
     """
 
-    def __init__(self, structure, **settings):
+    def __init__(self, structures, **settings):
         """
         Initializes a sample given a structure, and sets the sample name and
         parameters
 
         Args:
-            structure: Sample structure defined in the refnx model
+            structures: Sample structure defined in the refnx model
         """
         super().__init__()
-        if isinstance(structure, refnx.reflect.Structure):
-            structure = [structure]
-        self.structures = structure
+        if isinstance(structures, refnx.reflect.Structure):
+            structures = [structures]
+        self.structures = structures
         self.polarised = settings.get('polarised', self.is_magnetic())
         self.name = ', '.join(
             {structure.name for structure in self.structures})
