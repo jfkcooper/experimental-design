@@ -35,7 +35,6 @@ class Sample(BaseSample):
         bkg (list): List of the backgrounds corresponding to each structure
         dq (list): List of the resolutions corresponding to each structure
         params (list): The varying parameters in the sample.
-
     """
 
     def __init__(self, structures, **settings):
