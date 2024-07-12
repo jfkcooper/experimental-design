@@ -10,6 +10,7 @@ import refnx.dataset
 import refnx.reflect
 import refnx.analysis
 from refnx.reflect import ReflectModel
+from refnx.reflect.structure import Slab
 from refnx._lib import flatten
 
 from hogben.simulate import SimulateReflectivity
@@ -62,13 +63,27 @@ class BaseSample(VariableAngle):
         self._bkg = None
         self._dq = None
         self._scale = None
+        self.polarised = self.is_magnetic()
 
-    @abstractmethod
-    def get_structures(self):
+    def get_structures(self) -> list:
         """
         Get a list of the possible sample structures.
         """
-        pass
+        spin_structures = []
+        if self.polarised:
+            for structure in self._structures:
+                up_structure = structure.copy()
+                down_structure = structure.copy()
+                for i, layer in enumerate(structure):
+                    if isinstance(layer, MagneticSLD):
+                        up_structure[i] = layer.spin_up
+                        down_structure[i] = layer.spin_down
+                if self.is_magnetic():
+                    spin_structures.extend([up_structure, down_structure])
+                else:
+                    spin_structures.extend([structure.copy()])
+            return spin_structures
+        return self._structures
 
     @property
     def structures(self):
@@ -76,8 +91,17 @@ class BaseSample(VariableAngle):
         return self.get_structures()
 
     @structures.setter
-    def structures(self, structures):
+    def structures(self, structures: list):
         self._structures = structures
+
+    def is_magnetic(self) -> bool:
+        """Checks whether the sample contains at least one magnetic layer"""
+        for structure in self._structures:
+            for layer in structure:
+                if isinstance(layer, MagneticSLD):
+                    return True
+        return False
+
 
     def get_param_by_attribute(self, attr: str) -> list:
         """
@@ -114,7 +138,7 @@ class BaseSample(VariableAngle):
                                            bkg=bkg,
                                            dq=dq)
                 for structure, scale, bkg, dq
-                in zip(self.get_structures(), self.scale, self.bkg, self.dq)]
+                in zip(self.structures, self.scale, self.bkg, self.dq)]
 
     def simulate_reflectivity(self, angle_times,
                               inst_or_path='OFFSPEC') -> None:
@@ -181,6 +205,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         Initialize a BaseLipid object sample, and loads the
         experimentally measured data
         """
+        super().__init__()
         self._create_objectives()  # Load experimentally-measured data.
 
     @abstractmethod
@@ -290,7 +315,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax = fig.add_subplot(111)
 
         # Plot the SLD profile for each measured contrast.
-        for structure in self.get_structures():
+        for structure in self.structures:
             ax.plot(*structure.sld_profile(self.distances))
 
         x_label = '$\mathregular{Distance\ (\AA)}$'
@@ -304,7 +329,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
             ax.set_ylim(*ylim)
 
         # Add a legend if specified.
-        if legend and self.get_structures() > 1:
+        if legend and len(self.structures) > 1:
             ax.legend(self.labels, loc='upper left')
 
         # Save the plot.
@@ -357,7 +382,7 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         ax.set_yscale('log')
         ax.set_ylim(1e-10, 3)
         ax.set_title('Reflectivity profile')
-        if len(self.get_structures()) > 1:
+        if len(self.structures) > 1:
             ax.legend()
 
         # Save the plot.
@@ -419,3 +444,105 @@ class BaseLipid(BaseSample, VariableContrast, VariableUnderlayer):
         # Save the sampling corner plot.
         save_path = os.path.join(save_path, self.name)
         save_plot(fig, save_path, 'nested_sampling_' + filename)
+
+
+class MagneticSLD(Slab):
+    """
+    A class to represent a layer with a magnetic SLD component.
+
+    This class extends the `Slab` class from `refnx.reflect.structure` to
+    include properties for magnetic Scattering Length Density (SLD) as well.
+
+    Attributes:
+        SLD_n (float): Nuclear scattering length density.
+        SLD_m (float): Magnetic scattering length density.
+        thickness (float): Thickness of the layer.
+        roughness (float): Roughness of the layer.
+        name (str): Name of the layer.
+    """
+
+    def __init__(self,
+                 SLDn: float = 0,
+                 SLDm: float = 0,
+                 thick: float = 0,
+                 rough: float = 0,
+                 vfsolv: float = 0,
+                 interface: refnx.reflect.interface = None,
+                 name: str = 'Magnetic Layer'):
+        """
+        Initialize a MagneticSLD object.
+
+        Parameters:
+            SLDn (float): Nuclear scattering length density. Default is 0.
+            SLDm (float): Magnetic scattering length density. Default is 0.
+            thick (float): Thickness of the layer. Default is 0.
+            rough (float): Roughness of the layer. Default is 0.
+            vfsolv (float): Volume fraction of the solvent, between 0 and 1.
+                            Default is 0.
+            name (str): Name of the layer. Default is "Magnetic Layer".
+            interface (`refnx.reflect.Interface`):
+                The type of interfacial roughness associated with the Slab.
+                If `None`, then the default interfacial roughness is an Error
+                function (also known as Gaussian roughness).
+        """
+        self.SLDn = SLDn
+        self.SLDm = SLDm
+        self.thick = thick
+        self.rough = rough
+        self.vfsolv = vfsolv
+        self.interface = interface
+        self.name = name
+        super().__init__(thick=self.thick, sld=self.SLDn,
+                         rough=self.rough, name=self.name, vfsolv=self.vfsolv,
+                         interface=self.interface)
+
+    @property
+    def spin_up(self):
+        """
+        Calculate the spin-up scattering length density.
+
+        Returns:
+            SLD: An SLD object representing the spin-up component with the
+            appropriate thickness and roughness.
+        """
+        SLD_value = self.SLDn + self.SLDm
+        return Slab(thick=self.thick, sld=SLD_value, rough=self.rough,
+                    vfsolv=self.vfsolv, name='Spin up',
+                    interface=self.interface)
+
+    @property
+    def spin_down(self):
+        """
+        Calculate the spin-down scattering length density.
+
+        Returns:
+            SLD: An SLD object representing the spin-down component with the
+            appropriate thickness and roughness.
+        """
+        SLD_value = self.SLDn - self.SLDm
+        return Slab(thick=self.thick, sld=SLD_value, rough=self.rough,
+                    vfsolv=self.vfsolv, name='Spin down',
+                    interface=self.interface)
+
+    def __call__(self, thick=None, rough=None, vfsolv=None):
+        """
+        Update the thickness and roughness of the layer.
+
+        Parameters:
+            thick (float): New thickness of the layer. If None, the
+            current thickness is retained.
+            rough (float): New roughness of the layer. If None, the
+            current roughness is retained.
+            vfsolv (float): New volume fraction of the solvent, between 0 and
+                            1. Default is 0.
+
+        Returns:
+            MagneticSLD: The updated MagneticSLD object.
+        """
+        self.thick = thick if thick is not None else self.thick
+        self.rough = rough if rough is not None else self.rough
+        self.vfsolv = vfsolv if vfsolv is not None else self.vfsolv
+        super().__init__(thick=self.thick, sld=self.SLDn,
+                         rough=self.rough, name=self.name, vfsolv=self.vfsolv,
+                         interface=self.interface)
+        return self

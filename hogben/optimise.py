@@ -40,6 +40,12 @@ def optimise_parameters(sample: BaseSample,
     Returns:
         Sample: The sample object with optimised parameters.
     """
+    if not isinstance(angle_times[0], list):
+        angle_times = [angle_times for _ in sample.get_models()]
+    if sample.is_magnetic() and sample.polarised:
+        angle_times = [[(angle, points, time / 4)
+                       for angle, points, time in angle_time]
+                       for angle_time in angle_times]
     fisher = Fisher.from_sample(sample, angle_times, inst_or_path=inst_or_path)
     eigenval_initial = fisher.min_eigenval
 

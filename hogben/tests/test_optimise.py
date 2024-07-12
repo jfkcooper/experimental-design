@@ -38,6 +38,9 @@ class MockSample:
         self.simulate_reflectivity = MagicMock()
         self.sld_profile = MagicMock()
         self.get_models = MagicMock()
+        self.is_magnetic = MagicMock()
+        self.polarised = False
+
 
     def get_param_by_attribute(self, _attribute):
         """

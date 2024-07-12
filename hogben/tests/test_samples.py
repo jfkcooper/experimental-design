@@ -6,6 +6,7 @@ import pytest
 import matplotlib
 import hogben.models.samples as samples
 
+from hogben.models.base import MagneticSLD
 from hogben.models.samples import Sample
 from hogben.simulate import SimulateReflectivity
 from hogben.utils import Fisher
@@ -52,6 +53,32 @@ def refnx_three_solvents():
     return [structure_H2O, structure_D2O, structure_SMW]
 
 
+@pytest.fixture
+def refnx_magnetic_structure():
+    """Defines a structure describing a sample with one magnetic layer."""
+    air = SLD(0, name='Air')
+    layer1 = SLD(3, name='Layer 1')(thick=60, rough=8)
+    layer2 = SLD(8, name='Layer 2')(thick=150, rough=2)
+    mag_layer = MagneticSLD(6, 2, name='Magnetic layer')(thick=75, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
+    structure = air | layer1 | layer2 | mag_layer | substrate
+    return structure
+
+
+@pytest.fixture
+def refnx_magnetic_structure_multiple_layers():
+    """Defines a structure describing a sample with one magnetic layer."""
+    air = SLD(0, name='Air')
+    D2O = SLD(6.5, name='Air')
+    layer1 = SLD(3, name='Layer 1')(thick=60, rough=8)
+    layer2 = MagneticSLD(8, 2, name='Layer 2')(thick=150, rough=2)
+    mag_layer = MagneticSLD(6, 2, name='Magnetic layer')(thick=75, rough=2)
+    substrate = SLD(2.047, name='Substrate')(thick=0, rough=2)
+    structure_D2O = D2O | layer1 | layer2 | mag_layer | substrate
+    structure = air | layer1 | layer2 | mag_layer | substrate
+    return [structure, structure_D2O]
+
+
 def mock_save_plot(fig: matplotlib.figure.Figure,
                    save_path: str,
                    filename: str) -> None:
@@ -68,6 +95,38 @@ def mock_save_plot(fig: matplotlib.figure.Figure,
         os.makedirs(save_path)
     file_path = os.path.join(save_path, filename + '.png')
     fig.savefig(file_path, dpi=40)
+
+
+def test_magnetic_sample_SLD(refnx_magnetic_structure):
+    """
+    Tests whether the spin-up and spin-down directions of the magnetic
+    structure are as expected
+    """
+    sample = Sample(refnx_magnetic_structure)
+    assert sample.structures[0][3].sld.real.value == 8
+    assert sample.structures[1][3].sld.real.value == 4
+
+
+def test_magnetic_sample_SLD_unpolarised(refnx_magnetic_structure):
+    """
+    Tests whether the unpolarised state of the magnetic
+    structure are as expected
+    """
+    sample = Sample(refnx_magnetic_structure, polarised=False)
+    assert sample.structures[0][3].sld.real.value == 6
+
+
+def test_magnetic_sample_length(refnx_magnetic_structure,
+                                refnx_magnetic_structure_multiple_layers):
+    """
+    Tests whether the amount of structures for a magnetic layer is twice as
+    much as the defined amount of structures (one per spin-state).
+    """
+    sample_single = Sample(refnx_magnetic_structure)
+    sample_double = Sample(refnx_magnetic_structure_multiple_layers)
+
+    assert len(sample_single.structures) == 2 * len(sample_single._structures)
+    assert len(sample_double.structures) == 2 * len(sample_double._structures)
 
 
 def test_sample_with_multiple_bkg_order(refnx_three_solvents):

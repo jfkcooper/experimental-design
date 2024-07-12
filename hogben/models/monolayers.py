@@ -93,12 +93,6 @@ class MonolayerDPPG(BaseLipid):
         # Call the BaseLipid constructor.
         super().__init__()
 
-    def get_structures(self) -> list:
-        """
-        Get a list of the possible sample structures.
-        """
-        return self._structures
-
     def _create_objectives(self, protein: bool = True) -> None:
         """Creates objectives corresponding to each measured contrast.
 

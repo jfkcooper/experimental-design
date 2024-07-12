@@ -26,108 +26,75 @@ class Sample(BaseSample):
     """Wrapper class for a standard refnx reflectometry sample.
 
     Attributes:
-        structure (refnx.reflect.Structure: refnx sample.
+        structures (list[refnx.reflect.Structure]): List of structures in the
+                                                    sample
         name (str): name of the sample.
-        params (list): varying parameters of sample.
-
+        polarised (bool): Whether the sample is polarised or not.
+        labels (list): List of the labels corresponding to each structure
+        scale (list): List of the scale corresponding to each structure
+        bkg (list): List of the backgrounds corresponding to each structure
+        dq (list): List of the resolutions corresponding to each structure
+        params (list): The varying parameters in the sample.
     """
 
-    def __init__(self, structure, **settings):
+    def __init__(self, structures, **settings):
         """
         Initializes a sample given a structure, and sets the sample name and
         parameters
 
         Args:
-            structure: Sample structure defined in the refnx model
+            structures: Sample structure defined in the refnx model
+            **settings The settings which can be applied to the experiment:
+                labels (list): The labels for each structure
+                scale (list|float): The scale factor used for the structures
+                bkg (list|float): The backgrounds for the structures
+                dq (list|float): The resolutions for the structures
+                polarised (bool): Whether the sample is polarised
         """
         super().__init__()
-        if isinstance(structure, refnx.reflect.Structure):
-            structure = [structure]
-        self.structures = structure
+        if isinstance(structures, refnx.reflect.Structure):
+            structures = [structures]
+        self.structures = structures
+        self.polarised = settings.get('polarised', self.is_magnetic())
         self.name = ', '.join(
-            {structure.name for structure in self.get_structures()})
-
+            {structure.name for structure in self.structures})
         self._labels = None
         self.labels = settings.get('labels', self._labels)
         self.scale = settings.get('scale', 1)
         self.bkg = settings.get('bkg', 5e-6)
         self.dq = settings.get('dq', 2)
-        self.polarised = settings.get('polarised', True)
 
-    def _validate_and_set(self, attribute, value):
+    def _validate_and_set(self, attribute, value_list):
         """
         Validates the length of the value list against the number of structures
         and sets the attribute accordingly.
 
         Args:
             attribute (str): The name of the attribute to set.
-            value (float or list of floats): The value(s) to set for the
-                                             attribute.
+            value_list (float or list of floats): The value(s) to set for the
+                                                  attribute.
 
         Raises:
             ValueError: If the length of the value list does not match the
                         number of structures.
         """
-        if isinstance(value, list):
-            if len(value) != len(self.structures):
+        if isinstance(value_list, list):
+            if self.is_magnetic() and self.polarised:
+                # Duplicate each item for magnetic samples (up+down)
+                new_list = []
+                for item in value_list:
+                    new_list.append(item)
+                    new_list.append(item)
+                value_list = new_list
+            if len(value_list) != len(self.structures):
                 raise ValueError(
                     f'The length of `{attribute}` must be equal to the number '
                     f'of structures in the sample when using a list!'
                 )
             else:
-                setattr(self, f'_{attribute}', value)
+                setattr(self, f'_{attribute}', value_list)
         else:
-            setattr(self, f'_{attribute}', [value] * len(self.structures))
-
-    @property
-    def labels(self) -> list:
-        """
-        Returns a list of all refnx `ReflectModel` models that are
-        associated with each structure of the sample.
-        """
-        labels = []
-        if self._labels:
-            return self._labels
-
-        # Check if the different structures have the same solvent
-        first_solvent_sld = self.get_structures()[0][-1].sld.real.value
-        same_solvent = all(structure[-1].sld.real.value == first_solvent_sld
-                           for structure in self._structures)
-
-        for index, structure in enumerate(self._structures):
-            if same_solvent:
-                label = f'structure {index}'
-            else:
-                label = (f'Solvent SLD:'
-                         f' {"{:.3g}".format(structure[-1].sld.real.value)}')
-            labels.append(label)
-        return labels
-
-    @labels.setter
-    def labels(self, labels: list) -> None:
-        """
-        Returns a list of all refnx `ReflectModel` models that are
-        associated with each structure of the sample.
-        """
-
-        # Don't try to set the labels if no labels were specified
-        if labels is None:
-            return
-
-        if (isinstance(labels, list)
-                and all(isinstance(label, str) for label in labels)):
-            if len(labels) == len(self.structures):
-                self._labels = labels
-            else:
-                raise ValueError(
-                    'The amount of labels must be equal to the number '
-                    'of structures in the sample!'
-                )
-        else:
-            raise TypeError(
-                'The labels need to be given in the form of a list of'
-                ' strings!'
-            )
+            setattr(self, f'_{attribute}', [value_list] * len(self.structures))
 
     @property
     def bkg(self):
@@ -189,10 +156,6 @@ class Sample(BaseSample):
         """
         self._validate_and_set('scale', value)
 
-    def get_structures(self) -> list:
-        """Get a list of the possible sample structures."""
-        return self._structures
-
     @property
     def params(self) -> list:
         """List of all varying parameters of the sample"""
@@ -237,12 +200,69 @@ class Sample(BaseSample):
             return params
 
     @property
-    def models(self) -> list:
+    def labels(self) -> list:
         """
         Returns a list of all refnx `ReflectModel` models that are
         associated with each structure of the sample.
         """
-        return self.get_models()
+        # Use provided labels if present, else generate labels automatically
+        if self._labels:
+            labels = self._labels
+        else:
+            labels = []
+            # Check if the different structures have the same solvent
+            solvent_sld = self.structures[0][-1].sld.real.value
+            same_solvent = all(structure[-1].sld.real.value == solvent_sld
+                               for structure in self._structures)
+
+            for index, structure in enumerate(self._structures):
+                if len(self._structures) == 1:
+                    label = ''
+                elif same_solvent:
+                    label = f'Structure {index}'
+                else:
+                    sld_value = structure[-1].sld.real.value
+                    label = f'Solvent SLD:{"{:.3g}".format(sld_value)}'
+                labels.append(label)
+
+        # Add spin-labels for polarised and magnetic samples
+        if self.is_magnetic() and self.polarised:
+            # Duplicate each label per spin state
+            labels = [item for item in labels for _ in range(2)]
+            # Add spin-state for every structure
+            labels = [
+                f'Spin-up, {label}' if index % 2 == 0
+                else f'Spin-down, {label}'
+                for index, label in enumerate(labels)
+            ]
+        return labels
+
+    @labels.setter
+    def labels(self, labels: list) -> None:
+        """
+        Returns a list of all refnx `ReflectModel` models that are
+        associated with each structure of the sample.
+        """
+
+        # Don't try to set the labels if no labels were specified
+        if labels is None:
+            return
+
+        if (isinstance(labels, list)
+                and all(isinstance(label, str) for label in labels)):
+            if len(labels) == len(self._structures):
+                self._labels = labels
+            else:
+                raise ValueError(
+                    'The amount of labels must be equal to the number '
+                    'of structures in the sample!'
+                )
+        else:
+            raise TypeError(
+                'The labels need to be given in the form of a list of'
+                ' strings!'
+            )
+
 
     def angle_info(self,
                    angle_times: list[tuple],
@@ -285,7 +305,8 @@ class Sample(BaseSample):
             ax.set_xlabel('$\mathregular{Distance\ (\AA)}$')
             ax.set_ylabel('$\mathregular{SLD\ (10^{-6} \AA^{-2})}$')
             ax.set_title('SLD Profile')
-            ax.legend()
+            if len(self.structures) > 1:
+                ax.legend()
 
         # Save the plot.
         if save_path:
@@ -300,7 +321,7 @@ class Sample(BaseSample):
             numpy.ndarray: depth
             numpy.ndarray: SLD values
         """
-        return [structure.sld_profile() for structure in self.get_structures()]
+        return [structure.sld_profile() for structure in self.structures]
 
     def reflectivity_profile(self,
                              save_path: str = None,
@@ -331,14 +352,13 @@ class Sample(BaseSample):
             # Plot Q versus model reflectivity.
             ax.plot(q, r, label=self.labels[i])
 
-            x_label = '$\mathregular{Q\ (Å^{-1})}$'
-            y_label = 'Reflectivity (arb.)'
-
-            ax.set_xlabel(x_label, fontsize=11, weight='bold')
-            ax.set_ylabel(y_label, fontsize=11, weight='bold')
+            ax.set_xlabel('$\mathregular{Q\ (Å^{-1})}$')
+            ax.set_ylabel('Reflectivity (arb.)')
             ax.set_title('Reflectivity profile')
             ax.set_yscale('log')
-            ax.legend()
+
+            if len(self.structures) > 1:
+                ax.legend()
 
         # Save the plot.
         if save_path:
@@ -364,7 +384,7 @@ class Sample(BaseSample):
         # Geometrically-space Q points over the specified range.
         q = np.geomspace(q_min, q_max, points)
 
-        for structure in self.get_structures():
+        for structure in self.structures:
             model = ReflectModel(structure, scale=scale,
                                  bkg=bkg, dq=dq)
             r = SimulateReflectivity(model).reflectivity(q)
@@ -387,7 +407,7 @@ class Sample(BaseSample):
         """
         # Simulate data for the sample.
         objectives = []
-        for structure in self.get_structures():
+        for structure in self.structures:
             model = refnx.reflect.ReflectModel(structure)
             data = SimulateReflectivity(model, angle_times).simulate()
             objective = Objective(model, data)
