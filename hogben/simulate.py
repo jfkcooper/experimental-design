@@ -100,7 +100,7 @@ class SimulateReflectivity:
         # Non-polarised case
         # [(4, N), (4, M)] --> (4, N + M)
         simulation = np.hstack([
-            self._run_experiment(condition, polarised) for condition in self.angle_times
+            self._run_experiment(*condition, polarised) for condition in self.angle_times
         ])
 
         # filter zeros
