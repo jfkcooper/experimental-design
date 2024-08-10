@@ -98,19 +98,19 @@ class SimulateReflectivity:
             form [q, r, dr, counts]
         """
         # Non-polarised case
-        simulation = [np.empty(0,), np.empty(0,), np.empty(0,), np.empty(0,)]
-        for condition in self.angle_times:
-            simulated_angle = self._run_experiment(*condition, polarised)
-            for i, item in enumerate(simulated_angle):
-                simulation[i] = np.append(simulation[i], item)
+        # [(4, N), (4, M)] --> (4, N + M)
+        simulation = np.hstack([
+            self._run_experiment(condition, polarised) for condition in self.angle_times
+        ])
 
-        # Mask out zeros and order points so nested sampling will work
-        mask = simulation[1] != 0
-        simulation = [data[mask] for data in simulation]  # Filter zeroes
-        sort_indices = simulation[0].argsort()
-        simulation = [data[sort_indices] for data in simulation]  # Sort by q
+        # filter zeros
+        simulation = simulation[:, (simulation[1] != 0)]
 
-        return simulation
+        # order by q
+        simulation = simulation[:, np.argsort(simulation[0])]
+
+        # return as list
+        return simulation.tolist()
 
     def reflectivity(self, q: np.ndarray) -> np.ndarray:
         """Calculates the model reflectivity at given `q` points.
