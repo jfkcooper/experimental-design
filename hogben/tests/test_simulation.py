@@ -1,4 +1,4 @@
-"""Tests for the simulation module to run"""
+"""Tests for the simulation module"""
 
 import pytest
 
