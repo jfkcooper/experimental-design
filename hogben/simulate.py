@@ -1,11 +1,43 @@
 """Methods used to simulate an experiment """
 
 import os.path
+import numbers
+from typing import Optional
 
 import importlib_resources
 import numpy as np
 
 import refnx.reflect
+
+
+
+def _check_random_state(seed):
+    """Turn `seed` into a RNG
+
+    Parameters
+    ----------
+    seed : {None, int, `numpy.random.Generator`, `numpy.random.RandomState`}, optional
+        If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+        singleton is used.
+        If `seed` is an int, a ``Generator`` instance is returned, seeded with `seed`.
+        If `seed` is already a ``Generator`` or ``RandomState`` instance then
+        that instance is used.
+
+    Returns
+    -------
+    seed : {`numpy.random.Generator`, `numpy.random.RandomState`}
+        Random number generator.
+
+    """
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    if isinstance(seed, (numbers.Integral, np.integer)):
+        return np.random.default_rng(seed)
+    if isinstance(seed, (np.random.RandomState, np.random.Generator)):
+        return seed
+
+    raise ValueError(f"'{seed}' cannot be used to seed a numpy.random.RandomState"
+                      " instance")
 
 
 class SimulateReflectivity:
@@ -83,15 +115,20 @@ class SimulateReflectivity:
 
         return np.loadtxt(str(path), delimiter=',')
 
-    def simulate(self, polarised: bool = False) -> \
-            list[np.ndarray]:
+    def simulate(
+        self,
+        polarised: bool = False,
+        rng: Optional[np.random.Generator] = None
+    ) -> list[np.ndarray]:
         """Simulates a measurement of self.sample_model taken at the angles and
         for the durations specified in self.angle_times on the instrument
         specified in self.inst_or_path
 
         Args:
             polarised: defines if the measurement is polarised, and is used to
-            select the correct instrument direct beam file
+                select the correct instrument direct beam file
+            rng: {None or np.random.Generator} random number generator for
+                reproducible simulation
 
         Returns:
             list: simulated data for the given model in the
@@ -100,7 +137,7 @@ class SimulateReflectivity:
         # Non-polarised case
         simulation = [np.empty(0,), np.empty(0,), np.empty(0,), np.empty(0,)]
         for condition in self.angle_times:
-            simulated_angle = self._run_experiment(*condition, polarised)
+            simulated_angle = self._run_experiment(*condition, polarised, rng=rng)
             for i, item in enumerate(simulated_angle):
                 simulation[i] = np.append(simulation[i], item)
 
@@ -128,8 +165,14 @@ class SimulateReflectivity:
 
         return self.sample_model(q)
 
-    def _run_experiment(self, angle: float, points: int, time: float,
-                        polarised: bool = False) -> tuple:
+    def _run_experiment(
+        self,
+        angle: float,
+        points: int,
+        time: float,
+        polarised: bool = False,
+        rng: Optional[np.random.Generator] = None
+    ) -> tuple:
         """Simulates a single angle measurement of a given 'model' on the
         instrument set in self.incident_flux_data
 
@@ -138,11 +181,14 @@ class SimulateReflectivity:
             points: number of points to use for simulated data.
             time: counting time for simulation.
             polarised: defines if the measurement is polarised, and is used to
-            select the correct instrument direct beam file
+                select the correct instrument direct beam file
+            rng: {None or np.random.Generator} random number generator for
+                reproducible simulation
 
         Returns:
             tuple: simulated Q, R, dR data and incident neutron counts.
         """
+        rng = _check_random_state(rng)
         wavelengths, flux = self._incident_flux_data(polarised=polarised).T
 
         # Scale flux by relative measurement angle squared (assuming both slits
@@ -165,7 +211,7 @@ class SimulateReflectivity:
 
         # Get the measured reflected count for each bin.
         # r_model accounts for background.
-        counts_reflected = np.random.poisson(r_model * counts_incident).astype(
+        counts_reflected = rng.poisson(lam=r_model * counts_incident).astype(
             float)
 
         # Convert from count space to reflectivity space.

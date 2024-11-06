@@ -153,3 +153,17 @@ class TestSimulate:
             assert len(item) == sum(condition[1] for condition in angle_times)
 
         np.testing.assert_array_less(np.zeros_like(q_binned), q_binned)
+
+    def test_reproducibility(self, refnx_model):
+        """
+        Check that simulation is reproducible
+        """
+        angle_times = [(0.3, 100, 1000), (2.3, 150, 1000)]
+
+        sim = SimulateReflectivity(refnx_model, angle_times, self.instrument)
+        rng = np.random.default_rng(10982093)
+        output = sim.simulate(rng=rng)
+
+        rng = np.random.default_rng(10982093)
+        output2 = sim.simulate(rng=rng)
+        np.testing.assert_allclose(output, output2)
