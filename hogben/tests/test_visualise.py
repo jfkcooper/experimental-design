@@ -24,7 +24,7 @@ def refnx_sample():
 
 
 class MockFisher:
-    """Mocks the Fisher class, to return a simple minimum eigenvalue of 1.0 """
+    """Mocks the Fisher class, to return a simple minimum eigenvalue of 1.0"""
     def __init__(self, _sample, _angle_times):
         """Initialize the mocked Fisher class and set eigenval to 1"""
         self.min_eigenval = 1.0
