@@ -109,19 +109,22 @@ class TestSimulate:
 
     def test_number_of_points(self, refnx_model):
         """
-        Tests that the number of points generated in the simulation is what we define
-        (even when many are zero)
+        Tests that the number of points generated in the
+        simulation is what we define (even when many are zero)
         """
         NPOINTS = 100
         angle_times = [(0.3, NPOINTS, 10000)]
-        sim = SimulateReflectivity(refnx_model, angle_times=angle_times).simulate()
+        sim = SimulateReflectivity(refnx_model,
+                                   angle_times=angle_times).simulate()
         assert len(sim[0]) == NPOINTS
         angle_times = [(0.3, NPOINTS, 5)]
-        sim = SimulateReflectivity(refnx_model, angle_times=angle_times).simulate()
+        sim = SimulateReflectivity(refnx_model,
+                                   angle_times=angle_times).simulate()
         assert len(sim[0]) == NPOINTS
         angle_times = [(0.3, NPOINTS, 5), (2.0, NPOINTS, 50)]
-        sim = SimulateReflectivity(refnx_model, angle_times=angle_times).simulate()
-        assert len(sim[0]) == NPOINTS*2
+        sim = SimulateReflectivity(refnx_model,
+                                   angle_times=angle_times).simulate()
+        assert len(sim[0]) == NPOINTS * 2
 
     def test_reflectivity(self, refnx_model):
         """
